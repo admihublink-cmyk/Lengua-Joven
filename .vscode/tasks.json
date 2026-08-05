@@ -1,0 +1,27 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Git: Commit y Push",
+      "type": "shell",
+      "command": "git add -A && git commit -m \"${input:mensaje}\" && git push",
+      "options": {
+        "cwd": "${workspaceFolder}"
+      },
+      "presentation": {
+        "reveal": "always",
+        "panel": "shared",
+        "focus": true
+      },
+      "problemMatcher": []
+    }
+  ],
+  "inputs": [
+    {
+      "id": "mensaje",
+      "type": "promptString",
+      "description": "Mensaje del commit",
+      "default": "actualización"
+    }
+  ]
+}

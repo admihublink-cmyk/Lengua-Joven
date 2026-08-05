@@ -4,6 +4,11 @@ const { randomUUID } = require('crypto')
 const db = require('../db')
 const { signToken, requireAuth } = require('../middleware/auth')
 
+// Rate limiting: se inyecta desde server.js vía app.set
+function getRL(req) { return req.app.get('rateLimit') }
+const rl10per15m = (req, res, next) => (getRL(req)?.(10, 15 * 60 * 1000) || ((r,s,n) => n()))(req, res, next)
+const rl5per60m  = (req, res, next) => (getRL(req)?.(5, 60 * 60 * 1000)  || ((r,s,n) => n()))(req, res, next)
+
 function logActividad(usuario_id, tipo, descripcion, req) {
   const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 6)
   const ip = req?.ip || ''
@@ -13,7 +18,7 @@ function logActividad(usuario_id, tipo, descripcion, req) {
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
-router.post('/login', (req, res) => {
+router.post('/login', rl10per15m, (req, res) => {
   const { email, password } = req.body
   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' })
 
@@ -46,12 +51,12 @@ router.post('/cambiar-password', requireAuth, (req, res) => {
 })
 
 // ── Solicitar recuperación de contraseña ──────────────────────────────────────
-router.post('/forgot-password', async (req, res) => {
+router.post('/forgot-password', rl5per60m, async (req, res) => {
   const { email } = req.body
   if (!email) return res.status(400).json({ error: 'Email requerido' })
 
   const user = db.prepare('SELECT * FROM usuarios WHERE email = ? AND activo = 1').get(email.trim().toLowerCase())
-  if (!user) return res.status(404).json({ error: 'Usuario o correo no existente, favor de verificar' })
+  if (!user) return res.json({ ok: true })
 
   // Invalidar tokens anteriores del mismo usuario
   db.prepare("UPDATE reset_tokens SET usado = 1 WHERE usuario_id = ? AND usado = 0").run(user.id)
@@ -69,7 +74,7 @@ router.post('/forgot-password', async (req, res) => {
     console.error('Error enviando email de recuperación:', e.message)
     // No fallar si el email no se envía — el token ya está generado
     // En desarrollo: loguear el token en consola
-    console.log(`[DEV] Token de recuperación para ${user.email}: ${token}`)
+    if (process.env.NODE_ENV !== 'production') console.log(`[DEV] Token de recuperación para ${user.email}: ${token}`)
   }
 
   res.json({ ok: true })

@@ -1,5 +1,6 @@
 const router = require('express').Router()
 const bcrypt = require('bcryptjs')
+const { randomBytes } = require('crypto')
 const db = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
@@ -46,6 +47,9 @@ router.get('/', requireAuth, (req, res) => {
 })
 
 router.get('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const p = db.prepare('SELECT * FROM pre_registros WHERE id = ?').get(req.params.id)
   if (!p) return res.status(404).json({ error: 'No encontrado' })
   res.json(p)
@@ -110,7 +114,7 @@ router.post('/:id/crear-cuenta', requireAuth, async (req, res) => {
         tutorId = tutorUsuario.id
       } else {
         // Generar contraseña aleatoria para el tutor
-        tutorPassword = Math.random().toString(36).slice(-8)
+        tutorPassword = randomBytes(8).toString('base64url').slice(0, 10)
         const allIds = db.prepare('SELECT id FROM usuarios').all().map(r => r.id)
         const maxId = allIds.reduce((m, id) => Math.max(m, parseInt(id.replace('u', '')) || 0), 0)
         tutorId = 'u' + (maxId + 1)
@@ -134,7 +138,7 @@ router.post('/:id/crear-cuenta', requireAuth, async (req, res) => {
     }
   }
 
-  res.json({ nombre: pr.nombre, email: pr.email, password, usuario_id: newId, tutor: tutorResult })
+  res.json({ nombre: pr.nombre, email: pr.email, usuario_id: newId, tutor: tutorResult })
 })
 
 router.post('/:id/enviar-credenciales', requireAuth, async (req, res) => {

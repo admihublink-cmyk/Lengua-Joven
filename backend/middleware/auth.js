@@ -1,6 +1,9 @@
 const jwt = require('jsonwebtoken')
 const db = require('../db')
 
+if (!process.env.JWT_SECRET) {
+  console.warn('[SEGURIDAD] JWT_SECRET no configurado — usando clave por defecto. No usar en producción.')
+}
 const JWT_SECRET = process.env.JWT_SECRET || 'lengua-joven-secret-2026'
 
 function requireAuth(req, res, next) {

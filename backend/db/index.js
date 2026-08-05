@@ -461,4 +461,57 @@ try {
   }
 } catch (_) {}
 
+// Seed de usuarios demo: un juego por cada escuela de la oferta educativa
+try {
+  const pwHash = bcrypt.hashSync('Abc12345', 10)
+  const insU = db.prepare(`INSERT OR IGNORE INTO usuarios
+    (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad)
+    VALUES (?,?,?,?,?,?,1,?,?,?)`)
+  const insCP = db.prepare('INSERT OR IGNORE INTO coordinador_planteles (coordinador_id, plantel_id) VALUES (?,?)')
+  const insTA = db.prepare('INSERT OR IGNORE INTO tutor_alumnos (tutor_id, alumno_id) VALUES (?,?)')
+
+  const ESCUELAS = [
+    { pid: 'p8',  abbr: 'item',  nom: 'ITEM Idiomas',         base: 20 },
+    { pid: 'p5',  abbr: 'ies',   nom: 'Idiomas en Serio',     base: 26 },
+    { pid: 'p4',  abbr: 'imnar', nom: 'Inst. Mex. Norteam.',  base: 32 },
+    { pid: 'p9',  abbr: 'cca',   nom: 'C. Cultural Alemán',   base: 38 },
+    { pid: 'p6',  abbr: 'len',   nom: 'Lenglobal',            base: 44 },
+    { pid: 'p7',  abbr: 'utk',   nom: 'U talk',               base: 50 },
+    { pid: 'p10', abbr: 'alt',   nom: 'Altissia',             base: 56 },
+  ]
+
+  for (const { pid, abbr, nom, base } of ESCUELAS) {
+    const uid  = n => `u${base + n}`
+    const mail = role => `${role}.${abbr}@lj.test`
+    // coordinador
+    insU.run(uid(0), `Coord ${nom}`,   mail('coord'),  pwHash, 'coordinador', pid, null, null, 'Nuevo León')
+    insCP.run(uid(0), pid)
+    // director
+    insU.run(uid(1), `Dir ${nom}`,     mail('dir'),    pwHash, 'director',    pid, null, null, 'Nuevo León')
+    // alumno adulto (nacido 2000)
+    insU.run(uid(2), `Alumno ${nom}`,  mail('alumno'), pwHash, 'alumno',      pid, `MAT-${abbr.toUpperCase()}-01`, '2000-05-10', 'Nuevo León')
+    // menor 1 (nacido 2012)
+    insU.run(uid(3), `Menor1 ${nom}`,  mail('menor1'), pwHash, 'alumno',      pid, `MAT-${abbr.toUpperCase()}-02`, '2012-03-15', 'Nuevo León')
+    // menor 2 (nacido 2013)
+    insU.run(uid(4), `Menor2 ${nom}`,  mail('menor2'), pwHash, 'alumno',      pid, `MAT-${abbr.toUpperCase()}-03`, '2013-09-22', 'Nuevo León')
+    // tutor compartido para los 2 menores
+    insU.run(uid(5), `Tutor ${nom}`,   mail('tutor'),  pwHash, 'tutor',       null, null, null, 'Nuevo León')
+    insTA.run(uid(5), uid(3))
+    insTA.run(uid(5), uid(4))
+  }
+} catch (e) { console.error('Seed demo usuarios:', e.message) }
+
+// Sincronizar idiomas: agregar a la tabla idiomas cualquier idioma que exista en ofertas y no esté registrado
+try {
+  const idiomasOferta = db.prepare("SELECT DISTINCT idioma FROM ofertas WHERE idioma IS NOT NULL AND idioma != ''").all()
+  for (const { idioma } of idiomasOferta) {
+    const existe = db.prepare("SELECT id FROM idiomas WHERE nombre = ?").get(idioma)
+    if (!existe) {
+      const allIds = db.prepare("SELECT id FROM idiomas").all().map(r => r.id)
+      const max = allIds.reduce((m, id) => Math.max(m, parseInt(id.replace('i', '')) || 0), 0)
+      db.prepare("INSERT INTO idiomas (id, nombre) VALUES (?,?)").run('i' + (max + 1), idioma)
+    }
+  }
+} catch (_) {}
+
 module.exports = db
