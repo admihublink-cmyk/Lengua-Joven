@@ -26,12 +26,17 @@ router.get('/:id', requireAuth, (req, res) => {
 })
 
 router.post('/', requireAuth, (req, res) => {
-  if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
+  if (!['superadmin', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const { nombre, ciudad, convenio_vencimiento } = req.body
+  if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
   const ids = db.prepare('SELECT id FROM planteles').all().map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('p', '')) || 0), 0)
   const newId = 'p' + (max + 1)
-  db.prepare('INSERT INTO planteles VALUES (?,?,?,?,?)').run(newId, nombre, ciudad || '', convenio_vencimiento || '', 0)
+  db.prepare('INSERT INTO planteles VALUES (?,?,?,?,?)').run(newId, nombre.trim(), ciudad || '', convenio_vencimiento || '', 0)
+  // Si es coordinador, asignarlo automáticamente al nuevo plantel
+  if (req.user.rol === 'coordinador') {
+    db.prepare('INSERT OR IGNORE INTO coordinador_planteles (coordinador_id, plantel_id) VALUES (?,?)').run(req.user.id, newId)
+  }
   res.status(201).json(db.prepare('SELECT * FROM planteles WHERE id = ?').get(newId))
 })
 
