@@ -29,9 +29,10 @@ const DOCUMENTOS = [
 export default function Convenios() {
   const { usuario } = useAuth()
   const [planteles, setPlanteles] = useState([])
-  const [modal, setModal] = useState(null) // 'renovar' | 'datos' | 'documentos'
+  const [modal, setModal] = useState(null) // 'renovar' | 'datos' | 'documentos' | 'nuevo'
   const [plantelSel, setPlantelSel] = useState(null)
   const [form, setForm] = useState({})
+  const [formNuevo, setFormNuevo] = useState({ nombre: '', ciudad: '' })
   const [guardando, setGuardando] = useState(false)
   const [generando, setGenerando] = useState(false)
   // Documentos
@@ -181,12 +182,26 @@ export default function Convenios() {
     } catch (e) { alert('Error al generar: ' + e.message) } finally { setGenerando(false) }
   }
 
+  async function crearPlantel() {
+    if (!formNuevo.nombre.trim()) return alert('El nombre de la escuela es requerido.')
+    setGuardando(true)
+    try {
+      await api.crearPlantel(formNuevo)
+      setModal(null)
+      setFormNuevo({ nombre: '', ciudad: '' })
+      await cargar()
+    } catch (e) { alert('Error: ' + e.message) } finally { setGuardando(false) }
+  }
+
   const datosCompletos = (p) => !!(p.razon_social && p.representante_legal && p.rfc && p.domicilio_fiscal)
 
   return (
     <div>
       <div className="page-header">
         <h2>Convenios con planteles</h2>
+        <button className="btn-primario" onClick={() => { setFormNuevo({ nombre: '', ciudad: '' }); setModal('nuevo') }}>
+          + Nuevo convenio
+        </button>
       </div>
 
       {porVencer.length > 0 && (
@@ -419,6 +434,36 @@ export default function Convenios() {
 
           <div className="modal-acciones">
             <button className="btn-primario" onClick={() => { setModal(null); setPreview(null) }}>Cerrar</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: nuevo convenio / plantel */}
+      {modal === 'nuevo' && (
+        <Modal titulo="+ Nuevo convenio con escuela" onClose={() => setModal(null)}>
+          <p className="texto-muted" style={{ fontSize: 13, marginBottom: 16 }}>
+            Registra la escuela con la que se establecerá el convenio. Después podrás capturar sus datos legales y subir los documentos.
+          </p>
+          <label>Nombre de la escuela / institución *
+            <input
+              value={formNuevo.nombre}
+              onChange={e => setFormNuevo({ ...formNuevo, nombre: e.target.value })}
+              placeholder="Ej. ITEM Idiomas"
+              autoFocus
+            />
+          </label>
+          <label>Ciudad
+            <input
+              value={formNuevo.ciudad}
+              onChange={e => setFormNuevo({ ...formNuevo, ciudad: e.target.value })}
+              placeholder="Ej. Monterrey"
+            />
+          </label>
+          <div className="modal-acciones">
+            <button className="btn-sec" onClick={() => setModal(null)}>Cancelar</button>
+            <button className="btn-primario" onClick={crearPlantel} disabled={guardando}>
+              {guardando ? 'Guardando…' : '✓ Crear convenio'}
+            </button>
           </div>
         </Modal>
       )}
