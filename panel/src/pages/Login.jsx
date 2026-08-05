@@ -508,12 +508,36 @@ export default function Login({ onLogin }) {
 
           {/* Filtros */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
-            <select value={filtroPlantel} onChange={e => { setFiltroPlantel(e.target.value); setFiltroIdioma('') }}
+            <select value={filtroPlantel} onChange={e => {
+                const nuevoPlantel = e.target.value
+                setFiltroPlantel(nuevoPlantel)
+                // Si el idioma actual ya no es válido para el nuevo plantel, limpiarlo
+                if (filtroIdioma && nuevoPlantel) {
+                  const nombreIdioma = idiomas.find(i => i.id === filtroIdioma)?.nombre || ''
+                  const sigueValido = ofertas.some(o => o.plantel_id === nuevoPlantel && o.idioma === nombreIdioma)
+                  if (!sigueValido) setFiltroIdioma('')
+                }
+              }}
               style={{ padding: '9px 14px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer' }}>
               <option value="">📍 Selecciona tu plantel…</option>
-              {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              {planteles
+                .filter(p => {
+                  if (!filtroIdioma) return true
+                  const nombreIdioma = idiomas.find(i => i.id === filtroIdioma)?.nombre || ''
+                  return ofertas.some(o => o.plantel_id === p.id && o.idioma === nombreIdioma)
+                })
+                .map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
             </select>
-            <select value={filtroIdioma} onChange={e => setFiltroIdioma(e.target.value)}
+            <select value={filtroIdioma} onChange={e => {
+                const nuevoIdioma = e.target.value
+                setFiltroIdioma(nuevoIdioma)
+                // Si el plantel actual ya no ofrece el nuevo idioma, limpiarlo
+                if (filtroPlantel && nuevoIdioma) {
+                  const nombreIdioma = idiomas.find(i => i.id === nuevoIdioma)?.nombre || ''
+                  const sigueValido = ofertas.some(o => o.plantel_id === filtroPlantel && o.idioma === nombreIdioma)
+                  if (!sigueValido) setFiltroPlantel('')
+                }
+              }}
               style={{ padding: '9px 14px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer' }}>
               <option value="">🌐 Selecciona tu idioma…</option>
               {[...new Map(
