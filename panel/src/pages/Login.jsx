@@ -508,7 +508,7 @@ export default function Login({ onLogin }) {
 
           {/* Filtros */}
           <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
-            <select value={filtroPlantel} onChange={e => setFiltroPlantel(e.target.value)}
+            <select value={filtroPlantel} onChange={e => { setFiltroPlantel(e.target.value); setFiltroIdioma('') }}
               style={{ padding: '9px 14px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer' }}>
               <option value="">📍 Selecciona tu plantel…</option>
               {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
@@ -516,7 +516,11 @@ export default function Login({ onLogin }) {
             <select value={filtroIdioma} onChange={e => setFiltroIdioma(e.target.value)}
               style={{ padding: '9px 14px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer' }}>
               <option value="">🌐 Selecciona tu idioma…</option>
-              {idiomas.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+              {[...new Map(
+                idiomas
+                  .filter(i => !filtroPlantel || ofertas.some(o => o.plantel_id === filtroPlantel && o.idioma === i.nombre))
+                  .map(i => [i.nombre, i])
+              ).values()].map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
             </select>
           </div>
 
