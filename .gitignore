@@ -1,0 +1,29 @@
+# Dependencias
+node_modules/
+panel/node_modules/
+backend/node_modules/
+
+# Variables de entorno (¡NO subir!)
+.env
+backend/.env
+
+# Base de datos local
+backend/*.sqlite
+backend/*.db
+backend/*.db-shm
+backend/*.db-wal
+
+# Logs
+*.log
+npm-debug.log*
+
+# Vite / build
+panel/dist/
+panel/.vite/
+
+# Archivos subidos por usuarios
+backend/uploads/
+
+# OS
+.DS_Store
+Thumbs.db
