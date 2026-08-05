@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { login, getOfertas, getProveedoresOferta, crearPreRegistro, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
+import { login, getOfertas, crearPreRegistro, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
 
 const fetchPublico = (path) => fetch('/api/publico/' + path).then(r => r.json())
 
@@ -46,7 +46,6 @@ export default function Login({ onLogin }) {
   const [focusedInput, setFocusedInput] = useState('')
 
   const [ofertas, setOfertas] = useState([])
-  const [proveedores, setProveedores] = useState([])
   const [planteles, setPlanteles] = useState([])
   const [idiomas, setIdiomas] = useState([])
   const [filtroPlantel, setFiltroPlantel] = useState('')
@@ -56,7 +55,6 @@ export default function Login({ onLogin }) {
 
   useEffect(() => {
     getOfertas().then(setOfertas).catch(() => {})
-    getProveedoresOferta().then(setProveedores).catch(() => {})
     fetchPublico('planteles').then(setPlanteles).catch(() => {})
     fetchPublico('idiomas').then(setIdiomas).catch(() => {})
     // Detectar token de recuperación en URL (?reset=TOKEN)
@@ -78,10 +76,10 @@ export default function Login({ onLogin }) {
 
   const idiomasResumen = [...new Set(ofertas.filter(o => o.proveedor !== 'Altissia').map(o => o.idioma))].sort()
 
-  // Proveedores que ofrecen el idioma seleccionado en el form de pre-registro
-  const proveedoresPorIdioma = pre.idioma_interes
-    ? [...new Set(ofertas.filter(o => o.idioma === pre.idioma_interes).map(o => o.proveedor))]
-    : proveedores
+  // Planteles que ofrecen el idioma seleccionado en el form de pre-registro
+  const plantelesPorIdioma = pre.idioma_interes
+    ? planteles.filter(p => ofertas.some(o => o.plantel_id === p.id && o.idioma === pre.idioma_interes))
+    : planteles
 
   // Ofertas del idioma seleccionado en la sección pública (para el panel de horarios)
   const ofertasIdioma = idiomaAbierto
@@ -385,7 +383,7 @@ export default function Login({ onLogin }) {
                       <select value={pre.proveedor_interes} onChange={e => setPre({ ...pre, proveedor_interes: e.target.value })}
                         style={{ ...inputStyle(false), appearance: 'auto' }}>
                         <option value="">Sin preferencia</option>
-                        {proveedoresPorIdioma.map(p => <option key={p} value={p}>{p}</option>)}
+                        {plantelesPorIdioma.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
                       </select>
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
@@ -641,7 +639,7 @@ export default function Login({ onLogin }) {
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#111' }}>Oferta educativa</h2>
           <p style={{ color: '#666', fontSize: 14, marginBottom: 24 }}>
-            {proveedores.length} escuelas socias · {idiomasResumen.length} idiomas disponibles + 21 idiomas autodidacta con Altissia
+            {planteles.length} escuelas socias · {idiomasResumen.length} idiomas disponibles + 21 idiomas autodidacta con Altissia
           </p>
           <p style={{ color: '#888', fontSize: 13, marginBottom: 20 }}>
             Haz clic en un idioma para ver los horarios disponibles.
@@ -730,21 +728,21 @@ export default function Login({ onLogin }) {
           {/* Escuelas socias */}
           <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 16, color: '#111' }}>Escuelas socias</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 16 }}>
-            {proveedores.map(prov => {
-              const ofsProv = ofertas.filter(o => o.proveedor === prov)
-              const idiomasProv = [...new Set(ofsProv.map(o => o.idioma))]
-              const esAltissia = prov === 'Altissia'
+            {planteles.map(plantel => {
+              const ofsPlantel = ofertas.filter(o => o.plantel_id === plantel.id)
+              const idiomasPlantel = [...new Set(ofsPlantel.map(o => o.idioma))]
+              const esAltissia = plantel.nombre === 'Altissia'
               return (
-                <div key={prov} style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1.5px solid #f0e0cc', borderLeft: esAltissia ? '4px solid #27ae60' : '4px solid #f18b11' }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#111' }}>{prov}</div>
-                  <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>{esAltissia ? '💻 Autodidacta · En línea' : `🏫 ${ofsProv[0]?.modalidad || 'Presencial'}`}</div>
+                <div key={plantel.id} style={{ background: '#fff', borderRadius: 14, padding: '20px', border: '1.5px solid #f0e0cc', borderLeft: esAltissia ? '4px solid #27ae60' : '4px solid #f18b11' }}>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#111' }}>{plantel.nombre}</div>
+                  <div style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>{esAltissia ? '💻 Autodidacta · En línea' : `🏫 ${ofsPlantel[0]?.modalidad || 'Presencial'} · ${plantel.ciudad}`}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                    {idiomasProv.slice(0, 5).map(i => (
+                    {idiomasPlantel.slice(0, 5).map(i => (
                       <button key={i} onClick={() => setIdiomaAbierto(i)} style={{ fontSize: 11, background: '#faf0e6', padding: '2px 8px', borderRadius: 10, color: '#f18b11', fontWeight: 600, border: 'none', cursor: 'pointer' }}>
                         {ICONOS_IDIOMA[i] || '🌐'} {i}
                       </button>
                     ))}
-                    {idiomasProv.length > 5 && <span style={{ fontSize: 11, color: '#999', padding: '2px 6px' }}>+{idiomasProv.length - 5} más</span>}
+                    {idiomasPlantel.length > 5 && <span style={{ fontSize: 11, color: '#999', padding: '2px 6px' }}>+{idiomasPlantel.length - 5} más</span>}
                   </div>
                 </div>
               )

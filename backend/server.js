@@ -21,7 +21,12 @@ app.use('/api/periodos', require('./routes/periodos'))
 // Endpoints públicos para landing page (solo lectura, sin datos sensibles)
 const db = require('./db')
 app.get('/api/publico/planteles', (req, res) => {
-  res.json(db.prepare('SELECT id, nombre, ciudad FROM planteles ORDER BY nombre').all())
+  res.json(db.prepare(`
+    SELECT DISTINCT p.id, p.nombre, p.ciudad
+    FROM planteles p
+    INNER JOIN ofertas o ON o.plantel_id = p.id
+    ORDER BY p.nombre
+  `).all())
 })
 app.get('/api/publico/idiomas', (req, res) => {
   res.json(db.prepare('SELECT id, nombre FROM idiomas ORDER BY nombre').all())
