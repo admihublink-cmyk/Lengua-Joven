@@ -433,4 +433,32 @@ try {
   )`)
 } catch (_) {}
 
+// Migración: vincular ofertas con planteles
+try { db.exec("ALTER TABLE ofertas ADD COLUMN plantel_id TEXT") } catch (_) {}
+
+// Crear un plantel por cada proveedor distinto en ofertas y vincularlo
+const CIUDADES_PROV = {
+  'Altissia': 'En línea',
+  'Centro cultural Alemán': 'Monterrey',
+  'ITEM Idiomas': 'Monterrey',
+  'Idiomas en Serio': 'San Nicolás de los Garza',
+  'Instituto Mexicano Norteamericano de Relaciones Culturales': 'Monterrey',
+  'Lenglobal': 'En línea',
+  'U talk': 'En línea',
+}
+try {
+  const provs = db.prepare("SELECT DISTINCT proveedor FROM ofertas WHERE proveedor IS NOT NULL AND proveedor != ''").all()
+  for (const { proveedor } of provs) {
+    let plantel = db.prepare("SELECT id FROM planteles WHERE nombre = ?").get(proveedor)
+    if (!plantel) {
+      const allIds = db.prepare("SELECT id FROM planteles").all().map(r => r.id)
+      const max = allIds.reduce((m, id) => Math.max(m, parseInt(id.replace('p', '')) || 0), 0)
+      const newId = 'p' + (max + 1)
+      db.prepare("INSERT INTO planteles (id, nombre, ciudad, convenio_vencimiento, convenio_notificado) VALUES (?,?,?,?,?)").run(newId, proveedor, CIUDADES_PROV[proveedor] || '', '', 0)
+      plantel = { id: newId }
+    }
+    db.prepare("UPDATE ofertas SET plantel_id = ? WHERE proveedor = ? AND (plantel_id IS NULL OR plantel_id = '')").run(plantel.id, proveedor)
+  }
+} catch (_) {}
+
 module.exports = db
