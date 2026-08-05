@@ -1,0 +1,153 @@
+const router = require('express').Router()
+const bcrypt = require('bcryptjs')
+const db = require('../db')
+const { requireAuth } = require('../middleware/auth')
+
+const safe = u => { const { password_hash, ...r } = u; return { ...r, activo: r.activo === 1 } }
+
+// Roles que puede asignar un coordinador (no puede crear superadmin ni otros coordinadores)
+const ROLES_INSTITUCION = ['director', 'maestro', 'profesor', 'alumno', 'admin_ventas']
+
+router.get('/', requireAuth, (req, res) => {
+  const me = req.user
+  let rows
+  if (me.rol === 'superadmin') {
+    rows = db.prepare('SELECT * FROM usuarios ORDER BY nombre').all()
+  } else if (me.rol === 'coordinador') {
+    const ids = me.planteles || []
+    if (ids.length === 0) return res.json([])
+    const placeholders = ids.map(() => '?').join(',')
+    rows = db.prepare(`SELECT * FROM usuarios WHERE plantel_id IN (${placeholders}) ORDER BY nombre`).all(...ids)
+  } else if (me.plantel_id) {
+    rows = db.prepare('SELECT * FROM usuarios WHERE plantel_id = ? ORDER BY nombre').all(me.plantel_id)
+  } else {
+    rows = []
+  }
+  res.json(rows.map(safe))
+})
+
+// Endpoint para tutores: obtener sus alumnos menores con info básica
+router.get('/mis-alumnos', requireAuth, (req, res) => {
+  if (req.user.rol !== 'tutor') return res.status(403).json({ error: 'Sin permiso' })
+  const alumnos = req.user.alumnos || []
+  if (alumnos.length === 0) return res.json([])
+  const rows = db.prepare(`SELECT id, nombre, email, plantel_id, fecha_nacimiento FROM usuarios WHERE id IN (${alumnos.map(() => '?').join(',')})`).all(...alumnos)
+  res.json(rows)
+})
+
+router.get('/:id', requireAuth, (req, res) => {
+  const u = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+  if (!u) return res.status(404).json({ error: 'No encontrado' })
+  const me = req.user
+  if (me.rol === 'superadmin') return res.json(safe(u))
+  if (me.rol === 'coordinador') {
+    if (!(me.planteles || []).includes(u.plantel_id) && me.id !== req.params.id) {
+      return res.status(403).json({ error: 'Sin permiso' })
+    }
+    return res.json(safe(u))
+  }
+  if (u.plantel_id !== me.plantel_id && me.id !== req.params.id) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  res.json(safe(u))
+})
+
+router.post('/', requireAuth, (req, res) => {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador'].includes(me.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor } = req.body
+  if (!nombre || !email || !password || !rol) return res.status(400).json({ error: 'Campos requeridos: nombre, email, password, rol' })
+  // Coordinadores solo pueden crear personal de la institución
+  if (me.rol === 'coordinador' && !ROLES_INSTITUCION.includes(rol)) {
+    return res.status(403).json({ error: 'No puedes asignar ese rol' })
+  }
+  // Coordinadores solo pueden asignar sus planteles
+  if (me.rol === 'coordinador' && plantel_id && !(me.planteles || []).includes(plantel_id)) {
+    return res.status(403).json({ error: 'Plantel no asignado' })
+  }
+
+  const existing = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email.toLowerCase())
+  if (existing) return res.status(400).json({ error: 'Email ya registrado' })
+
+  const ids = db.prepare('SELECT id FROM usuarios ORDER BY id').all().map(r => r.id)
+  const maxNum = ids.reduce((m, id) => {
+    const n = parseInt(id.replace('u', ''))
+    return isNaN(n) ? m : Math.max(m, n)
+  }, 0)
+  const newId = 'u' + (maxNum + 1)
+
+  const hash = bcrypt.hashSync(password, 10)
+  db.prepare(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+    newId, nombre, email.toLowerCase(), hash, rol,
+    plantel_id || null, activo !== false ? 1 : 0,
+    matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null
+  )
+  const created = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(newId)
+  res.status(201).json(safe(created))
+})
+
+router.put('/:id', requireAuth, (req, res) => {
+  const me = req.user
+  const target = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+  if (!target) return res.status(404).json({ error: 'No encontrado' })
+
+  const canEdit = me.rol === 'superadmin' ||
+    (me.rol === 'director' && target.plantel_id === me.plantel_id) ||
+    (me.rol === 'coordinador' && (me.planteles || []).includes(target.plantel_id)) ||
+    me.id === req.params.id
+
+  if (!canEdit) return res.status(403).json({ error: 'Sin permiso' })
+
+  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor } = req.body
+  const updates = {}
+  if (nombre !== undefined) updates.nombre = nombre
+  if (email !== undefined) updates.email = email.toLowerCase()
+  if (rol !== undefined && me.rol === 'superadmin') updates.rol = rol
+  if (rol !== undefined && me.rol === 'coordinador' && ROLES_INSTITUCION.includes(rol)) updates.rol = rol
+  if (plantel_id !== undefined && me.rol === 'superadmin') updates.plantel_id = plantel_id || null
+  if (plantel_id !== undefined && me.rol === 'director' && me.plantel_id) updates.plantel_id = me.plantel_id
+  if (plantel_id !== undefined && me.rol === 'coordinador' && (me.planteles || []).includes(plantel_id)) updates.plantel_id = plantel_id || null
+  if (activo !== undefined && me.rol !== req.params.id) updates.activo = activo ? 1 : 0
+  if (matricula !== undefined) updates.matricula = matricula || null
+  if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
+  if (estado_entidad !== undefined) updates.estado_entidad = estado_entidad || null
+  if (proveedor !== undefined) updates.proveedor = proveedor || null
+  if (password) updates.password_hash = bcrypt.hashSync(password, 10)
+
+  const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ')
+  if (setClauses) {
+    db.prepare(`UPDATE usuarios SET ${setClauses} WHERE id = ?`).run(...Object.values(updates), req.params.id)
+  }
+  const updated = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+  res.json(safe(updated))
+})
+
+router.delete('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  db.prepare('UPDATE usuarios SET activo = 0 WHERE id = ?').run(req.params.id)
+  res.json({ ok: true })
+})
+
+// ── Asignación de planteles a coordinadores ───────────────────────────────────
+router.get('/:id/planteles', requireAuth, (req, res) => {
+  if (req.user.rol !== 'superadmin' && req.user.id !== req.params.id) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const rows = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(req.params.id)
+  res.json(rows.map(r => r.plantel_id))
+})
+
+router.put('/:id/planteles', requireAuth, (req, res) => {
+  if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
+  const { plantel_ids } = req.body  // array de IDs
+  if (!Array.isArray(plantel_ids)) return res.status(400).json({ error: 'plantel_ids debe ser un array' })
+  db.prepare('DELETE FROM coordinador_planteles WHERE coordinador_id = ?').run(req.params.id)
+  const insert = db.prepare('INSERT INTO coordinador_planteles VALUES (?, ?)')
+  for (const pid of plantel_ids) insert.run(req.params.id, pid)
+  res.json({ ok: true, plantel_ids })
+})
+
+module.exports = router
