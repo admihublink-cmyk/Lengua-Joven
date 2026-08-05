@@ -4,214 +4,250 @@ import { P } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
 
+const MODALIDAD_COLOR = {
+  'Presencial': '#f18b11',
+  'En Línea': '#2980b9',
+  'Autodidacta': '#27ae60',
+}
+
+function fmtFecha(iso) {
+  if (!iso) return null
+  const [y, m, d] = iso.split('-')
+  const meses = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic']
+  return `${parseInt(d)} ${meses[parseInt(m)-1]} ${y}`
+}
+
 export default function Idiomas() {
   const { usuario, tienePermiso } = useAuth()
-  const [idiomas, setIdiomas] = useState([])
-  const [niveles, setNiveles] = useState([])
+  const [ofertas, setOfertas]   = useState([])
+  const [idiomas, setIdiomas]   = useState([])
   const [planteles, setPlanteles] = useState([])
-  const [modal, setModal] = useState(null)
-  const [form, setForm] = useState({})
-
-  const plantelDefault = usuario.plantel_id || ''
-  const [plantelFiltro, setPlantelFiltro] = useState(plantelDefault)
+  const [periodos, setPeriodos] = useState([])
+  const [plantelFiltro, setPlantelFiltro] = useState(usuario.plantel_id || '')
+  const [modal, setModal]       = useState(null)
+  const [form, setForm]         = useState({})
+  const [guardando, setGuardando] = useState(false)
 
   async function cargar() {
     try {
-      const [i, p] = await Promise.all([api.getIdiomas(), api.getPlanteles()])
+      const [o, i, p] = await Promise.all([api.getOfertas(), api.getIdiomas(), api.getPlanteles()])
+      setOfertas(o)
       setIdiomas(i)
       setPlanteles(p)
-      if (i.length > 0) {
-        const todos = await Promise.all(i.map(id => api.getNiveles(id.id)))
-        setNiveles(todos.flat())
-      }
-    } catch (e) {
-      console.error('Error cargando idiomas:', e)
-    }
+      const perAll = await Promise.all(p.map(pl => api.getPeriodos({ plantel_id: pl.id })))
+      setPeriodos(perAll.flat())
+    } catch (e) { console.error(e) }
   }
 
   useEffect(() => { cargar() }, [])
 
-  const idiomasFiltrados = plantelFiltro
-    ? idiomas.filter(i => i.plantel_id === plantelFiltro)
-    : idiomas
-
-  function nivelesDeIdioma(id) {
-    return niveles.filter(n => n.idioma_id === id).sort((a, b) => a.orden - b.orden)
-  }
-  function nombrePlantel(id) {
-    return planteles.find(p => p.id === id)?.nombre || id
+  // Idiomas únicos que ofrece un plantel (desde ofertas)
+  function idiomasDelPlantel(plantelId) {
+    const vistos = new Set()
+    return ofertas
+      .filter(o => o.plantel_id === plantelId)
+      .filter(o => { if (vistos.has(o.idioma)) return false; vistos.add(o.idioma); return true })
   }
 
-  function abrirCrearIdioma() {
-    setForm({ nombre: '', plantel_id: plantelFiltro || '' })
-    setModal('idioma')
+  function periodoDe(plantelId, idiomaNombre) {
+    const rec = idiomas.find(i => i.nombre === idiomaNombre)
+    if (!rec) return null
+    return periodos.find(p => p.plantel_id === plantelId && p.idioma_id === rec.id) || null
   }
 
-  async function guardarIdioma() {
-    if (!form.nombre?.trim() || !form.plantel_id) {
-      alert('Ingresa el nombre del idioma y selecciona el plantel.')
-      return
-    }
-    try {
-      await api.crearIdioma({ nombre: form.nombre.trim(), plantel_id: form.plantel_id })
-      setModal(null)
-      await cargar()
-    } catch (e) {
-      alert('Error: ' + e.message)
-    }
-  }
-
-  function abrirCrearNivel(idiomaId) {
+  function abrirModal(plantel, idiomaNombre) {
+    const rec = idiomas.find(i => i.nombre === idiomaNombre)
+    const per = periodoDe(plantel.id, idiomaNombre)
     setForm({
-      nombre: '',
-      orden: nivelesDeIdioma(idiomaId).length + 1,
-      idioma_id: idiomaId,
+      plantel_id: plantel.id, plantel_nombre: plantel.nombre,
+      idioma_nombre: idiomaNombre, idioma_id: rec?.id || null,
+      periodo_id: per?.id || null,
+      ciclo:               per?.ciclo               || '',
+      inicio_prereg:       per?.inicio_prereg        || '',
+      fin_prereg:          per?.fin_prereg           || '',
+      fecha_examen:        per?.fecha_examen         || '',
+      fecha_asignacion:    per?.fecha_asignacion     || '',
+      fecha_inicio_clases: per?.fecha_inicio_clases  || '',
     })
-    setModal('nivel')
+    setModal('periodo')
   }
 
-  async function guardarNivel() {
-    if (!form.nombre?.trim()) return
+  async function guardar() {
+    if (!form.idioma_id) return
+    setGuardando(true)
     try {
-      await api.crearNivel(form.idioma_id, { nombre: form.nombre.trim(), orden: form.orden })
+      const payload = {
+        plantel_id: form.plantel_id, idioma_id: form.idioma_id,
+        ciclo:               form.ciclo               || null,
+        inicio_prereg:       form.inicio_prereg        || null,
+        fin_prereg:          form.fin_prereg           || null,
+        fecha_examen:        form.fecha_examen         || null,
+        fecha_asignacion:    form.fecha_asignacion     || null,
+        fecha_inicio_clases: form.fecha_inicio_clases  || null,
+      }
+      if (form.periodo_id) await api.actualizarPeriodo(form.periodo_id, payload)
+      else                 await api.crearPeriodo(payload)
       setModal(null)
       await cargar()
-    } catch (e) {
-      alert('Error: ' + e.message)
-    }
+    } catch (e) { alert('Error: ' + e.message) }
+    finally { setGuardando(false) }
   }
 
-  async function eliminarIdioma(id, nombre) {
-    if (!confirm(`¿Eliminar "${nombre}" y todos sus niveles?`)) return
-    try {
-      await api.eliminarIdioma(id)
-      await cargar()
-    } catch (e) {
-      alert('Error: ' + e.message)
-    }
+  async function eliminar() {
+    if (!form.periodo_id || !confirm('¿Eliminar este período?')) return
+    try { await api.eliminarPeriodo(form.periodo_id); setModal(null); await cargar() }
+    catch (e) { alert('Error: ' + e.message) }
   }
+
+  const puedeEditar = tienePermiso(P.IDIOMA_CONFIG)
+
+  function TarjetaIdioma({ plantel, oferta }) {
+    const per = periodoDe(plantel.id, oferta.idioma)
+    const color = MODALIDAD_COLOR[oferta.modalidad] || '#888'
+    return (
+      <div className="card">
+        <div className="card-head-row">
+          <h3 style={{ fontSize: 15 }}>🌐 {oferta.idioma}</h3>
+          {puedeEditar && (
+            <button className="btn-mini" onClick={() => abrirModal(plantel, oferta.idioma)}>
+              📅 {per ? 'Editar período' : 'Configurar período'}
+            </button>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
+          <span style={{ background: color + '22', color, borderRadius: 10, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+            {oferta.modalidad === 'Presencial' ? '🏫' : '💻'} {oferta.modalidad}
+          </span>
+          {oferta.categoria && (
+            <span style={{ background: '#fff4e0', color: '#f18b11', borderRadius: 10, padding: '2px 10px', fontSize: 12, fontWeight: 600 }}>
+              {oferta.categoria}
+            </span>
+          )}
+        </div>
+
+        {per ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+            {per.ciclo && (
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#f18b11', marginBottom: 2 }}>Ciclo {per.ciclo}</div>
+            )}
+            {[
+              { label: 'Pre-registro', value: per.inicio_prereg ? `${fmtFecha(per.inicio_prereg)}${per.fin_prereg ? ' – ' + fmtFecha(per.fin_prereg) : ''}` : null },
+              { label: 'Examen ubic.',  value: fmtFecha(per.fecha_examen) },
+              { label: 'Asignación',   value: fmtFecha(per.fecha_asignacion) },
+              { label: 'Inicio clases',value: fmtFecha(per.fecha_inicio_clases) },
+            ].map(({ label, value }) => value ? (
+              <div key={label} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12 }}>
+                <span style={{ color: '#888' }}>{label}</span>
+                <span style={{ fontWeight: 600 }}>{value}</span>
+              </div>
+            ) : null)}
+          </div>
+        ) : (
+          <p style={{ fontSize: 12, color: '#bbb', margin: 0 }}>
+            {puedeEditar ? 'Sin período configurado — haz clic en "Configurar período".' : 'Sin período de inscripción configurado.'}
+          </p>
+        )}
+      </div>
+    )
+  }
+
+  const plantelActual = planteles.find(p => p.id === plantelFiltro)
+  const idiomasActuales = plantelFiltro ? idiomasDelPlantel(plantelFiltro) : []
 
   return (
     <div>
       <div className="page-header">
-        <h2>Idiomas y Niveles</h2>
-        {tienePermiso(P.IDIOMA_CONFIG) && (
-          <button className="btn-primario" onClick={abrirCrearIdioma}>+ Idioma</button>
-        )}
+        <h2>Idiomas y Períodos</h2>
       </div>
 
+      {/* Tabs de planteles */}
       <div className="plantel-tabs">
         {!usuario.plantel_id && (
-          <button
-            className={`plantel-tab ${plantelFiltro === '' ? 'activo' : ''}`}
-            onClick={() => setPlantelFiltro('')}
-          >
+          <button className={`plantel-tab ${plantelFiltro === '' ? 'activo' : ''}`} onClick={() => setPlantelFiltro('')}>
             Todos los planteles
           </button>
         )}
         {planteles.map(p => (
-          <button
-            key={p.id}
-            className={`plantel-tab ${plantelFiltro === p.id ? 'activo' : ''}`}
-            onClick={() => setPlantelFiltro(p.id)}
-          >
+          <button key={p.id} className={`plantel-tab ${plantelFiltro === p.id ? 'activo' : ''}`} onClick={() => setPlantelFiltro(p.id)}>
             {p.nombre}
           </button>
         ))}
       </div>
 
-      {idiomasFiltrados.length === 0 && (
+      {/* Vista plantel seleccionado */}
+      {plantelFiltro && idiomasActuales.length === 0 && (
         <div className="card" style={{ textAlign: 'center', padding: 40, color: 'var(--texto-muted)' }}>
           <div style={{ fontSize: 32, marginBottom: 8 }}>🌐</div>
-          Este plantel aún no tiene idiomas configurados.
-          {tienePermiso(P.IDIOMA_CONFIG) && (
-            <div style={{ marginTop: 12 }}>
-              <button className="btn-primario" onClick={abrirCrearIdioma}>Agregar idioma</button>
-            </div>
-          )}
+          Este plantel no tiene oferta educativa registrada.
         </div>
       )}
 
-      <div className="card-grid">
-        {idiomasFiltrados.map(id => (
-          <div key={id.id} className="card">
-            <div className="card-head-row">
-              <h3>🌐 {id.nombre}</h3>
-              {tienePermiso(P.IDIOMA_CONFIG) && (
-                <div style={{ display: 'flex', gap: 6 }}>
-                  <button className="btn-mini" onClick={() => abrirCrearNivel(id.id)}>+ Nivel</button>
-                  <button className="btn-mini rojo" onClick={() => eliminarIdioma(id.id, id.nombre)}>✕</button>
-                </div>
-              )}
-            </div>
-
-            <div style={{ marginBottom: 10 }}>
-              <span className="badge nueva" style={{ fontSize: 11 }}>
-                📍 {nombrePlantel(id.plantel_id)}
-              </span>
-            </div>
-
-            <div className="niveles-lista">
-              {nivelesDeIdioma(id.id).map(n => (
-                <div key={n.id} className="nivel-chip">{n.nombre}</div>
-              ))}
-              {nivelesDeIdioma(id.id).length === 0 && (
-                <p className="texto-muted chico">Sin niveles configurados.</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
-
-      {modal === 'idioma' && (
-        <Modal titulo="Nuevo idioma" onClose={() => setModal(null)}>
-          <label>Plantel *
-            <select
-              value={form.plantel_id || ''}
-              onChange={e => setForm({ ...form, plantel_id: e.target.value })}
-              disabled={!!usuario.plantel_id}
-            >
-              <option value="">Seleccionar plantel…</option>
-              {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
-            </select>
-          </label>
-          <label>Nombre del idioma *
-            <input
-              value={form.nombre || ''}
-              onChange={e => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Ej. Inglés, Francés, Alemán…"
-            />
-          </label>
-          <div className="alerta info">
-            Cada plantel mantiene su propio catálogo de idiomas y puede usar escalas de nivel distintas.
-          </div>
-          <div className="modal-acciones">
-            <button className="btn-sec" onClick={() => setModal(null)}>Cancelar</button>
-            <button className="btn-primario" onClick={guardarIdioma}>Guardar</button>
-          </div>
-        </Modal>
+      {plantelFiltro && idiomasActuales.length > 0 && (
+        <div className="card-grid">
+          {idiomasActuales.map(oferta => (
+            <TarjetaIdioma key={oferta.idioma} plantel={plantelActual} oferta={oferta} />
+          ))}
+        </div>
       )}
 
-      {modal === 'nivel' && (
-        <Modal titulo="Nuevo nivel" onClose={() => setModal(null)}>
-          <label>Nombre del nivel *
-            <input
-              value={form.nombre || ''}
-              onChange={e => setForm({ ...form, nombre: e.target.value })}
-              placeholder="Ej. A1 — Básico, Nivel 1, Principiante…"
-            />
+      {/* Vista todos los planteles */}
+      {!plantelFiltro && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
+          {planteles.map(pl => {
+            const ids = idiomasDelPlantel(pl.id)
+            if (ids.length === 0) return null
+            return (
+              <div key={pl.id}>
+                <h3 style={{ fontSize: 14, fontWeight: 700, color: '#555', marginBottom: 12, textTransform: 'uppercase', letterSpacing: '.04em' }}>
+                  {pl.nombre}
+                </h3>
+                <div className="card-grid">
+                  {ids.map(oferta => <TarjetaIdioma key={oferta.idioma} plantel={pl} oferta={oferta} />)}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+
+      {/* Modal de período */}
+      {modal === 'periodo' && (
+        <Modal titulo={`Período — ${form.idioma_nombre}`} onClose={() => setModal(null)}>
+          <p style={{ fontSize: 13, color: '#888', margin: '0 0 16px' }}>
+            Plantel: <strong>{form.plantel_nombre}</strong>
+          </p>
+          {!form.idioma_id && (
+            <div className="alerta error" style={{ marginBottom: 12 }}>
+              Este idioma no está en el catálogo del sistema. Contacta al superadmin.
+            </div>
+          )}
+          <label>Nombre del ciclo (opcional)
+            <input value={form.ciclo} onChange={e => setForm({ ...form, ciclo: e.target.value })} placeholder="Ej. Ciclo 2026-A" />
           </label>
-          <label>Orden
-            <input
-              type="number"
-              min="1"
-              value={form.orden || 1}
-              onChange={e => setForm({ ...form, orden: Number(e.target.value) })}
-            />
+          <label>Inicio de pre-registro
+            <input type="date" value={form.inicio_prereg} onChange={e => setForm({ ...form, inicio_prereg: e.target.value })} />
+          </label>
+          <label>Fin de pre-registro
+            <input type="date" value={form.fin_prereg} onChange={e => setForm({ ...form, fin_prereg: e.target.value })} />
+          </label>
+          <label>Examen de ubicación
+            <input type="date" value={form.fecha_examen} onChange={e => setForm({ ...form, fecha_examen: e.target.value })} />
+          </label>
+          <label>Asignación de grupo
+            <input type="date" value={form.fecha_asignacion} onChange={e => setForm({ ...form, fecha_asignacion: e.target.value })} />
+          </label>
+          <label>Inicio de clases
+            <input type="date" value={form.fecha_inicio_clases} onChange={e => setForm({ ...form, fecha_inicio_clases: e.target.value })} />
           </label>
           <div className="modal-acciones">
+            {form.periodo_id && (
+              <button className="btn-mini rojo" style={{ marginRight: 'auto' }} onClick={eliminar}>Eliminar período</button>
+            )}
             <button className="btn-sec" onClick={() => setModal(null)}>Cancelar</button>
-            <button className="btn-primario" onClick={guardarNivel}>Guardar</button>
+            <button className="btn-primario" onClick={guardar} disabled={guardando || !form.idioma_id}>
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
           </div>
         </Modal>
       )}
