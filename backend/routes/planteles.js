@@ -4,13 +4,8 @@ const { requireAuth, puedeVerPlantel } = require('../middleware/auth')
 
 router.get('/', requireAuth, (req, res) => {
   const me = req.user
-  if (me.rol === 'superadmin') {
+  if (['superadmin', 'coordinador'].includes(me.rol)) {
     res.json(db.prepare('SELECT * FROM planteles ORDER BY nombre').all())
-  } else if (me.rol === 'coordinador') {
-    const ids = me.planteles || []
-    if (ids.length === 0) return res.json([])
-    const placeholders = ids.map(() => '?').join(',')
-    res.json(db.prepare(`SELECT * FROM planteles WHERE id IN (${placeholders}) ORDER BY nombre`).all(...ids))
   } else if (me.plantel_id) {
     res.json(db.prepare('SELECT * FROM planteles WHERE id = ?').all(me.plantel_id))
   } else {

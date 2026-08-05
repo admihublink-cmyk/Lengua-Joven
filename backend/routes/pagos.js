@@ -127,6 +127,9 @@ router.post('/importar-csv', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const { monto, fecha, estado, metodo_pago, referencia } = req.body
   const sets = []; const vals = []
   if (monto !== undefined) { sets.push('monto = ?'); vals.push(monto) }

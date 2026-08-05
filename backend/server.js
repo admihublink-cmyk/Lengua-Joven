@@ -6,7 +6,30 @@ const path = require('path')
 const app = express()
 const PORT = process.env.PORT || 3001
 
-app.use(cors({ origin: true, credentials: true }))
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim())
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true)
+    else cb(new Error('CORS: origen no permitido'))
+  },
+  credentials: true
+}))
+
+// Rate limiting simple en memoria
+const _rateCounts = new Map()
+function rateLimit(max, windowMs) {
+  return (req, res, next) => {
+    const key = req.ip + req.path
+    const now = Date.now()
+    const rec = _rateCounts.get(key) || { n: 0, reset: now + windowMs }
+    if (now > rec.reset) { rec.n = 0; rec.reset = now + windowMs }
+    rec.n++
+    _rateCounts.set(key, rec)
+    if (rec.n > max) return res.status(429).json({ error: 'Demasiados intentos. Espera un momento e intenta de nuevo.' })
+    next()
+  }
+}
+app.set('rateLimit', rateLimit)
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
