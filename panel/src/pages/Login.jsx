@@ -679,8 +679,7 @@ export default function Login({ onLogin }) {
           {!cargandoPeriodo && filtroPlantel && filtroIdioma && !periodo && (
             <div style={{ background: '#fff8f0', border: '1.5px dashed #f18b11', borderRadius: 14, padding: '24px', textAlign: 'center', color: '#888', marginBottom: 28 }}>
               <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
-              <strong>Aún no hay fechas configuradas</strong> para este plantel e idioma.<br />
-              <span style={{ fontSize: 13 }}>Consulta directamente con tu coordinador.</span>
+              <strong>Aún no hay fechas configuradas</strong> para este plantel e idioma.
             </div>
           )}
 

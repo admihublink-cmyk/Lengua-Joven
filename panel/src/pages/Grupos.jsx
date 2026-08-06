@@ -4,7 +4,7 @@ import { P } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
 
-export default function Grupos() {
+export default function Grupos({ params = {} }) {
   const { usuario, tienePermiso } = useAuth()
   const [grupos, setGrupos] = useState([])
   const [idiomas, setIdiomas] = useState([])
@@ -43,7 +43,26 @@ export default function Grupos() {
     }
   }
 
-  useEffect(() => { cargar() }, [])
+  useEffect(() => {
+    cargar().then(() => {
+      if (params.abrirCrear) {
+        setForm({
+          idioma_id: params.idioma_id || '',
+          nivel_id: '',
+          plantel_id: params.plantel_id || usuario.plantel_id || '',
+          profesor_id: '',
+          codigo: '',
+          horario: '',
+          cupo: 20,
+          fecha_inicio_inscripciones: '',
+          fecha_fin_inscripciones: '',
+          fecha_inicio_clases: '',
+          fecha_fin_clases: '',
+        })
+        setModal('crear')
+      }
+    })
+  }, [])
 
   function alumnosEnGrupo(gid) {
     return inscripciones.filter(i => i.grupo_id === gid && i.estado !== 'baja').length
