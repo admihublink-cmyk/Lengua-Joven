@@ -800,7 +800,7 @@ export default function Login({ onLogin }) {
             <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: '#111' }}>Información para inscripción</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {[
-                { req: '📋 Requisitos', items: ['Tener entre 12 y 29 años', 'Ser residente de Nuevo León', 'Identificación oficial o acta de nacimiento', 'CURP'] },
+                { req: '📋 Requisitos', items: ['Tener de 12 años en adelante', 'Identificación oficial o acta de nacimiento', 'CURP'] },
                 { req: '💰 Costo', items: ['Cuota bimestral accesible por escuela socia', 'Subsidio INJUVE aplicado automáticamente', 'Material didáctico adicional (varía por escuela)'] },
                 { req: '📍 Modalidades', items: ['Presencial en planteles y escuelas socias', 'En línea (plataforma de la escuela socia)', 'Autodidacta (Altissia, acceso 24/7)'] },
               ].map(({ req, items }) => (
@@ -1013,7 +1013,7 @@ export default function Login({ onLogin }) {
         <div style={{ fontWeight: 700, color: '#fff', fontSize: 16, marginBottom: 6 }}>
           <span style={{ color: '#f18b11' }}>Lengua</span> Joven — INJUVE Nuevo León
         </div>
-        <p style={{ margin: '4px 0' }}>Programa de idiomas para jóvenes de 12 a 29 años</p>
+        <p style={{ margin: '4px 0' }}>Programa de idiomas para personas de 12 años en adelante</p>
         <p style={{ margin: '4px 0', fontSize: 12 }}>© 2026 · soporte@injuve.mx</p>
       </footer>
     </div>
