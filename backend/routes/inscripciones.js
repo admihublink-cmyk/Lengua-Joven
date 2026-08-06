@@ -68,6 +68,24 @@ router.post('/', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(me.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+
+  const ins = db.prepare('SELECT * FROM inscripciones WHERE id = ?').get(req.params.id)
+  if (!ins) return res.status(404).json({ error: 'No encontrado' })
+
+  if (me.rol === 'director' && ins.plantel_id !== me.plantel_id) {
+    return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
+  if (me.rol === 'coordinador') {
+    const asignados = me.planteles || []
+    if (!asignados.includes(ins.plantel_id) && ins.plantel_id !== me.plantel_id) {
+      return res.status(403).json({ error: 'Sin permiso para este plantel' })
+    }
+  }
+
   const fields = ['alumno_id','grupo_id','plantel_id','estado','placement_nivel','sugerida_por',
     'nombre_externo','email_externo','tel_externo','oferta_id']
   const sets = []; const vals = []

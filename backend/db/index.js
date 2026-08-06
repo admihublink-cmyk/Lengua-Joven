@@ -427,6 +427,19 @@ try { db.exec("ALTER TABLE pre_registros ADD COLUMN tutor_tel TEXT") } catch (_)
 try { db.exec("ALTER TABLE pre_registros ADD COLUMN tutor_email TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE pre_registros ADD COLUMN grupo_interes_id TEXT") } catch (_) {}
 try {
+  db.exec(`CREATE TABLE IF NOT EXISTS suscripciones_apertura (
+    id TEXT PRIMARY KEY,
+    nombre TEXT NOT NULL,
+    email TEXT NOT NULL,
+    whatsapp TEXT,
+    municipio TEXT,
+    idioma TEXT,
+    plantel_nombre TEXT,
+    fecha TEXT NOT NULL,
+    notificado INTEGER DEFAULT 0
+  )`)
+} catch (_) {}
+try {
   db.exec(`CREATE TABLE IF NOT EXISTS tutor_alumnos (
     tutor_id TEXT NOT NULL,
     alumno_id TEXT NOT NULL,

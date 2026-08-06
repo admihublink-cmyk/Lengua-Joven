@@ -74,7 +74,7 @@ export const ROL_PERMISOS = {
   coordinador: {
     permisos: [
       P.IDIOMA_VER, P.IDIOMA_CONFIG,
-      P.GRUPO_VER,
+      P.GRUPO_VER, P.GRUPO_CREAR, P.GRUPO_ASIGNAR,
       P.INSC_VER, P.INSC_CREAR, P.INSC_CONFIRMAR,
       P.PAGO_VER, P.PAGO_REGISTRAR,
       P.AVISO_VER,

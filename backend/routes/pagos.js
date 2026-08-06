@@ -25,10 +25,28 @@ router.get('/', requireAuth, (req, res) => {
 })
 
 router.post('/', requireAuth, (req, res) => {
-  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, inscripcion_id, monto, fecha, estado, metodo_pago, referencia } = req.body
+
+  // Director y coordinador solo pueden registrar pagos de inscripciones de sus planteles
+  if (['director', 'coordinador'].includes(me.rol) && inscripcion_id) {
+    const ins = db.prepare('SELECT plantel_id FROM inscripciones WHERE id = ?').get(inscripcion_id)
+    if (ins) {
+      if (me.rol === 'director' && ins.plantel_id !== me.plantel_id) {
+        return res.status(403).json({ error: 'Sin permiso para este plantel' })
+      }
+      if (me.rol === 'coordinador') {
+        const asignados = me.planteles || []
+        if (!asignados.includes(ins.plantel_id) && ins.plantel_id !== me.plantel_id) {
+          return res.status(403).json({ error: 'Sin permiso para este plantel' })
+        }
+      }
+    }
+  }
+
   const ids = db.prepare('SELECT id FROM pagos').all().map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('pag', '')) || 0), 0)
   const newId = 'pag' + (max + 1)
@@ -127,9 +145,30 @@ router.post('/importar-csv', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
-  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
+
+  // Director y coordinador solo pueden modificar pagos de inscripciones de sus planteles
+  if (['director', 'coordinador'].includes(me.rol)) {
+    const pago = db.prepare('SELECT inscripcion_id FROM pagos WHERE id = ?').get(req.params.id)
+    if (pago?.inscripcion_id) {
+      const ins = db.prepare('SELECT plantel_id FROM inscripciones WHERE id = ?').get(pago.inscripcion_id)
+      if (ins) {
+        if (me.rol === 'director' && ins.plantel_id !== me.plantel_id) {
+          return res.status(403).json({ error: 'Sin permiso para este plantel' })
+        }
+        if (me.rol === 'coordinador') {
+          const asignados = me.planteles || []
+          if (!asignados.includes(ins.plantel_id) && ins.plantel_id !== me.plantel_id) {
+            return res.status(403).json({ error: 'Sin permiso para este plantel' })
+          }
+        }
+      }
+    }
+  }
+
   const { monto, fecha, estado, metodo_pago, referencia } = req.body
   const sets = []; const vals = []
   if (monto !== undefined) { sets.push('monto = ?'); vals.push(monto) }
