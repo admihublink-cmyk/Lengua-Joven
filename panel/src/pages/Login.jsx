@@ -54,6 +54,7 @@ export default function Login({ onLogin }) {
   const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
   const [gruposDisponibles, setGruposDisponibles] = useState([])
   const [grupoInteres, setGrupoInteres] = useState('')
+  const [cargandoGruposPreReg, setCargandoGruposPreReg] = useState(false)
   const [gruposPeriodo, setGruposPeriodo] = useState([])
   const [subForm, setSubForm] = useState({ nombre: '', email: '', whatsapp: '', municipio: '' })
   const [subOk, setSubOk] = useState(false)
@@ -175,9 +176,11 @@ export default function Login({ onLogin }) {
   useEffect(() => {
     const plantel = planteles.find(p => p.nombre === pre.proveedor_interes)
     if (!plantel || !pre.idioma_interes) { setGruposDisponibles([]); setGrupoInteres(''); return }
+    setCargandoGruposPreReg(true)
     fetchPublico(`grupos?plantel_id=${plantel.id}&idioma=${encodeURIComponent(pre.idioma_interes)}`)
       .then(g => { setGruposDisponibles(g); setGrupoInteres('') })
       .catch(() => { setGruposDisponibles([]); setGrupoInteres('') })
+      .finally(() => setCargandoGruposPreReg(false))
   }, [pre.idioma_interes, pre.proveedor_interes, planteles])
 
   useEffect(() => {
@@ -492,28 +495,38 @@ export default function Login({ onLogin }) {
                         {plantelesPorIdioma.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
                       </select>
                     </label>
-                    {/* Selector de grupo/horario: si hay grupos disponibles, muestra opciones; si no, texto libre */}
-                    {gruposDisponibles.length > 0 ? (
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                        Horario preferido
-                        <select value={grupoInteres} onChange={e => setGrupoInteres(e.target.value)}
-                          style={{ ...inputStyle(false), appearance: 'auto' }}>
-                          <option value="">Sin preferencia de horario</option>
-                          {gruposDisponibles.map(g => (
-                            <option key={g.id} value={g.id} disabled={g.cupo_disponible === 0}>
-                              {g.nivel_nombre ? `${g.nivel_nombre} — ` : ''}{g.horario}
-                              {g.cupo_disponible === 0 ? ' (sin cupo)' : ` (${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''})`}
-                            </option>
-                          ))}
-                        </select>
-                      </label>
-                    ) : (
-                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                        Horario preferido (opcional)
-                        <input value={pre.horario_preferido} onChange={e => setPre({ ...pre, horario_preferido: e.target.value })} placeholder="Ej. Sábados por la mañana"
-                          style={inputStyle(focusedInput === 'horario')} onFocus={() => setFocusedInput('horario')} onBlur={() => setFocusedInput('')} />
-                      </label>
-                    )}
+                    {/* Selector de grupo/horario — siempre dropdown */}
+                    {(() => {
+                      const tienePlantel = !!pre.proveedor_interes && pre.proveedor_interes !== ''
+                      const tieneIdioma  = !!pre.idioma_interes
+                      const listo        = tienePlantel && tieneIdioma && !cargandoGruposPreReg
+
+                      let placeholder = 'Selecciona un idioma y una escuela primero'
+                      if (tieneIdioma && !tienePlantel) placeholder = 'Selecciona una escuela primero'
+                      if (tienePlantel && !tieneIdioma) placeholder = 'Selecciona un idioma primero'
+                      if (cargandoGruposPreReg) placeholder = 'Cargando horarios…'
+                      if (listo && gruposDisponibles.length === 0) placeholder = 'No hay grupos abiertos para esta selección'
+
+                      return (
+                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
+                          Horario preferido
+                          <select
+                            value={grupoInteres}
+                            onChange={e => setGrupoInteres(e.target.value)}
+                            disabled={!listo || gruposDisponibles.length === 0}
+                            style={{ ...inputStyle(false), appearance: 'auto', color: (!listo || gruposDisponibles.length === 0) ? '#aaa' : 'inherit' }}
+                          >
+                            <option value="">{listo && gruposDisponibles.length > 0 ? 'Sin preferencia de horario' : placeholder}</option>
+                            {gruposDisponibles.map(g => (
+                              <option key={g.id} value={g.id} disabled={g.cupo_disponible === 0}>
+                                {g.nivel_nombre ? `${g.nivel_nombre} — ` : ''}{g.horario || 'Horario por confirmar'}
+                                {g.cupo_disponible === 0 ? ' (sin cupo)' : ` (${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''})`}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+                      )
+                    })()}
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
                       ¿Cómo te enteraste? (opcional)
                       <select value={pre.como_entero} onChange={e => setPre({ ...pre, como_entero: e.target.value })}
