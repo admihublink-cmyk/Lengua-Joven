@@ -95,6 +95,7 @@ export default function Login({ onLogin }) {
       const u = await login(email.trim(), password)
       onLogin(u)
     } catch (err) {
+      console.error('Login error:', err)
       setLoginErr(err.message || 'Correo o contraseña incorrectos.')
     }
   }
