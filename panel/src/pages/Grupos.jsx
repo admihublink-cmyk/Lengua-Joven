@@ -10,6 +10,7 @@ export default function Grupos() {
   const [idiomas, setIdiomas] = useState([])
   const [niveles, setNiveles] = useState([])
   const [planteles, setPlanteles] = useState([])
+  const [ofertas, setOfertas] = useState([])
   const [profesores, setProfesores] = useState([])
   const [inscripciones, setInscripciones] = useState([])
   const [modal, setModal] = useState(null)
@@ -17,20 +18,24 @@ export default function Grupos() {
 
   async function cargar() {
     try {
-      const [g, i, p, u, ins] = await Promise.all([
+      // Idiomas: usar endpoint público para que coordinadores vean todos los idiomas
+      const [g, i, o, p, u, ins] = await Promise.all([
         api.getGrupos(),
-        api.getIdiomas(),
+        fetch('/api/publico/idiomas').then(r => r.json()),
+        api.getOfertas(),
         api.getPlanteles(),
         api.getUsuarios(),
         api.getInscripciones(),
       ])
       setGrupos(g)
       setIdiomas(i)
+      setOfertas(o)
       setPlanteles(p)
       setProfesores(u.filter(x => x.rol === 'profesor'))
       setInscripciones(ins)
+      // Niveles: cargar usando los IDs del catálogo público
       if (i.length > 0) {
-        const todos = await Promise.all(i.map(id => api.getNiveles(id.id)))
+        const todos = await Promise.all(i.map(id => api.getNiveles(id.id).catch(() => [])))
         setNiveles(todos.flat())
       }
     } catch (e) {
@@ -48,8 +53,9 @@ export default function Grupos() {
   function nombrePlantel(id) { return planteles.find(x => x.id === id)?.nombre || '—' }
   function nombreProfesor(id) { return profesores.find(x => x.id === id)?.nombre || 'Sin asignar' }
 
+  // Filtra idiomas por los que el plantel realmente ofrece (vía ofertas)
   const idiomasDelPlantel = form.plantel_id
-    ? idiomas.filter(i => i.plantel_id === form.plantel_id)
+    ? idiomas.filter(i => ofertas.some(o => o.plantel_id === form.plantel_id && o.idioma === i.nombre))
     : idiomas
 
   const nivelesDelIdioma = form.idioma_id
@@ -138,7 +144,7 @@ export default function Grupos() {
                       <button className="btn-mini" onClick={() => { setForm({ ...g }); setModal('editar') }}>
                         Editar
                       </button>
-                      {(usuario.rol === 'superadmin' || usuario.rol === 'director') && (
+                      {['superadmin', 'director', 'coordinador'].includes(usuario.rol) && (
                         <button className="btn-mini" style={{ background: '#2980b9', color: '#fff', borderColor: '#2980b9' }}
                           onClick={() => { setForm({ ...g }); setModal('fechas') }}>
                           📅 Fechas

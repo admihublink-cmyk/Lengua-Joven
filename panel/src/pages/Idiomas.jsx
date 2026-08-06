@@ -37,7 +37,11 @@ export default function Idiomas() {
       ])
       setOfertas(o)
       setIdiomas(i)
-      setPlanteles(p)
+      // Coordinadores solo ven y editan su propio plantel
+      const visibles = usuario.rol === 'coordinador' && usuario.plantel_id
+        ? p.filter(pl => pl.id === usuario.plantel_id)
+        : p
+      setPlanteles(visibles)
       const perAll = await Promise.all(p.map(pl => api.getPeriodos({ plantel_id: pl.id })))
       setPeriodos(perAll.flat())
     } catch (e) { console.error(e) }

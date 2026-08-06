@@ -169,4 +169,50 @@ async function enviarBienvenidaTutor(destinatario, nombreTutor, emailTutor, cont
   })
 }
 
-module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor }
+async function enviarNotificacionApertura(destinatario, nombre, idioma, plantelNombre, grupo) {
+  const url = process.env.FRONTEND_URL || 'http://localhost:5173'
+  const transporter = crearTransporter()
+  await transporter.sendMail({
+    from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
+    to: destinatario,
+    subject: `¡Nuevo grupo de ${idioma} abierto en ${plantelNombre}! — Lengua Joven`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;padding:0;background:#f9f9f9;">
+        <div style="background:linear-gradient(135deg,#F18B11 0%,#e07a00 100%);padding:36px 32px;text-align:center;border-radius:12px 12px 0 0;">
+          <div style="font-size:28px;font-weight:800;color:#fff;">Lengua <span style="color:#fff3d4;">Joven</span></div>
+        </div>
+        <div style="background:#fff;padding:36px 32px;">
+          <h2 style="color:#1a1a1a;font-size:20px;margin:0 0 12px;">¡Hola, ${nombre}! 🎉</h2>
+          <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 20px;">
+            Tenemos buenas noticias: acaba de abrirse un nuevo grupo de <strong>${idioma}</strong>
+            en <strong>${plantelNombre}</strong> que solicitaste seguir.
+          </p>
+          <div style="background:#fff8f0;border:1.5px solid #f0e0cc;border-radius:10px;padding:18px 22px;margin-bottom:24px;">
+            <div style="font-size:13px;color:#888;margin-bottom:6px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Detalles del grupo</div>
+            <div style="font-size:15px;color:#222;line-height:2;">
+              <div>📚 <strong>Idioma:</strong> ${idioma}</div>
+              <div>🏫 <strong>Plantel:</strong> ${plantelNombre}</div>
+              ${grupo.nivel_nombre ? `<div>🎓 <strong>Nivel:</strong> ${grupo.nivel_nombre}</div>` : ''}
+              ${grupo.horario ? `<div>🕐 <strong>Horario:</strong> ${grupo.horario}</div>` : ''}
+              ${grupo.cupo_disponible > 0 ? `<div>✅ <strong>Lugares disponibles:</strong> ${grupo.cupo_disponible}</div>` : ''}
+            </div>
+          </div>
+          <div style="text-align:center;margin:0 0 24px;">
+            <a href="${url}" style="background:#F18B11;color:#fff;text-decoration:none;padding:14px 32px;border-radius:8px;font-size:15px;font-weight:700;display:inline-block;">
+              Ver y pre-registrarme →
+            </a>
+          </div>
+          <p style="color:#888;font-size:13px;line-height:1.6;">
+            Los cupos son limitados. Te recomendamos pre-registrarte lo antes posible.<br>
+            Si ya no deseas recibir estas notificaciones, ignora este correo.
+          </p>
+        </div>
+        <div style="background:#f0f0f0;padding:16px 32px;text-align:center;border-radius:0 0 12px 12px;">
+          <p style="color:#aaa;font-size:12px;margin:0;">Lengua Joven · Programa de idiomas INJUVE Nuevo León</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor, enviarNotificacionApertura }

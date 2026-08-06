@@ -54,6 +54,11 @@ export default function Login({ onLogin }) {
   const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
   const [gruposDisponibles, setGruposDisponibles] = useState([])
   const [grupoInteres, setGrupoInteres] = useState('')
+  const [gruposPeriodo, setGruposPeriodo] = useState([])
+  const [subForm, setSubForm] = useState({ nombre: '', email: '', whatsapp: '', municipio: '' })
+  const [subOk, setSubOk] = useState(false)
+  const [subErr, setSubErr] = useState('')
+  const [subLoading, setSubLoading] = useState(false)
 
   useEffect(() => {
     getOfertas().then(setOfertas).catch(() => {})
@@ -176,13 +181,19 @@ export default function Login({ onLogin }) {
   }, [pre.idioma_interes, pre.proveedor_interes, planteles])
 
   useEffect(() => {
-    if (!filtroPlantel || !filtroIdioma) { setPeriodo(null); return }
+    if (!filtroPlantel || !filtroIdioma) { setPeriodo(null); setGruposPeriodo([]); return }
     setCargandoPeriodo(true)
-    getPeriodos({ plantel_id: filtroPlantel, idioma_id: filtroIdioma })
-      .then(data => setPeriodo(data[0] || null))
-      .catch(() => setPeriodo(null))
+    const idiomaName = idiomas.find(i => i.id === filtroIdioma)?.nombre || ''
+    Promise.all([
+      getPeriodos({ plantel_id: filtroPlantel, idioma_id: filtroIdioma }),
+      idiomaName
+        ? fetchPublico(`grupos?plantel_id=${filtroPlantel}&idioma=${encodeURIComponent(idiomaName)}`)
+        : Promise.resolve([]),
+    ])
+      .then(([periodos, grupos]) => { setPeriodo(periodos[0] || null); setGruposPeriodo(grupos) })
+      .catch(() => { setPeriodo(null); setGruposPeriodo([]) })
       .finally(() => setCargandoPeriodo(false))
-  }, [filtroPlantel, filtroIdioma])
+  }, [filtroPlantel, filtroIdioma, idiomas])
 
   function fmtFecha(iso) {
     if (!iso) return ''
@@ -192,6 +203,30 @@ export default function Login({ onLogin }) {
   }
 
   function cerrar() { setModal(null); setLoginErr(''); setPreErr('') }
+
+  async function enviarSuscripcion(e) {
+    e.preventDefault()
+    setSubErr('')
+    if (!subForm.nombre.trim()) { setSubErr('El nombre es requerido.'); return }
+    if (!subForm.email.trim())  { setSubErr('El correo es requerido.'); return }
+    setSubLoading(true)
+    try {
+      const plantelNombre = planteles.find(p => p.id === filtroPlantel)?.nombre || ''
+      const idiomaName = idiomas.find(i => i.id === filtroIdioma)?.nombre || ''
+      const res = await fetch('/api/publico/suscribir-apertura', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...subForm, idioma: idiomaName, plantel_nombre: plantelNombre }),
+      })
+      if (!res.ok) { const d = await res.json(); throw new Error(d.error || 'Error al suscribirse') }
+      setSubOk(true)
+      setModal('suscribir_ok')
+    } catch (err) {
+      setSubErr(err.message || 'Error al enviar, intenta de nuevo.')
+    } finally {
+      setSubLoading(false)
+    }
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'linear-gradient(135deg, #fff8f2 0%, #fff 60%, #fff8f2 100%)', fontFamily: 'system-ui, sans-serif', color: '#1a1a1a' }}>
@@ -212,7 +247,7 @@ export default function Login({ onLogin }) {
       </nav>
 
       {/* ── MODALES ── */}
-      {(modal === 'login' || modal === 'prereg' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok') && (
+      {(modal === 'login' || modal === 'prereg' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok' || modal === 'suscribir' || modal === 'suscribir_ok') && (
         <div onClick={cerrar} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: '#fff', borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,.25)' }}>
 
@@ -332,6 +367,63 @@ export default function Login({ onLogin }) {
                 <button onClick={() => { setResetNueva(''); setResetNueva2(''); setModal('login') }} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer' }}>
                   Ir al inicio de sesión
                 </button>
+              </div>
+            )}
+
+            {/* SUSCRIBIRSE A APERTURA DE GRUPOS */}
+            {modal === 'suscribir' && (() => {
+              const plantelNombre = planteles.find(p => p.id === filtroPlantel)?.nombre || ''
+              const idiomaName = idiomas.find(i => i.id === filtroIdioma)?.nombre || ''
+              return (
+                <>
+                  <div style={{ textAlign: 'center', marginBottom: 20 }}>
+                    <div style={{ fontSize: 40, marginBottom: 8 }}>🔔</div>
+                    <h3 style={{ margin: '0 0 6px', fontSize: 18, fontWeight: 800 }}>¡Te avisamos cuando abra un grupo!</h3>
+                    <p style={{ color: '#888', fontSize: 13, margin: 0, lineHeight: 1.6 }}>
+                      Te enviaremos un correo en cuanto se abra un grupo de <strong>{idiomaName}</strong> en <strong>{plantelNombre}</strong>.
+                    </p>
+                  </div>
+                  <form onSubmit={enviarSuscripcion} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                    {subErr && <div style={{ background: '#fff0f0', border: '1px solid #ffbaba', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#c0392b' }}>{subErr}</div>}
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
+                      Nombre completo *
+                      <input value={subForm.nombre} onChange={e => setSubForm({ ...subForm, nombre: e.target.value })} placeholder="Ana González"
+                        style={inputStyle(focusedInput === 'sub_nombre')} onFocus={() => setFocusedInput('sub_nombre')} onBlur={() => setFocusedInput('')} />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
+                      Correo electrónico *
+                      <input type="email" value={subForm.email} onChange={e => setSubForm({ ...subForm, email: e.target.value })} placeholder="correo@ejemplo.com"
+                        style={inputStyle(focusedInput === 'sub_email')} onFocus={() => setFocusedInput('sub_email')} onBlur={() => setFocusedInput('')} />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
+                      WhatsApp (opcional)
+                      <input value={subForm.whatsapp} onChange={e => setSubForm({ ...subForm, whatsapp: e.target.value })} placeholder="81 1234 5678"
+                        style={inputStyle(focusedInput === 'sub_wa')} onFocus={() => setFocusedInput('sub_wa')} onBlur={() => setFocusedInput('')} />
+                    </label>
+                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
+                      Municipio (opcional)
+                      <input value={subForm.municipio} onChange={e => setSubForm({ ...subForm, municipio: e.target.value })} placeholder="Monterrey"
+                        style={inputStyle(focusedInput === 'sub_mun')} onFocus={() => setFocusedInput('sub_mun')} onBlur={() => setFocusedInput('')} />
+                    </label>
+                    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                      <button type="button" onClick={cerrar} style={{ background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 8, padding: '10px 18px', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
+                      <button type="submit" disabled={subLoading} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 22px', fontWeight: 700, cursor: 'pointer' }}>
+                        {subLoading ? 'Enviando…' : '🔔 Avisarme cuando haya grupos'}
+                      </button>
+                    </div>
+                  </form>
+                </>
+              )
+            })()}
+
+            {modal === 'suscribir_ok' && (
+              <div style={{ textAlign: 'center', padding: '12px 0' }}>
+                <div style={{ fontSize: 52, marginBottom: 12 }}>✅</div>
+                <h3 style={{ margin: '0 0 8px', fontSize: 18, fontWeight: 800 }}>¡Listo! Te notificaremos</h3>
+                <p style={{ color: '#888', fontSize: 13, lineHeight: 1.6, margin: '0 0 20px' }}>
+                  En cuanto abra un nuevo grupo te enviaremos un correo para que puedas pre-registrarte.
+                </p>
+                <button onClick={cerrar} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
               </div>
             )}
 
@@ -644,11 +736,59 @@ export default function Login({ onLogin }) {
             </div>
           )}
 
-          <div style={{ textAlign: 'center' }}>
-            <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 36px', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
-              Iniciar mi pre-registro →
-            </button>
-          </div>
+          {/* Grupos disponibles para el plantel+idioma seleccionado */}
+          {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length > 0 && (
+            <div style={{ marginBottom: 32 }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 14px', color: '#111' }}>
+                Grupos abiertos
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
+                {gruposPeriodo.map(g => (
+                  <div key={g.id} style={{ background: '#fff', border: '1.5px solid #f0e0cc', borderLeft: '4px solid #f18b11', borderRadius: 12, padding: '16px 18px' }}>
+                    {g.nivel_nombre && (
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>{g.nivel_nombre}</div>
+                    )}
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#111', marginBottom: 6 }}>🕐 {g.horario || 'Horario por confirmar'}</div>
+                    <div style={{ fontSize: 13, color: g.cupo_disponible > 0 ? '#27ae60' : '#e74c3c', fontWeight: 600 }}>
+                      {g.cupo_disponible > 0
+                        ? `${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''}`
+                        : 'Sin cupo disponible'}
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: 18, textAlign: 'center' }}>
+                <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 32px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+                  Pre-registrarme en este idioma →
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* CTA de suscripción cuando hay filtros pero no hay grupos */}
+          {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length === 0 && (
+            <div style={{ background: '#f5faff', border: '1.5px dashed #2980b9', borderRadius: 14, padding: '24px', textAlign: 'center', marginBottom: 28 }}>
+              <div style={{ fontSize: 28, marginBottom: 8 }}>🔔</div>
+              <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 15, color: '#111' }}>
+                ¿Te gustaría que te notifiquemos cuando se abra uno?
+              </p>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: '#666' }}>
+                Aún no hay grupos abiertos para este idioma en este plantel, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.
+              </p>
+              <button onClick={() => { setSubForm({ nombre: '', email: '', whatsapp: '', municipio: '' }); setSubErr(''); setModal('suscribir') }}
+                style={{ background: '#2980b9', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                Sí, notifícame cuando haya grupos
+              </button>
+            </div>
+          )}
+
+          {!(filtroPlantel && filtroIdioma && gruposPeriodo.length > 0) && (
+            <div style={{ textAlign: 'center' }}>
+              <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 36px', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
+                Iniciar mi pre-registro →
+              </button>
+            </div>
+          )}
         </div>
       </section>
 

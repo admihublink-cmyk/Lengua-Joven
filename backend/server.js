@@ -66,6 +66,15 @@ app.get('/api/publico/planteles', (req, res) => {
 app.get('/api/publico/idiomas', (req, res) => {
   res.json(db.prepare('SELECT id, nombre FROM idiomas ORDER BY nombre').all())
 })
+app.post('/api/publico/suscribir-apertura', (req, res) => {
+  const { nombre, email, whatsapp, municipio, idioma, plantel_nombre } = req.body
+  if (!nombre?.trim() || !email?.trim()) return res.status(400).json({ error: 'Nombre y email son requeridos' })
+  const id = 'sub' + Date.now() + Math.random().toString(36).slice(2, 6)
+  db.prepare(`INSERT INTO suscripciones_apertura (id, nombre, email, whatsapp, municipio, idioma, plantel_nombre, fecha)
+    VALUES (?,?,?,?,?,?,?,?)`)
+    .run(id, nombre.trim(), email.trim().toLowerCase(), whatsapp || '', municipio || '', idioma || '', plantel_nombre || '', new Date().toISOString())
+  res.status(201).json({ ok: true })
+})
 app.get('/api/publico/grupos', (req, res) => {
   const { plantel_id, idioma } = req.query
   if (!plantel_id || !idioma) return res.json([])
