@@ -48,8 +48,18 @@ async function req(method, path, body, options = {}) {
   }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText || 'Error de servidor' }))
-    throw new Error(err.error || 'Error de servidor')
+    let errMessage = res.statusText || 'Error de servidor'
+    try {
+      const contentType = res.headers.get('content-type') || ''
+      if (contentType.includes('application/json')) {
+        const err = await res.json()
+        errMessage = err.error || err.message || errMessage
+      } else {
+        const text = await res.text()
+        if (text) errMessage = text
+      }
+    } catch {}
+    throw new Error(errMessage)
   }
   return res.json()
 }

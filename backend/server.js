@@ -6,13 +6,25 @@ const path = require('path')
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
 
-const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim())
+const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(o => o.trim()).filter(Boolean)
+
+function isAllowedOrigin(origin) {
+  if (!origin) return true
+  try {
+    const requestUrl = new URL(origin)
+    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(requestUrl.hostname)
+    if (isLocalhost) return true
+    return ALLOWED_ORIGINS.includes(origin.replace(/\/$/, ''))
+  } catch {
+    return false
+  }
+}
+
 app.use(cors({
-  origin: (origin, cb) => {
-    if (!origin || ALLOWED_ORIGINS.includes(origin)) cb(null, true)
-    else cb(new Error('CORS: origen no permitido'))
-  },
-  credentials: true
+  origin: (origin, cb) => cb(null, isAllowedOrigin(origin)),
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
 }))
 
 // Rate limiting simple en memoria
@@ -93,6 +105,14 @@ app.use('/api/planteles/:id/documentos', require('./routes/documentos_convenio')
 app.use('/api/banorte', require('./routes/banorte'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
+
+app.use((err, req, res, next) => {
+  if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
+    console.warn(`JSON inválido en ${req.method} ${req.path}`)
+    return res.status(400).json({ error: 'JSON inválido' })
+  }
+  next(err)
+})
 
 function startServer(port) {
   const server = app.listen(port, () => {
