@@ -4,7 +4,7 @@ const cors = require('cors')
 const path = require('path')
 
 const app = express()
-const PORT = process.env.PORT || 3001
+const PORT = Number(process.env.PORT || 3001)
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173').split(',').map(o => o.trim())
 app.use(cors({
@@ -54,6 +54,22 @@ app.get('/api/publico/planteles', (req, res) => {
 app.get('/api/publico/idiomas', (req, res) => {
   res.json(db.prepare('SELECT id, nombre FROM idiomas ORDER BY nombre').all())
 })
+app.get('/api/publico/grupos', (req, res) => {
+  const { plantel_id, idioma } = req.query
+  if (!plantel_id || !idioma) return res.json([])
+  const rows = db.prepare(`
+    SELECT g.id, g.codigo, g.horario, g.cupo, g.nivel_id,
+           n.nombre AS nivel_nombre, n.orden AS nivel_orden,
+           (SELECT COUNT(*) FROM inscripciones
+            WHERE grupo_id = g.id AND estado NOT IN ('cancelada','rechazada','baja')) AS inscritos
+    FROM grupos g
+    LEFT JOIN niveles n ON n.id = g.nivel_id
+    LEFT JOIN idiomas i ON i.id = g.idioma_id
+    WHERE g.plantel_id = ? AND i.nombre = ? AND g.activo = 1
+    ORDER BY n.orden, g.horario
+  `).all(plantel_id, idioma)
+  res.json(rows.map(r => ({ ...r, cupo_disponible: Math.max(0, r.cupo - r.inscritos) })))
+})
 
 // Rutas protegidas
 app.use('/api/auth', require('./routes/auth'))
@@ -78,6 +94,26 @@ app.use('/api/banorte', require('./routes/banorte'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 
-app.listen(PORT, () => {
-  console.log(`Lengua Joven API corriendo en http://localhost:${PORT}`)
-})
+function startServer(port) {
+  const server = app.listen(port, () => {
+    console.log(`Lengua Joven API corriendo en http://localhost:${port}`)
+  })
+
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      const nextPort = port + 1
+      console.warn(`Puerto ${port} ocupado. Intentando ${nextPort}...`)
+      if (server.listening) {
+        server.close(() => startServer(nextPort))
+      } else {
+        startServer(nextPort)
+      }
+      return
+    }
+
+    console.error('No se pudo iniciar el servidor:', error)
+    process.exit(1)
+  })
+}
+
+startServer(PORT)

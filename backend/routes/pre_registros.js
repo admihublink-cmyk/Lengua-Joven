@@ -6,10 +6,10 @@ const { requireAuth } = require('../middleware/auth')
 
 // POST público — sin auth
 router.post('/publico', (req, res) => {
-  const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes, horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email } = req.body
+  const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
+    horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id } = req.body
   if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
 
-  // Validar que menores de edad incluyan datos del tutor
   const esMenor = fecha_nacimiento && calcularEdad(fecha_nacimiento) < 18
   if (esMenor && (!tutor_nombre || !tutor_tel || !tutor_email)) {
     return res.status(400).json({ error: 'Los menores de edad deben registrar los datos de su tutor' })
@@ -20,12 +20,17 @@ router.post('/publico', (req, res) => {
   const newId = 'pr' + (count + 1)
   const fecha = new Date().toISOString()
 
-  db.prepare(`INSERT INTO pre_registros (id, folio, nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes, horario_preferido, como_entero, estado, fecha_registro, fecha_pago, usuario_id, tutor_nombre, tutor_tel, tutor_email)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+  db.prepare(`INSERT INTO pre_registros
+    (id, folio, nombre, email, tel, curp, fecha_nacimiento, estado_entidad,
+     idioma_interes, proveedor_interes, horario_preferido, como_entero,
+     estado, fecha_registro, fecha_pago, usuario_id,
+     tutor_nombre, tutor_tel, tutor_email, grupo_interes_id)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
     newId, folio, nombre, email, tel || '', curp || '', fecha_nacimiento || '', estado_entidad || '',
     idioma_interes || '', proveedor_interes || '', horario_preferido || '', como_entero || '',
     'pendiente_pago', fecha, null, null,
-    tutor_nombre || null, tutor_tel || null, tutor_email || null
+    tutor_nombre || null, tutor_tel || null, tutor_email || null,
+    grupo_interes_id || null
   )
   res.status(201).json({ folio, id: newId })
 })

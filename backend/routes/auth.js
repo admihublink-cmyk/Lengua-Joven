@@ -6,8 +6,25 @@ const { signToken, requireAuth } = require('../middleware/auth')
 
 // Rate limiting: se inyecta desde server.js vía app.set
 function getRL(req) { return req.app.get('rateLimit') }
-const rl10per15m = (req, res, next) => (getRL(req)?.(10, 15 * 60 * 1000) || ((r,s,n) => n()))(req, res, next)
 const rl5per60m  = (req, res, next) => (getRL(req)?.(5, 60 * 60 * 1000)  || ((r,s,n) => n()))(req, res, next)
+
+// Login: rastrear solo intentos FALLIDOS — 3 por ventana de 5 horas por IP
+const _loginFails = new Map()
+const WINDOW_LOGIN = 5 * 60 * 60 * 1000 // 5 horas
+const MAX_FAILS    = 3
+
+function getLoginRecord(ip) {
+  const now = Date.now()
+  const rec = _loginFails.get(ip) || { n: 0, reset: now + WINDOW_LOGIN }
+  if (now > rec.reset) { rec.n = 0; rec.reset = now + WINDOW_LOGIN }
+  return rec
+}
+function recordFail(ip) {
+  const rec = getLoginRecord(ip)
+  rec.n++
+  _loginFails.set(ip, rec)
+}
+function clearFails(ip) { _loginFails.delete(ip) }
 
 function logActividad(usuario_id, tipo, descripcion, req) {
   const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 6)
@@ -18,16 +35,28 @@ function logActividad(usuario_id, tipo, descripcion, req) {
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────
-router.post('/login', rl10per15m, (req, res) => {
+router.post('/login', (req, res) => {
+  const ip = req.ip
+  const rec = getLoginRecord(ip)
+  if (rec.n >= MAX_FAILS) {
+    const waitH = Math.ceil((rec.reset - Date.now()) / (60 * 60 * 1000))
+    return res.status(429).json({ error: `Demasiados intentos fallidos. Espera ${waitH} hora${waitH !== 1 ? 's' : ''} e intenta de nuevo.` })
+  }
+
   const { email, password } = req.body
   if (!email || !password) return res.status(400).json({ error: 'Email y contraseña requeridos' })
 
   const user = db.prepare('SELECT * FROM usuarios WHERE email = ? AND activo = 1').get(email.trim().toLowerCase())
-  if (!user) return res.status(401).json({ error: 'Credenciales incorrectas' })
+  if (!user || !bcrypt.compareSync(password, user.password_hash)) {
+    recordFail(ip)
+    const restantes = MAX_FAILS - getLoginRecord(ip).n
+    const msg = restantes > 0
+      ? `Credenciales incorrectas. ${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''}.`
+      : 'Demasiados intentos fallidos. Espera 5 horas e intenta de nuevo.'
+    return res.status(401).json({ error: msg })
+  }
 
-  const ok = bcrypt.compareSync(password, user.password_hash)
-  if (!ok) return res.status(401).json({ error: 'Credenciales incorrectas' })
-
+  clearFails(ip)
   const token = signToken(user)
   const { password_hash, ...safeUser } = user
   res.json({ token, user: { ...safeUser, activo: user.activo === 1 } })
