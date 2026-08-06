@@ -689,12 +689,6 @@ export default function Login({ onLogin }) {
             <p style={{ color: '#999', textAlign: 'center', padding: '32px 0' }}>Cargando fechas…</p>
           )}
 
-          {!cargandoPeriodo && filtroPlantel && filtroIdioma && !periodo && (
-            <div style={{ background: '#fff8f0', border: '1.5px dashed #f18b11', borderRadius: 14, padding: '24px', textAlign: 'center', color: '#888', marginBottom: 28 }}>
-              <div style={{ fontSize: 24, marginBottom: 8 }}>📅</div>
-              <strong>Aún no hay fechas configuradas</strong> para este plantel e idioma.
-            </div>
-          )}
 
           {!cargandoPeriodo && periodo && (() => {
             const tarjetas = [
@@ -777,15 +771,18 @@ export default function Login({ onLogin }) {
             </div>
           )}
 
-          {/* CTA de suscripción cuando hay filtros pero no hay grupos */}
+          {/* Sin fechas ni grupos: caja única combinada */}
           {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length === 0 && (
-            <div style={{ background: '#f5faff', border: '1.5px dashed #2980b9', borderRadius: 14, padding: '24px', textAlign: 'center', marginBottom: 28 }}>
+            <div style={{ background: '#f5faff', border: '1.5px dashed #2980b9', borderRadius: 14, padding: '28px 24px', textAlign: 'center', marginBottom: 28 }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🔔</div>
               <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 15, color: '#111' }}>
-                ¿Te gustaría que te notifiquemos cuando se abra uno?
+                ¿Te gustaría que te notifiquemos cuando se abra un grupo?
               </p>
               <p style={{ margin: '0 0 16px', fontSize: 13, color: '#666' }}>
-                Aún no hay grupos abiertos para este idioma en este plantel, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.
+                {!periodo
+                  ? <><strong>Aún no hay fechas configuradas</strong> para este plantel e idioma, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.</>
+                  : 'Aún no hay grupos abiertos para este idioma en este plantel, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.'
+                }
               </p>
               <button onClick={() => { setSubForm({ nombre: '', email: '', whatsapp: '', municipio: '' }); setSubErr(''); setModal('suscribir') }}
                 style={{ background: '#2980b9', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
