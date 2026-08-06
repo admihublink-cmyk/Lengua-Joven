@@ -7,9 +7,22 @@ const { requireAuth, puedeVerPlantel } = require('../middleware/auth')
 router.get('/', (req, res) => {
   const { plantel_id, idioma_id } = req.query
   if (plantel_id && idioma_id) {
-    // Intenta primero el periodo específico idioma+plantel, luego el genérico del plantel
+    // Intenta primero el periodo específico idioma+plantel
     const exacto = db.prepare('SELECT * FROM periodos_inscripcion WHERE plantel_id = ? AND idioma_id = ?').get(plantel_id, idioma_id)
     if (exacto) return res.json([exacto])
+    // Fallback: el período puede haber sido guardado con un ID de idioma diferente al mismo idioma
+    // (ocurre cuando se guardó antes de normalizar IDs globales)
+    const idiomaNombre = db.prepare('SELECT nombre FROM idiomas WHERE id = ?').get(idioma_id)?.nombre
+    if (idiomaNombre) {
+      const porNombre = db.prepare(`
+        SELECT pi.* FROM periodos_inscripcion pi
+        JOIN idiomas i ON i.id = pi.idioma_id
+        WHERE pi.plantel_id = ? AND i.nombre = ?
+        LIMIT 1
+      `).get(plantel_id, idiomaNombre)
+      if (porNombre) return res.json([porNombre])
+    }
+    // Fallback genérico del plantel (sin idioma específico)
     const generico = db.prepare('SELECT * FROM periodos_inscripcion WHERE plantel_id = ? AND idioma_id IS NULL').get(plantel_id)
     if (generico) return res.json([generico])
     return res.json([])

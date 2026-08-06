@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../App.jsx'
+import { useAuth, useNav } from '../App.jsx'
 import { P } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
@@ -19,6 +19,7 @@ function fmtFecha(iso) {
 
 export default function Idiomas() {
   const { usuario, tienePermiso } = useAuth()
+  const { navegar } = useNav()
   const [ofertas, setOfertas]   = useState([])
   const [idiomas, setIdiomas]   = useState([])
   const [planteles, setPlanteles] = useState([])
@@ -116,11 +117,22 @@ export default function Idiomas() {
       <div className="card">
         <div className="card-head-row">
           <h3 style={{ fontSize: 15 }}>🌐 {oferta.idioma}</h3>
-          {puedeEditar && (
-            <button className="btn-mini" onClick={() => abrirModal(plantel, oferta.idioma)}>
-              📅 {per ? 'Editar período' : 'Configurar período'}
-            </button>
-          )}
+          <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+            {tienePermiso(P.GRUPO_CREAR) && (
+              <button className="btn-mini" style={{ background: '#2980b9', color: '#fff', borderColor: '#2980b9' }}
+                onClick={() => {
+                  const rec = idiomas.find(i => i.nombre === oferta.idioma)
+                  navegar('grupos', { abrirCrear: true, plantel_id: plantel.id, idioma_id: rec?.id || '' })
+                }}>
+                + Grupo
+              </button>
+            )}
+            {puedeEditar && (
+              <button className="btn-mini" onClick={() => abrirModal(plantel, oferta.idioma)}>
+                📅 {per ? 'Editar período' : 'Configurar período'}
+              </button>
+            )}
+          </div>
         </div>
 
         <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 12 }}>
