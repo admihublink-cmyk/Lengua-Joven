@@ -620,7 +620,7 @@ export default function Login({ onLogin }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
             {[
               { icon: '🏛', title: 'INJUVE Nuevo León', desc: 'El Instituto de la Juventud de Nuevo León impulsa el desarrollo integral de los jóvenes del estado a través de programas educativos, culturales y de emprendimiento.' },
-              { icon: '🤝', title: 'Programa Lengua Joven', desc: 'Convenios con escuelas de idiomas reconocidas para ofrecer becas de idiomas para personas de 12 años en adelante, en modalidad presencial y en línea.' },
+              { icon: '🤝', title: 'Programa Lengua Joven', desc: 'Convenios con escuelas de idiomas reconocidas para ofrecer becas para personas de 12 años en adelante, en modalidad presencial y en línea.' },
               { icon: '🌍', title: 'Nuestra misión', desc: 'Garantizar que el acceso a un segundo idioma no sea una barrera económica, ampliando las oportunidades laborales y académicas de los jóvenes nuevoleoneses.' },
             ].map(({ icon, title, desc }) => (
               <div key={title} style={{ background: '#fafafa', borderRadius: 14, padding: '24px', border: '1px solid #f0f0f0' }}>
