@@ -2,22 +2,33 @@
 
 const BASE = '/api'
 
+function getStorage() {
+  return typeof window !== 'undefined' ? window.localStorage : undefined
+}
+
 function getToken() {
-  return localStorage.getItem('lj_token')
+  try { return getStorage()?.getItem('lj_token') || null } catch { return null }
 }
 
 function setToken(t) {
-  if (t) localStorage.setItem('lj_token', t)
-  else localStorage.removeItem('lj_token')
+  try {
+    if (t) getStorage()?.setItem('lj_token', t)
+    else getStorage()?.removeItem('lj_token')
+  } catch {}
 }
 
 function getUser() {
-  try { return JSON.parse(localStorage.getItem('lj_user') || 'null') } catch { return null }
+  try {
+    const raw = getStorage()?.getItem('lj_user') || 'null'
+    return JSON.parse(raw)
+  } catch { return null }
 }
 
 function setUser(u) {
-  if (u) localStorage.setItem('lj_user', JSON.stringify(u))
-  else localStorage.removeItem('lj_user')
+  try {
+    if (u) getStorage()?.setItem('lj_user', JSON.stringify(u))
+    else getStorage()?.removeItem('lj_user')
+  } catch {}
 }
 
 async function req(method, path, body, options = {}) {
@@ -25,14 +36,19 @@ async function req(method, path, body, options = {}) {
   const token = getToken()
   if (token) headers['Authorization'] = `Bearer ${token}`
 
-  const res = await fetch(BASE + path, {
-    method,
-    headers: options.isFormData ? { Authorization: headers['Authorization'] } : headers,
-    body: options.isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
-  })
+  let res
+  try {
+    res = await fetch(BASE + path, {
+      method,
+      headers: options.isFormData ? { Authorization: headers['Authorization'] } : headers,
+      body: options.isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
+    })
+  } catch (error) {
+    throw new Error('No se pudo conectar con el servidor. Revisa la conexión o intenta más tarde.')
+  }
 
   if (!res.ok) {
-    const err = await res.json().catch(() => ({ error: res.statusText }))
+    const err = await res.json().catch(() => ({ error: res.statusText || 'Error de servidor' }))
     throw new Error(err.error || 'Error de servidor')
   }
   return res.json()

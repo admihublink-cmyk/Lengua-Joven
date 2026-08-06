@@ -64,6 +64,19 @@ export default function App() {
   const tema = 'light'
 
   useEffect(() => {
+    const currentUser = getUsuarioActual()
+    if (!currentUser && typeof window !== 'undefined') {
+      try {
+        const saved = window.localStorage.getItem('lj_user')
+        if (saved) {
+          const parsed = JSON.parse(saved)
+          if (parsed?.id) setUsuario(parsed)
+        }
+      } catch {}
+    }
+  }, [])
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'light')
   }, [])
 

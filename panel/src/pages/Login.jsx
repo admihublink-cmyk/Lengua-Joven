@@ -52,6 +52,8 @@ export default function Login({ onLogin }) {
   const [filtroIdioma, setFiltroIdioma] = useState('')
   const [periodo, setPeriodo] = useState(null)
   const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
+  const [gruposDisponibles, setGruposDisponibles] = useState([])
+  const [grupoInteres, setGrupoInteres] = useState('')
 
   useEffect(() => {
     getOfertas().then(setOfertas).catch(() => {})
@@ -152,14 +154,25 @@ export default function Login({ onLogin }) {
       if (!pre.tutor_email.trim()) { setPreErr('El correo del tutor es requerido para menores de edad.'); return }
     }
     try {
-      const result = await crearPreRegistro(pre)
+      const result = await crearPreRegistro({ ...pre, grupo_interes_id: grupoInteres || null })
       setFolioOk(result.folio)
       setModal('ok')
+      setGrupoInteres('')
+      setGruposDisponibles([])
       setPre({ nombre: '', email: '', tel: '', curp: '', fecha_nacimiento: '', estado_entidad: '', idioma_interes: '', proveedor_interes: '', horario_preferido: '', como_entero: '', tutor_nombre: '', tutor_tel: '', tutor_email: '' })
     } catch (err) {
       setPreErr(err.message || 'Error al enviar, intenta de nuevo.')
     }
   }
+
+  // Cuando el alumno elige idioma + escuela en el pre-registro, carga grupos disponibles
+  useEffect(() => {
+    const plantel = planteles.find(p => p.nombre === pre.proveedor_interes)
+    if (!plantel || !pre.idioma_interes) { setGruposDisponibles([]); setGrupoInteres(''); return }
+    fetchPublico(`grupos?plantel_id=${plantel.id}&idioma=${encodeURIComponent(pre.idioma_interes)}`)
+      .then(g => { setGruposDisponibles(g); setGrupoInteres('') })
+      .catch(() => { setGruposDisponibles([]); setGrupoInteres('') })
+  }, [pre.idioma_interes, pre.proveedor_interes, planteles])
 
   useEffect(() => {
     if (!filtroPlantel || !filtroIdioma) { setPeriodo(null); return }
@@ -386,11 +399,28 @@ export default function Login({ onLogin }) {
                         {plantelesPorIdioma.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
                       </select>
                     </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                      Horario preferido (opcional)
-                      <input value={pre.horario_preferido} onChange={e => setPre({ ...pre, horario_preferido: e.target.value })} placeholder="Ej. Sábados por la mañana"
-                        style={inputStyle(focusedInput === 'horario')} onFocus={() => setFocusedInput('horario')} onBlur={() => setFocusedInput('')} />
-                    </label>
+                    {/* Selector de grupo/horario: si hay grupos disponibles, muestra opciones; si no, texto libre */}
+                    {gruposDisponibles.length > 0 ? (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
+                        Horario preferido
+                        <select value={grupoInteres} onChange={e => setGrupoInteres(e.target.value)}
+                          style={{ ...inputStyle(false), appearance: 'auto' }}>
+                          <option value="">Sin preferencia de horario</option>
+                          {gruposDisponibles.map(g => (
+                            <option key={g.id} value={g.id} disabled={g.cupo_disponible === 0}>
+                              {g.nivel_nombre ? `${g.nivel_nombre} — ` : ''}{g.horario}
+                              {g.cupo_disponible === 0 ? ' (sin cupo)' : ` (${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''})`}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    ) : (
+                      <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
+                        Horario preferido (opcional)
+                        <input value={pre.horario_preferido} onChange={e => setPre({ ...pre, horario_preferido: e.target.value })} placeholder="Ej. Sábados por la mañana"
+                          style={inputStyle(focusedInput === 'horario')} onFocus={() => setFocusedInput('horario')} onBlur={() => setFocusedInput('')} />
+                      </label>
+                    )}
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
                       ¿Cómo te enteraste? (opcional)
                       <select value={pre.como_entero} onChange={e => setPre({ ...pre, como_entero: e.target.value })}

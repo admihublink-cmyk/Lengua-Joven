@@ -30,7 +30,11 @@ export default function Idiomas() {
 
   async function cargar() {
     try {
-      const [o, i, p] = await Promise.all([api.getOfertas(), api.getIdiomas(), api.getPlanteles()])
+      const [o, i, p] = await Promise.all([
+        api.getOfertas(),
+        fetch('/api/publico/idiomas').then(r => r.json()),
+        api.getPlanteles(),
+      ])
       setOfertas(o)
       setIdiomas(i)
       setPlanteles(p)
