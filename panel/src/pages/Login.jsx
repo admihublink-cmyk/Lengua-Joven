@@ -244,7 +244,6 @@ export default function Login({ onLogin }) {
           {[['quienes', '¿Quiénes somos?'], ['inscripciones', 'Inscripciones'], ['oferta', 'Oferta educativa']].map(([id, label]) => (
             <a key={id} href={`#${id}`} style={{ color: '#555', textDecoration: 'none', fontSize: 14, fontWeight: 500 }}>{label}</a>
           ))}
-          <button onClick={() => setModal('prereg')} style={{ background: '#fff', color: '#f18b11', border: '2px solid #f18b11', borderRadius: 8, padding: '7px 18px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Pre-registrarme</button>
           <button onClick={() => setModal('login')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>Iniciar sesión</button>
         </div>
       </nav>
@@ -791,13 +790,6 @@ export default function Login({ onLogin }) {
             </div>
           )}
 
-          {!(filtroPlantel && filtroIdioma && gruposPeriodo.length > 0) && (
-            <div style={{ textAlign: 'center' }}>
-              <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '14px 36px', fontWeight: 700, fontSize: 16, cursor: 'pointer' }}>
-                Iniciar mi pre-registro →
-              </button>
-            </div>
-          )}
         </div>
       </section>
 
