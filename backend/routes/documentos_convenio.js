@@ -16,7 +16,7 @@ const TIPOS_VALIDOS = [
 
 const storage = multer.diskStorage({
   destination(req, file, cb) {
-    const dir = path.join(__dirname, '..', 'uploads', 'convenios', req.params.id)
+    const dir = path.join(process.env.UPLOADS_PATH || path.join(__dirname, '..', 'uploads'), 'convenios', req.params.id)
     fs.mkdirSync(dir, { recursive: true })
     cb(null, dir)
   },

@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { login, getOfertas, crearPreRegistro, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
 
-const fetchPublico = (path) => fetch('/api/publico/' + path).then(r => r.json())
+const API_BASE = import.meta.env.VITE_API_URL || ''
+const fetchPublico = (path) => fetch(API_BASE + '/api/publico/' + path).then(r => r.json())
 
 const ICONOS_IDIOMA = {
   'Inglés': '🇺🇸', 'Francés': '🇫🇷', 'Alemán': '🇩🇪', 'Italiano': '🇮🇹',
@@ -614,21 +615,77 @@ export default function Login({ onLogin }) {
       </section>
 
       {/* ── ¿QUIÉNES SOMOS? ── */}
-      <section id="quienes" style={{ background: '#fff', padding: '64px 32px', borderTop: '1px solid #f0f0f0', borderBottom: '1px solid #f0f0f0' }}>
-        <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 24, color: '#111' }}>¿Quiénes somos?</h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 24 }}>
-            {[
-              { icon: '🏛', title: 'INJUVE Nuevo León', desc: 'El Instituto de la Juventud de Nuevo León impulsa el desarrollo integral de los jóvenes del estado a través de programas educativos, culturales y de emprendimiento.' },
-              { icon: '🤝', title: 'Programa Lengua Joven', desc: 'Convenios con escuelas de idiomas reconocidas para ofrecer becas para personas de 12 años en adelante, en modalidad presencial y en línea.' },
-              { icon: '🌍', title: 'Nuestra misión', desc: 'Garantizar que el acceso a un segundo idioma no sea una barrera económica, ampliando las oportunidades laborales y académicas de los jóvenes nuevoleoneses.' },
-            ].map(({ icon, title, desc }) => (
-              <div key={title} style={{ background: '#fafafa', borderRadius: 14, padding: '24px', border: '1px solid #f0f0f0' }}>
-                <div style={{ fontSize: 32, marginBottom: 12 }}>{icon}</div>
-                <h3 style={{ fontSize: 16, fontWeight: 700, margin: '0 0 8px', color: '#111' }}>{title}</h3>
-                <p style={{ fontSize: 13, color: '#666', lineHeight: 1.6, margin: 0 }}>{desc}</p>
+      <section id="quienes" style={{ background: 'linear-gradient(180deg, #fff8f2 0%, #fff 100%)', padding: '80px 32px', borderTop: '1px solid #f0e8e0', borderBottom: '1px solid #f0e8e0' }}>
+        <div style={{ maxWidth: 960, margin: '0 auto' }}>
+          {/* Encabezado */}
+          <div style={{ textAlign: 'center', marginBottom: 56 }}>
+            <div style={{ display: 'inline-block', background: '#fff4e0', color: '#f18b11', borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16 }}>Sobre el programa</div>
+            <h2 style={{ fontSize: 34, fontWeight: 900, margin: '0 0 12px', color: '#111', lineHeight: 1.2 }}>¿Quiénes somos?</h2>
+            <p style={{ fontSize: 15, color: '#777', maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+              Conoce la iniciativa que está transformando el acceso a la educación en idiomas para los jóvenes de Nuevo León.
+            </p>
+          </div>
+
+          {/* Tarjeta principal — Descripción */}
+          <div style={{ background: '#fff', borderRadius: 20, padding: '36px 40px', border: '1.5px solid #f0e0cc', boxShadow: '0 8px 40px rgba(241,139,17,.09)', marginBottom: 28, display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+            <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #f18b11, #f5a940)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0, boxShadow: '0 4px 16px rgba(241,139,17,.3)' }}>📖</div>
+            <div style={{ flex: 1, minWidth: 220 }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>Descripción</div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px', color: '#111' }}>¿Qué es Lengua Joven?</h3>
+              <p style={{ fontSize: 14, color: '#555', lineHeight: 1.8, margin: 0 }}>
+                Es una línea de acción del programa MIR <strong style={{ color: '#111' }}>"PRO-EDUCACIÓN"</strong>, enfocada en incrementar las oportunidades de obtener un empleo digno y mejor remunerado para las y los jóvenes del estado de Nuevo León, a través de la gestión de becas en el estudio de lenguas extranjeras. En un mundo globalizado, las personas jóvenes merecen acceso a esta parte fundamental de su vida académica.
+              </p>
+            </div>
+          </div>
+
+          {/* Fila inferior — Objetivos + Alcance */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 24 }}>
+
+            {/* Objetivos */}
+            <div style={{ background: '#fff', borderRadius: 20, padding: '32px', border: '1.5px solid #f0e0cc', boxShadow: '0 4px 24px rgba(0,0,0,.05)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+                <div style={{ width: 48, height: 48, borderRadius: 14, background: '#fff4e0', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎯</div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', letterSpacing: '.08em', textTransform: 'uppercase' }}>Del programa</div>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#111' }}>Objetivos</h3>
+                </div>
               </div>
-            ))}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                {[
+                  'Incrementar las oportunidades de formación educativa en idiomas extranjeros para que las y los jóvenes puedan acceder a más y mejores oportunidades laborales.',
+                  'Brindar a las juventudes del estado cursos de idiomas extranjeros de calidad a bajo costo.',
+                  'Reanudar el programa con mecanismos de inscripción y gestión rápidos y eficaces para las y los jóvenes, así como para el INJUVE e instituciones asociadas.',
+                ].map((texto, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
+                    <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#f18b11', color: '#fff', fontWeight: 800, fontSize: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>{i + 1}</div>
+                    <p style={{ margin: 0, fontSize: 13, color: '#555', lineHeight: 1.7 }}>{texto}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Alcance */}
+            <div style={{ background: 'linear-gradient(135deg, #f18b11 0%, #f5a940 100%)', borderRadius: 20, padding: '32px', boxShadow: '0 8px 32px rgba(241,139,17,.25)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
+                  <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(255,255,255,.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🌍</div>
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'rgba(255,255,255,.75)', letterSpacing: '.08em', textTransform: 'uppercase' }}>Impacto</div>
+                    <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#fff' }}>Alcance</h3>
+                  </div>
+                </div>
+                <p style={{ fontSize: 14, color: 'rgba(255,255,255,.92)', lineHeight: 1.8, margin: '0 0 28px' }}>
+                  Brindar apoyo a las y los jóvenes a través de herramientas que impulsen su desarrollo académico, contribuyendo al incremento del índice de jóvenes con un segundo idioma en Nuevo León.
+                </p>
+              </div>
+              <div style={{ background: 'rgba(255,255,255,.18)', borderRadius: 12, padding: '14px 18px', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontSize: 20 }}>🏆</span>
+                <p style={{ margin: 0, fontSize: 13, color: '#fff', fontWeight: 600, lineHeight: 1.5 }}>
+                  Programa MIR <span style={{ fontWeight: 800 }}>"PRO-EDUCACIÓN"</span> · INJUVE Nuevo León
+                </p>
+              </div>
+            </div>
+
           </div>
         </div>
       </section>
