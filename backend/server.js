@@ -124,26 +124,6 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
-function startServer(port) {
-  const server = app.listen(port, () => {
-    console.log(`Lengua Joven API corriendo en http://localhost:${port}`)
-  })
-
-  server.on('error', (error) => {
-    if (error.code === 'EADDRINUSE') {
-      const nextPort = port + 1
-      console.warn(`Puerto ${port} ocupado. Intentando ${nextPort}...`)
-      if (server.listening) {
-        server.close(() => startServer(nextPort))
-      } else {
-        startServer(nextPort)
-      }
-      return
-    }
-
-    console.error('No se pudo iniciar el servidor:', error)
-    process.exit(1)
-  })
-}
-
-startServer(PORT)
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Lengua Joven API corriendo en http://0.0.0.0:${PORT}`)
+})
