@@ -6,7 +6,7 @@ const { v4: uuidv4 } = require('uuid')
 const db = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
-const UPLOAD_DIR = path.join(__dirname, '..', 'uploads')
+const UPLOAD_DIR = process.env.UPLOADS_PATH || path.join(__dirname, '..', 'uploads')
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

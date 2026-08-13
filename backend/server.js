@@ -46,7 +46,8 @@ app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
 // Servir archivos subidos
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')))
+const UPLOADS_PATH = process.env.UPLOADS_PATH || path.join(__dirname, 'uploads')
+app.use('/uploads', express.static(UPLOADS_PATH))
 
 // Rutas públicas (sin auth)
 app.use('/api/ofertas', require('./routes/ofertas'))
