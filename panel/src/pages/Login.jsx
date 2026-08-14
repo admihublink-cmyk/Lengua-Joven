@@ -264,9 +264,10 @@ export default function Login({ onLogin }) {
         padding: '0 32px', height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ fontSize: 22, fontWeight: 800 }}>
-          <span style={{ color: '#f18b11' }}>Lengua</span>
-          <span style={{ fontWeight: 300, color: txt }}> Joven</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+          <img src="/logo-injuve.jpg" alt="INJUVE NL" style={{ height: 40, objectFit: 'contain' }} />
+          <div style={{ width: 1, height: 32, background: 'rgba(0,0,0,0.12)' }} />
+          <img src="/logo-lengua-joven.jpg" alt="Lengua Joven" style={{ height: 36, objectFit: 'contain' }} />
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {[['quienes', '¿Quiénes somos?'], ['inscripciones', 'Inscripciones'], ['oferta', 'Oferta educativa']].map(([id, label]) => (
@@ -1069,9 +1070,11 @@ export default function Login({ onLogin }) {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, padding: '36px 32px', textAlign: 'center', fontSize: 13 }}>
-        <div style={{ fontWeight: 700, color: txt, fontSize: 16, marginBottom: 6 }}>
-          <span style={{ color: '#f18b11' }}>Lengua</span> Joven — INJUVE Nuevo León
+      <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, padding: '40px 32px', textAlign: 'center', fontSize: 13 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
+          <img src="/logo-injuve.jpg" alt="INJUVE NL" style={{ height: 44, objectFit: 'contain' }} />
+          <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.12)' }} />
+          <img src="/logo-lengua-joven.jpg" alt="Lengua Joven" style={{ height: 40, objectFit: 'contain' }} />
         </div>
         <p style={{ margin: '4px 0' }}>Programa de idiomas para personas de 12 años en adelante</p>
         <p style={{ margin: '4px 0', fontSize: 12 }}>© 2026 · soporte@injuve.mx</p>
