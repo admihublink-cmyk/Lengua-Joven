@@ -264,7 +264,7 @@ export default function Login({ onLogin }) {
         padding: '0 32px', height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 40, objectFit: 'contain' }} />
+        <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 52, objectFit: 'contain', mixBlendMode: 'multiply' }} />
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {[['quienes', '¿Quiénes somos?'], ['inscripciones', 'Inscripciones'], ['oferta', 'Oferta educativa']].map(([id, label]) => (
             <a key={id} href={`#${id}`} style={{ color: txtMid, textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color .15s' }}
@@ -1069,9 +1069,9 @@ export default function Login({ onLogin }) {
       {/* ── FOOTER ── */}
       <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, padding: '40px 32px', textAlign: 'center', fontSize: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
-          <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 44, objectFit: 'contain' }} />
+          <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 52, objectFit: 'contain', mixBlendMode: 'multiply' }} />
           <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.12)' }} />
-          <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 40, objectFit: 'contain' }} />
+          <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 48, objectFit: 'contain', mixBlendMode: 'multiply' }} />
         </div>
         <p style={{ margin: '4px 0' }}>Programa de idiomas para personas de 12 años en adelante</p>
         <p style={{ margin: '4px 0', fontSize: 12 }}>© 2026 · soporte@injuve.mx</p>
