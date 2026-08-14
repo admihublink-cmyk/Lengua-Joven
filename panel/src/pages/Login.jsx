@@ -738,7 +738,7 @@ export default function Login({ onLogin }) {
                   if (!sigueValido) setFiltroIdioma('')
                 }
               }}
-              style={{ padding: '9px 14px', borderRadius: 8, border: `1px solid ${glass.border}`, fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer', background: glass.bg, color: '#e2e8f0' }}>
+              style={{ padding: '9px 14px', borderRadius: 8, border: `1px solid ${glass.border}`, fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer', background: glass.bg, color: txt }}>
               <option value="">📍 Selecciona tu plantel…</option>
               {planteles
                 .filter(p => {
@@ -758,7 +758,7 @@ export default function Login({ onLogin }) {
                   if (!sigueValido) setFiltroPlantel('')
                 }
               }}
-              style={{ padding: '9px 14px', borderRadius: 8, border: `1px solid ${glass.border}`, fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer', background: glass.bg, color: '#e2e8f0' }}>
+              style={{ padding: '9px 14px', borderRadius: 8, border: `1px solid ${glass.border}`, fontSize: 14, flex: 1, minWidth: 180, cursor: 'pointer', background: glass.bg, color: txt }}>
               <option value="">🌐 Selecciona tu idioma…</option>
               {[...new Map(
                 idiomas
