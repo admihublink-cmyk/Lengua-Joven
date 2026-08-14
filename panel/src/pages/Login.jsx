@@ -233,29 +233,32 @@ export default function Login({ onLogin }) {
   }
 
   const glass = {
-    bg:     'rgba(17,21,32,0.55)',
-    border: 'rgba(255,255,255,0.09)',
+    bg:     'rgba(255,255,255,0.65)',
+    border: 'rgba(0,0,0,0.07)',
     blur:   'blur(24px) saturate(160%)',
-    shadow: '0 8px 32px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+    shadow: '0 8px 32px rgba(0,0,0,0.08), inset 0 1px 0 rgba(255,255,255,0.9)',
   }
+  const txt    = '#1a1a2e'
+  const txtMid = '#555e70'
+  const txtDim = '#8892a4'
 
   return (
     <div style={{
       minHeight: '100vh',
-      backgroundColor: '#0b0e18',
+      backgroundColor: '#f0f2f8',
       backgroundImage: `
-        radial-gradient(ellipse 70% 55% at 12% 8%,  rgba(241,139,17,0.13) 0%, transparent 65%),
-        radial-gradient(ellipse 55% 70% at 88% 92%, rgba(52,152,219,0.09) 0%, transparent 65%),
-        radial-gradient(ellipse 45% 45% at 60% 40%, rgba(155,89,182,0.06) 0%, transparent 60%)`,
+        radial-gradient(ellipse 70% 55% at 12% 8%,  rgba(241,139,17,0.10) 0%, transparent 65%),
+        radial-gradient(ellipse 55% 70% at 88% 92%, rgba(52,152,219,0.08) 0%, transparent 65%),
+        radial-gradient(ellipse 45% 45% at 60% 40%, rgba(155,89,182,0.05) 0%, transparent 60%)`,
       backgroundAttachment: 'fixed',
       fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif',
-      color: '#e2e8f0',
+      color: txt,
     }}>
 
       {/* ── NAVBAR ── */}
       <nav style={{
         position: 'sticky', top: 0, zIndex: 100,
-        background: 'rgba(11,14,24,0.72)',
+        background: 'rgba(240,242,248,0.75)',
         backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur,
         borderBottom: `1px solid ${glass.border}`,
         padding: '0 32px', height: 64,
@@ -263,12 +266,12 @@ export default function Login({ onLogin }) {
       }}>
         <div style={{ fontSize: 22, fontWeight: 800 }}>
           <span style={{ color: '#f18b11' }}>Lengua</span>
-          <span style={{ fontWeight: 300, color: '#e2e8f0' }}> Joven</span>
+          <span style={{ fontWeight: 300, color: txt }}> Joven</span>
         </div>
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {[['quienes', '¿Quiénes somos?'], ['inscripciones', 'Inscripciones'], ['oferta', 'Oferta educativa']].map(([id, label]) => (
-            <a key={id} href={`#${id}`} style={{ color: 'rgba(226,232,240,0.7)', textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color .15s' }}
-               onMouseEnter={e => e.target.style.color='#e2e8f0'} onMouseLeave={e => e.target.style.color='rgba(226,232,240,0.7)'}>{label}</a>
+            <a key={id} href={`#${id}`} style={{ color: txtMid, textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color .15s' }}
+               onMouseEnter={e => e.target.style.color=txt} onMouseLeave={e => e.target.style.color=txtMid}>{label}</a>
           ))}
           <button onClick={() => setModal('login')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 20px', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: '0 2px 12px rgba(241,139,17,.35)' }}>Iniciar sesión</button>
         </div>
@@ -277,27 +280,27 @@ export default function Login({ onLogin }) {
       {/* ── MODALES ── */}
       {(modal === 'login' || modal === 'prereg' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok' || modal === 'suscribir' || modal === 'suscribir_ok') && (
         <div onClick={cerrar} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.08)', color: '#e2e8f0' }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.9)', color: txt }}>
 
             {/* LOGIN */}
             {modal === 'login' && (
               <>
                 <div style={{ textAlign: 'center', marginBottom: 28 }}>
-                  <div style={{ fontSize: 24, fontWeight: 800 }}><span style={{ color: '#f18b11' }}>Lengua</span><span style={{ color: '#e2e8f0' }}> Joven</span></div>
-                  <p style={{ color: 'rgba(226,232,240,0.55)', fontSize: 13, marginTop: 4 }}>Panel de Gestión Educativa</p>
+                  <div style={{ fontSize: 24, fontWeight: 800 }}><span style={{ color: '#f18b11' }}>Lengua</span><span style={{ color: txt }}> Joven</span></div>
+                  <p style={{ color: txtDim, fontSize: 13, marginTop: 4 }}>Panel de Gestión Educativa</p>
                 </div>
                 <form onSubmit={entrar} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                   {loginErr && <div style={{ background: 'rgba(231,76,60,0.15)', border: '1px solid rgba(231,76,60,0.3)', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#ff6b6b' }}>{loginErr}</div>}
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'rgba(226,232,240,0.7)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: txtMid }}>
                     Correo electrónico
                     <input type="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="usuario@injuve.mx" autoFocus
-                      style={{ ...inputStyle(focusedInput === 'loginEmail'), background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', borderColor: focusedInput === 'loginEmail' ? '#f18b11' : 'rgba(255,255,255,0.12)' }}
+                      style={inputStyle(focusedInput === 'loginEmail')}
                       onFocus={() => setFocusedInput('loginEmail')} onBlur={() => setFocusedInput('')} />
                   </label>
-                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: 'rgba(226,232,240,0.7)' }}>
+                  <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: txtMid }}>
                     Contraseña
                     <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                      style={{ ...inputStyle(focusedInput === 'loginPwd'), background: 'rgba(255,255,255,0.06)', color: '#e2e8f0', borderColor: focusedInput === 'loginPwd' ? '#f18b11' : 'rgba(255,255,255,0.12)' }}
+                      style={inputStyle(focusedInput === 'loginPwd')}
                       onFocus={() => setFocusedInput('loginPwd')} onBlur={() => setFocusedInput('')} />
                   </label>
                   <button type="submit" style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: 15, cursor: 'pointer', marginTop: 4, boxShadow: '0 4px 18px rgba(241,139,17,.4)' }}>Iniciar sesión</button>
@@ -622,18 +625,18 @@ export default function Login({ onLogin }) {
 
       {/* ── HERO ── */}
       <section style={{ padding: '96px 32px 72px', textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
-        <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.15)', color: '#faa63a', border: '1px solid rgba(241,139,17,0.3)', borderRadius: 20, padding: '4px 16px', fontSize: 13, fontWeight: 600, marginBottom: 20, backdropFilter: 'blur(8px)' }}>Programa de idiomas INJUVE</div>
-        <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.08, margin: '0 0 22px', color: '#f0f4ff', letterSpacing: '-0.5px' }}>
+        <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.12)', color: '#c96e00', border: '1px solid rgba(241,139,17,0.25)', borderRadius: 20, padding: '4px 16px', fontSize: 13, fontWeight: 600, marginBottom: 20, backdropFilter: 'blur(8px)' }}>Programa de idiomas INJUVE</div>
+        <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.08, margin: '0 0 22px', color: txt, letterSpacing: '-0.5px' }}>
           Aprende un idioma.<br /><span style={{ color: '#f18b11' }}>Abre tu futuro.</span>
         </h1>
-        <p style={{ fontSize: 18, color: 'rgba(226,232,240,0.72)', lineHeight: 1.65, margin: '0 auto 36px', maxWidth: 540 }}>
+        <p style={{ fontSize: 18, color: txtMid, lineHeight: 1.65, margin: '0 auto 36px', maxWidth: 540 }}>
           Oferta educativa de idiomas a precios accesibles para jóvenes de Nuevo León, en colaboración con las mejores escuelas de idiomas de la región.
         </p>
         <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
-          <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 12, padding: '15px 38px', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: '0 4px 24px rgba(241,139,17,.45)' }}>
+          <button onClick={() => setModal('prereg')} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 12, padding: '15px 38px', fontWeight: 700, fontSize: 16, cursor: 'pointer', boxShadow: '0 4px 24px rgba(241,139,17,.35)' }}>
             Pre-registrarme ahora →
           </button>
-          <button onClick={() => { const el = document.getElementById('oferta'); if (el) el.scrollIntoView({ behavior: 'smooth' }) }} style={{ background: 'rgba(255,255,255,0.08)', color: '#f18b11', border: '1.5px solid rgba(241,139,17,0.45)', borderRadius: 12, padding: '15px 30px', fontWeight: 700, fontSize: 16, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
+          <button onClick={() => { const el = document.getElementById('oferta'); if (el) el.scrollIntoView({ behavior: 'smooth' }) }} style={{ background: 'rgba(255,255,255,0.65)', color: '#f18b11', border: '1.5px solid rgba(241,139,17,0.35)', borderRadius: 12, padding: '15px 30px', fontWeight: 700, fontSize: 16, cursor: 'pointer', backdropFilter: 'blur(8px)' }}>
             Ver oferta educativa
           </button>
         </div>
@@ -644,9 +647,9 @@ export default function Login({ onLogin }) {
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
           {/* Encabezado */}
           <div style={{ textAlign: 'center', marginBottom: 56 }}>
-            <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.15)', color: '#faa63a', border: '1px solid rgba(241,139,17,0.3)', borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16, backdropFilter: 'blur(8px)' }}>Sobre el programa</div>
-            <h2 style={{ fontSize: 36, fontWeight: 900, margin: '0 0 12px', color: '#f0f4ff', lineHeight: 1.2 }}>¿Quiénes somos?</h2>
-            <p style={{ fontSize: 15, color: 'rgba(226,232,240,0.65)', maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
+            <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.12)', color: '#c96e00', border: '1px solid rgba(241,139,17,0.25)', borderRadius: 20, padding: '4px 16px', fontSize: 12, fontWeight: 700, letterSpacing: '.06em', textTransform: 'uppercase', marginBottom: 16, backdropFilter: 'blur(8px)' }}>Sobre el programa</div>
+            <h2 style={{ fontSize: 36, fontWeight: 900, margin: '0 0 12px', color: txt, lineHeight: 1.2 }}>¿Quiénes somos?</h2>
+            <p style={{ fontSize: 15, color: txtMid, maxWidth: 520, margin: '0 auto', lineHeight: 1.7 }}>
               Conoce la iniciativa que está transformando el acceso a la educación en idiomas para los jóvenes de Nuevo León.
             </p>
           </div>
@@ -655,10 +658,10 @@ export default function Login({ onLogin }) {
           <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, boxShadow: glass.shadow, borderRadius: 20, padding: '36px 40px', marginBottom: 24, display: 'flex', gap: 28, alignItems: 'flex-start', flexWrap: 'wrap' }}>
             <div style={{ width: 56, height: 56, borderRadius: 16, background: 'linear-gradient(135deg, #f18b11, #f5a940)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 26, flexShrink: 0, boxShadow: '0 4px 20px rgba(241,139,17,.4)' }}>📖</div>
             <div style={{ flex: 1, minWidth: 220 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: '#faa63a', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>Descripción</div>
-              <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px', color: '#f0f4ff' }}>¿Qué es Lengua Joven?</h3>
-              <p style={{ fontSize: 14, color: 'rgba(226,232,240,0.8)', lineHeight: 1.8, margin: 0 }}>
-                Es una línea de acción del programa MIR <strong style={{ color: '#e2e8f0' }}>"PRO-EDUCACIÓN"</strong>, enfocada en incrementar las oportunidades de obtener un empleo digno y mejor remunerado para las y los jóvenes del estado de Nuevo León, a través de la gestión de becas en el estudio de lenguas extranjeras. En un mundo globalizado, las personas jóvenes merecen acceso a esta parte fundamental de su vida académica.
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', letterSpacing: '.08em', textTransform: 'uppercase', marginBottom: 6 }}>Descripción</div>
+              <h3 style={{ fontSize: 20, fontWeight: 800, margin: '0 0 10px', color: txt }}>¿Qué es Lengua Joven?</h3>
+              <p style={{ fontSize: 14, color: txtMid, lineHeight: 1.8, margin: 0 }}>
+                Es una línea de acción del programa MIR <strong style={{ color: txt }}>"PRO-EDUCACIÓN"</strong>, enfocada en incrementar las oportunidades de obtener un empleo digno y mejor remunerado para las y los jóvenes del estado de Nuevo León, a través de la gestión de becas en el estudio de lenguas extranjeras. En un mundo globalizado, las personas jóvenes merecen acceso a esta parte fundamental de su vida académica.
               </p>
             </div>
           </div>
@@ -671,8 +674,8 @@ export default function Login({ onLogin }) {
               <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 24 }}>
                 <div style={{ width: 48, height: 48, borderRadius: 14, background: 'rgba(241,139,17,0.18)', border: '1px solid rgba(241,139,17,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>🎯</div>
                 <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#faa63a', letterSpacing: '.08em', textTransform: 'uppercase' }}>Del programa</div>
-                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: '#f0f4ff' }}>Objetivos</h3>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', letterSpacing: '.08em', textTransform: 'uppercase' }}>Del programa</div>
+                  <h3 style={{ fontSize: 17, fontWeight: 800, margin: 0, color: txt }}>Objetivos</h3>
                 </div>
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
@@ -683,7 +686,7 @@ export default function Login({ onLogin }) {
                 ].map((texto, i) => (
                   <div key={i} style={{ display: 'flex', gap: 14, alignItems: 'flex-start' }}>
                     <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#f18b11', color: '#fff', fontWeight: 800, fontSize: 12, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', marginTop: 1 }}>{i + 1}</div>
-                    <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.78)', lineHeight: 1.7 }}>{texto}</p>
+                    <p style={{ margin: 0, fontSize: 13, color: txtMid, lineHeight: 1.7 }}>{texto}</p>
                   </div>
                 ))}
               </div>
@@ -718,8 +721,8 @@ export default function Login({ onLogin }) {
       {/* ── PERÍODO DE INSCRIPCIONES ── */}
       <section id="inscripciones" style={{ padding: '72px 32px', borderTop: `1px solid ${glass.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#f0f4ff' }}>Período de inscripciones</h2>
-          <p style={{ color: 'rgba(226,232,240,0.6)', fontSize: 14, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: txt }}>Período de inscripciones</h2>
+          <p style={{ color: txtMid, fontSize: 14, marginBottom: 24 }}>
             {periodo?.ciclo || 'Selecciona tu plantel e idioma para ver las fechas de tu ciclo'}
           </p>
 
@@ -804,8 +807,8 @@ export default function Login({ onLogin }) {
                 {tarjetas.map(({ fecha, titulo, desc, color }) => (
                   <div key={titulo} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderTop: `3px solid ${color}`, borderRadius: 14, padding: '20px', boxShadow: glass.shadow }}>
                     <div style={{ fontSize: 12, fontWeight: 700, color, marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.05em' }}>{fecha}</div>
-                    <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: '#f0f4ff' }}>{titulo}</div>
-                    <p style={{ fontSize: 13, color: 'rgba(226,232,240,0.7)', lineHeight: 1.5, margin: 0 }}>{desc}</p>
+                    <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6, color: txt }}>{titulo}</div>
+                    <p style={{ fontSize: 13, color: txtMid, lineHeight: 1.5, margin: 0 }}>{desc}</p>
                   </div>
                 ))}
               </div>
@@ -826,16 +829,16 @@ export default function Login({ onLogin }) {
           {/* Grupos disponibles para el plantel+idioma seleccionado */}
           {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length > 0 && (
             <div style={{ marginBottom: 32 }}>
-              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 14px', color: '#f0f4ff' }}>
+              <h3 style={{ fontSize: 17, fontWeight: 800, margin: '0 0 14px', color: txt }}>
                 Grupos abiertos
               </h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(220px, 1fr))', gap: 14 }}>
                 {gruposPeriodo.map(g => (
                   <div key={g.id} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderLeft: '3px solid #f18b11', borderRadius: 12, padding: '16px 18px', boxShadow: glass.shadow }}>
                     {g.nivel_nombre && (
-                      <div style={{ fontSize: 11, fontWeight: 700, color: '#faa63a', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>{g.nivel_nombre}</div>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#f18b11', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 4 }}>{g.nivel_nombre}</div>
                     )}
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#f0f4ff', marginBottom: 6 }}>🕐 {g.horario || 'Horario por confirmar'}</div>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: txt, marginBottom: 6 }}>🕐 {g.horario || 'Horario por confirmar'}</div>
                     <div style={{ fontSize: 13, color: g.cupo_disponible > 0 ? '#4cd964' : '#ff6b6b', fontWeight: 600 }}>
                       {g.cupo_disponible > 0
                         ? `${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''}`
@@ -856,10 +859,10 @@ export default function Login({ onLogin }) {
           {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length === 0 && (
             <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: '1px dashed rgba(52,152,219,0.45)', borderRadius: 14, padding: '28px 24px', textAlign: 'center', marginBottom: 28, boxShadow: glass.shadow }}>
               <div style={{ fontSize: 28, marginBottom: 8 }}>🔔</div>
-              <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 15, color: '#f0f4ff' }}>
+              <p style={{ margin: '0 0 14px', fontWeight: 700, fontSize: 15, color: txt }}>
                 ¿Te gustaría que te notifiquemos cuando se abra un grupo?
               </p>
-              <p style={{ margin: '0 0 16px', fontSize: 13, color: 'rgba(226,232,240,0.7)' }}>
+              <p style={{ margin: '0 0 16px', fontSize: 13, color: txtMid }}>
                 {!periodo
                   ? <><strong>Aún no hay fechas configuradas</strong> para este plantel e idioma, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.</>
                   : 'Aún no hay grupos abiertos para este idioma en este plantel, pero puedes suscribirte y te avisaremos en cuanto haya disponibilidad.'
@@ -879,7 +882,7 @@ export default function Login({ onLogin }) {
       <section style={{ padding: '72px 32px', borderTop: `1px solid ${glass.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: 48, alignItems: 'start' }}>
           <div>
-            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: '#f0f4ff' }}>Información para inscripción</h2>
+            <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 16, color: txt }}>Información para inscripción</h2>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               {[
                 { req: '📋 Requisitos', items: ['Tener de 12 años en adelante', 'Identificación oficial o acta de nacimiento', 'CURP'] },
@@ -887,16 +890,16 @@ export default function Login({ onLogin }) {
                 { req: '📍 Modalidades', items: ['Presencial en planteles y escuelas socias', 'En línea (plataforma de la escuela socia)', 'Autodidacta (Altissia, acceso 24/7)'] },
               ].map(({ req, items }) => (
                 <div key={req} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 12, padding: '16px 20px', boxShadow: glass.shadow }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#faa63a' }}>{req}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 8, color: '#f18b11' }}>{req}</div>
                   <ul style={{ margin: 0, paddingLeft: 18, display: 'flex', flexDirection: 'column', gap: 4 }}>
-                    {items.map(i => <li key={i} style={{ fontSize: 13, color: 'rgba(226,232,240,0.75)' }}>{i}</li>)}
+                    {items.map(i => <li key={i} style={{ fontSize: 13, color: txtMid }}>{i}</li>)}
                   </ul>
                 </div>
               ))}
             </div>
           </div>
           <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 18, padding: '32px', boxShadow: glass.shadow }}>
-            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 800, color: '#f0f4ff' }}>¿Cómo inscribirte?</h3>
+            <h3 style={{ margin: '0 0 20px', fontSize: 18, fontWeight: 800, color: txt }}>¿Cómo inscribirte?</h3>
             {[
               ['1', 'Elige tu idioma y escuela en el catálogo de oferta educativa.'],
               ['2', 'Llena tu pre-registro desde esta página (sin necesidad de cuenta).'],
@@ -906,7 +909,7 @@ export default function Login({ onLogin }) {
             ].map(([n, texto]) => (
               <div key={n} style={{ display: 'flex', gap: 16, marginBottom: 18, alignItems: 'flex-start' }}>
                 <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#f18b11', color: '#fff', fontWeight: 800, fontSize: 14, flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 10px rgba(241,139,17,.4)' }}>{n}</div>
-                <p style={{ margin: 0, fontSize: 13, color: 'rgba(226,232,240,0.78)', lineHeight: 1.6, paddingTop: 6 }}>{texto}</p>
+                <p style={{ margin: 0, fontSize: 13, color: txtMid, lineHeight: 1.6, paddingTop: 6 }}>{texto}</p>
               </div>
             ))}
             <button onClick={() => setModal('prereg')} style={{ width: '100%', background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '13px', fontWeight: 700, fontSize: 14, cursor: 'pointer', marginTop: 4, boxShadow: '0 4px 18px rgba(241,139,17,.4)' }}>
@@ -919,11 +922,11 @@ export default function Login({ onLogin }) {
       {/* ── OFERTA EDUCATIVA ── */}
       <section id="oferta" style={{ padding: '72px 32px', borderTop: `1px solid ${glass.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
-          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#f0f4ff' }}>Oferta educativa</h2>
-          <p style={{ color: 'rgba(226,232,240,0.6)', fontSize: 14, marginBottom: 24 }}>
+          <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: txt }}>Oferta educativa</h2>
+          <p style={{ color: txtMid, fontSize: 14, marginBottom: 24 }}>
             {planteles.length} escuelas socias · {idiomasResumen.length} idiomas disponibles + 21 idiomas autodidacta con Altissia
           </p>
-          <p style={{ color: 'rgba(226,232,240,0.5)', fontSize: 13, marginBottom: 20 }}>
+          <p style={{ color: txtDim, fontSize: 13, marginBottom: 20 }}>
             Haz clic en un idioma para ver los horarios disponibles.
           </p>
 
@@ -935,7 +938,7 @@ export default function Login({ onLogin }) {
                 <button key={idioma} onClick={() => setIdiomaAbierto(activo ? null : idioma)} style={{
                   background: activo ? '#f18b11' : glass.bg,
                   backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur,
-                  color: activo ? '#fff' : 'rgba(226,232,240,0.85)',
+                  color: activo ? '#fff' : txtMid,
                   border: activo ? '1px solid #f18b11' : `1px solid ${glass.border}`,
                   borderRadius: 20, padding: '8px 18px', fontSize: 14, fontWeight: 600, cursor: 'pointer',
                   transition: 'all .15s',
@@ -951,7 +954,7 @@ export default function Login({ onLogin }) {
           {idiomaAbierto && (
             <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 16, padding: '24px', marginBottom: 32, boxShadow: glass.shadow }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: '#f0f4ff' }}>
+                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: txt }}>
                   {ICONOS_IDIOMA[idiomaAbierto] || '🌐'} {idiomaAbierto} — Horarios disponibles
                 </h3>
                 <button onClick={() => setIdiomaAbierto(null)} style={{ background: 'rgba(255,255,255,0.08)', border: `1px solid ${glass.border}`, borderRadius: 8, fontSize: 16, cursor: 'pointer', color: 'rgba(226,232,240,0.6)', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>✕</button>
@@ -961,13 +964,13 @@ export default function Login({ onLogin }) {
                   const ops = ofertasIdioma.filter(o => o.proveedor === prov)
                   return (
                     <div key={prov}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#faa63a', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>{prov}</div>
+                      <div style={{ fontWeight: 700, fontSize: 13, color: '#f18b11', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '.04em' }}>{prov}</div>
                       <div style={{ overflowX: 'auto' }}>
                         <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                           <thead>
                             <tr style={{ textAlign: 'left' }}>
                               {['Categoría', 'Modalidad', 'Horario', 'Costo', 'Examen ubic.'].map(h => (
-                                <th key={h} style={{ padding: '8px 12px', fontWeight: 600, color: 'rgba(226,232,240,0.5)', fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: `1px solid ${glass.border}` }}>{h}</th>
+                                <th key={h} style={{ padding: '8px 12px', fontWeight: 600, color: txtDim, fontSize: 11, textTransform: 'uppercase', letterSpacing: '.04em', borderBottom: `1px solid ${glass.border}` }}>{h}</th>
                               ))}
                             </tr>
                           </thead>
@@ -983,13 +986,13 @@ export default function Login({ onLogin }) {
                                     {o.modalidad === 'Presencial' ? '🏫' : '💻'} {o.modalidad}
                                   </span>
                                 </td>
-                                <td style={{ padding: '10px 12px', color: 'rgba(226,232,240,0.85)' }}>🕐 {o.horario}</td>
-                                <td style={{ padding: '10px 12px', fontWeight: 700, whiteSpace: 'nowrap', color: '#f0f4ff' }}>
+                                <td style={{ padding: '10px 12px', color: txtMid }}>🕐 {o.horario}</td>
+                                <td style={{ padding: '10px 12px', fontWeight: 700, whiteSpace: 'nowrap', color: txt }}>
                                   ${typeof o.costo === 'number' ? o.costo.toLocaleString() : o.costo}
-                                  <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.45)', fontWeight: 400 }}> / {o.costo_tipo === 'anual' ? 'año' : 'bimestral'}</span>
+                                  <span style={{ fontSize: 11, color: txtDim, fontWeight: 400 }}> / {o.costo_tipo === 'anual' ? 'año' : 'bimestral'}</span>
                                 </td>
                                 <td style={{ padding: '10px 12px', textAlign: 'center' }}>
-                                  <span style={{ fontSize: 12, fontWeight: 600, color: o.examen_ubicacion === 'Si' ? '#4cd964' : o.examen_ubicacion === 'No' ? '#ff6b6b' : 'rgba(226,232,240,0.5)' }}>
+                                  <span style={{ fontSize: 12, fontWeight: 600, color: o.examen_ubicacion === 'Si' ? '#27ae60' : o.examen_ubicacion === 'No' ? '#e74c3c' : txtDim }}>
                                     {o.examen_ubicacion === 'Si' ? '✓ Sí' : o.examen_ubicacion === 'No' ? '✗ No' : o.examen_ubicacion}
                                   </span>
                                 </td>
@@ -1019,15 +1022,15 @@ export default function Login({ onLogin }) {
               const esAltissia = plantel.nombre === 'Altissia'
               return (
                 <div key={plantel.id} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderLeft: esAltissia ? '3px solid #27ae60' : '3px solid #f18b11', borderRadius: 14, padding: '20px', boxShadow: glass.shadow }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: '#f0f4ff' }}>{plantel.nombre}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(226,232,240,0.55)', marginBottom: 10 }}>{esAltissia ? '💻 Autodidacta · En línea' : `🏫 ${ofsPlantel[0]?.modalidad || 'Presencial'} · ${plantel.ciudad}`}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, marginBottom: 6, color: txt }}>{plantel.nombre}</div>
+                  <div style={{ fontSize: 12, color: txtDim, marginBottom: 10 }}>{esAltissia ? '💻 Autodidacta · En línea' : `🏫 ${ofsPlantel[0]?.modalidad || 'Presencial'} · ${plantel.ciudad}`}</div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                     {idiomasPlantel.slice(0, 5).map(i => (
                       <button key={i} onClick={() => setIdiomaAbierto(i)} style={{ fontSize: 11, background: 'rgba(241,139,17,0.15)', padding: '2px 8px', borderRadius: 10, color: '#faa63a', fontWeight: 600, border: '1px solid rgba(241,139,17,0.25)', cursor: 'pointer' }}>
                         {ICONOS_IDIOMA[i] || '🌐'} {i}
                       </button>
                     ))}
-                    {idiomasPlantel.length > 5 && <span style={{ fontSize: 11, color: 'rgba(226,232,240,0.4)', padding: '2px 6px' }}>+{idiomasPlantel.length - 5} más</span>}
+                    {idiomasPlantel.length > 5 && <span style={{ fontSize: 11, color: txtDim, padding: '2px 6px' }}>+{idiomasPlantel.length - 5} más</span>}
                   </div>
                 </div>
               )
@@ -1039,10 +1042,10 @@ export default function Login({ onLogin }) {
       {/* ── TESTIMONIOS ── */}
       <section style={{ padding: '72px 32px', borderTop: `1px solid ${glass.border}` }}>
         <div style={{ maxWidth: 960, margin: '0 auto' }}>
-          <h2 style={{ textAlign: 'center', fontSize: 28, fontWeight: 800, marginBottom: 8, color: '#f0f4ff' }}>
+          <h2 style={{ textAlign: 'center', fontSize: 28, fontWeight: 800, marginBottom: 8, color: txt }}>
             Lo que dicen nuestros <span style={{ color: '#f18b11' }}>estudiantes</span>
           </h2>
-          <p style={{ textAlign: 'center', color: 'rgba(226,232,240,0.55)', fontSize: 14, marginBottom: 48 }}>
+          <p style={{ textAlign: 'center', color: txtMid, fontSize: 14, marginBottom: 48 }}>
             Historias reales de jóvenes que estudian con Lengua Joven
           </p>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
@@ -1054,10 +1057,10 @@ export default function Login({ onLogin }) {
             ].map((t, i) => (
               <div key={i} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 16, padding: '28px 24px', boxShadow: glass.shadow, display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <div style={{ fontSize: 28, color: '#f18b11' }}>❝</div>
-                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: 'rgba(226,232,240,0.8)', flex: 1 }}>{t.texto}</p>
+                <p style={{ margin: 0, fontSize: 14, lineHeight: 1.7, color: txtMid, flex: 1 }}>{t.texto}</p>
                 <div style={{ borderTop: `1px solid ${glass.border}`, paddingTop: 12 }}>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: '#f0f4ff' }}>{t.nombre}</div>
-                  <div style={{ fontSize: 12, color: 'rgba(226,232,240,0.5)' }}>{t.edad} · {t.nivel}</div>
+                  <div style={{ fontWeight: 700, fontSize: 14, color: txt }}>{t.nombre}</div>
+                  <div style={{ fontSize: 12, color: txtDim }}>{t.edad} · {t.nivel}</div>
                 </div>
               </div>
             ))}
@@ -1066,8 +1069,8 @@ export default function Login({ onLogin }) {
       </section>
 
       {/* ── FOOTER ── */}
-      <footer style={{ background: 'rgba(11,14,24,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: 'rgba(226,232,240,0.5)', padding: '36px 32px', textAlign: 'center', fontSize: 13 }}>
-        <div style={{ fontWeight: 700, color: '#e2e8f0', fontSize: 16, marginBottom: 6 }}>
+      <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, padding: '36px 32px', textAlign: 'center', fontSize: 13 }}>
+        <div style={{ fontWeight: 700, color: txt, fontSize: 16, marginBottom: 6 }}>
           <span style={{ color: '#f18b11' }}>Lengua</span> Joven — INJUVE Nuevo León
         </div>
         <p style={{ margin: '4px 0' }}>Programa de idiomas para personas de 12 años en adelante</p>
