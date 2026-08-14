@@ -622,7 +622,7 @@ export default function Login({ onLogin }) {
 
       {/* ── HERO ── */}
       <section style={{ padding: '96px 32px 72px', textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
-        <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 72, objectFit: 'contain', marginBottom: 16 }} />
+        <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 100, objectFit: 'contain', marginBottom: 20, display: 'block', margin: '0 auto 20px' }} />
         <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.12)', color: '#c96e00', border: '1px solid rgba(241,139,17,0.25)', borderRadius: 20, padding: '4px 16px', fontSize: 13, fontWeight: 600, marginBottom: 20, backdropFilter: 'blur(8px)' }}>Programa de idiomas INJUVE</div>
         <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.08, margin: '0 0 22px', color: txt, letterSpacing: '-0.5px' }}>
           Aprende un idioma.<br /><span style={{ color: '#f18b11' }}>Abre tu futuro.</span>
