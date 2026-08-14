@@ -264,11 +264,7 @@ export default function Login({ onLogin }) {
         padding: '0 32px', height: 64,
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
       }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 40, objectFit: 'contain' }} />
-          <div style={{ width: 1, height: 32, background: 'rgba(0,0,0,0.12)' }} />
-          <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 36, objectFit: 'contain' }} />
-        </div>
+        <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 40, objectFit: 'contain' }} />
         <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
           {[['quienes', '¿Quiénes somos?'], ['inscripciones', 'Inscripciones'], ['oferta', 'Oferta educativa']].map(([id, label]) => (
             <a key={id} href={`#${id}`} style={{ color: txtMid, textDecoration: 'none', fontSize: 14, fontWeight: 500, transition: 'color .15s' }}
@@ -626,6 +622,7 @@ export default function Login({ onLogin }) {
 
       {/* ── HERO ── */}
       <section style={{ padding: '96px 32px 72px', textAlign: 'center', maxWidth: 720, margin: '0 auto' }}>
+        <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 72, objectFit: 'contain', marginBottom: 16 }} />
         <div style={{ display: 'inline-block', background: 'rgba(241,139,17,0.12)', color: '#c96e00', border: '1px solid rgba(241,139,17,0.25)', borderRadius: 20, padding: '4px 16px', fontSize: 13, fontWeight: 600, marginBottom: 20, backdropFilter: 'blur(8px)' }}>Programa de idiomas INJUVE</div>
         <h1 style={{ fontSize: 52, fontWeight: 900, lineHeight: 1.08, margin: '0 0 22px', color: txt, letterSpacing: '-0.5px' }}>
           Aprende un idioma.<br /><span style={{ color: '#f18b11' }}>Abre tu futuro.</span>
