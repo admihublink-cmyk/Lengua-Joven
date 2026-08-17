@@ -121,6 +121,13 @@ app.use((err, req, res, next) => {
     console.warn(`JSON inválido en ${req.method} ${req.path}`)
     return res.status(400).json({ error: 'JSON inválido' })
   }
+  // Errores de multer (tipo de archivo o tamaño)
+  if (err.code === 'LIMIT_FILE_SIZE') {
+    return res.status(400).json({ error: 'El archivo excede el tamaño máximo permitido (20 MB).' })
+  }
+  if (err.message?.startsWith('Tipo de archivo no permitido')) {
+    return res.status(400).json({ error: err.message })
+  }
   next(err)
 })
 
