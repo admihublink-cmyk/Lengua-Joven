@@ -772,7 +772,7 @@ export default function Login({ onLogin }) {
       </section>
 
       {/* ── PERÍODO DE INSCRIPCIONES ── */}
-      <section id="inscripciones" style={{ padding: '72px 32px', borderTop: `1px solid ${glass.border}` }}>
+      <section id="inscripciones" style={{ padding: `72px 32px ${(!filtroPlantel || !filtroIdioma) ? '40px' : '72px'}`, borderTop: `1px solid ${glass.border}` }}>
         <div style={{ maxWidth: 900, margin: '0 auto' }}>
           <h2 style={{ fontSize: 28, fontWeight: 800, marginBottom: 8, color: txt }}>Período de inscripciones</h2>
           <p style={{ color: txtMid, fontSize: 14, marginBottom: 24 }}>
@@ -780,7 +780,7 @@ export default function Login({ onLogin }) {
           </p>
 
           {/* Filtros */}
-          <div style={{ display: 'flex', gap: 12, marginBottom: 28, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: 12, marginBottom: (!filtroPlantel || !filtroIdioma) ? 0 : 28, flexWrap: 'wrap' }}>
             <select value={filtroPlantel} onChange={e => {
                 const nuevoPlantel = e.target.value
                 setFiltroPlantel(nuevoPlantel)
