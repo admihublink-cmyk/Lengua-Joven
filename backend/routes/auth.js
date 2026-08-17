@@ -8,23 +8,27 @@ const { signToken, requireAuth } = require('../middleware/auth')
 function getRL(req) { return req.app.get('rateLimit') }
 const rl5per60m  = (req, res, next) => (getRL(req)?.(5, 60 * 60 * 1000)  || ((r,s,n) => n()))(req, res, next)
 
-// Login: rastrear solo intentos FALLIDOS — 3 por ventana de 5 horas por IP
-const _loginFails = new Map()
+// Login: rastrear intentos FALLIDOS en DB — persiste entre reinicios
 const WINDOW_LOGIN = 5 * 60 * 60 * 1000 // 5 horas
 const MAX_FAILS    = 3
 
 function getLoginRecord(ip) {
-  const now = Date.now()
-  const rec = _loginFails.get(ip) || { n: 0, reset: now + WINDOW_LOGIN }
-  if (now > rec.reset) { rec.n = 0; rec.reset = now + WINDOW_LOGIN }
+  const now = new Date().toISOString()
+  const rec = db.prepare('SELECT * FROM login_bloqueos WHERE ip = ?').get(ip)
+  if (!rec || rec.reset_en < now) {
+    const reset = new Date(Date.now() + WINDOW_LOGIN).toISOString()
+    db.prepare('INSERT OR REPLACE INTO login_bloqueos (ip, intentos, reset_en) VALUES (?,0,?)').run(ip, reset)
+    return { intentos: 0, reset_en: reset }
+  }
   return rec
 }
 function recordFail(ip) {
-  const rec = getLoginRecord(ip)
-  rec.n++
-  _loginFails.set(ip, rec)
+  getLoginRecord(ip) // asegura que existe y no está expirado
+  db.prepare('UPDATE login_bloqueos SET intentos = intentos + 1 WHERE ip = ?').run(ip)
 }
-function clearFails(ip) { _loginFails.delete(ip) }
+function clearFails(ip) {
+  db.prepare('DELETE FROM login_bloqueos WHERE ip = ?').run(ip)
+}
 
 function logActividad(usuario_id, tipo, descripcion, req) {
   const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 6)
@@ -38,8 +42,8 @@ function logActividad(usuario_id, tipo, descripcion, req) {
 router.post('/login', (req, res) => {
   const ip = req.ip
   const rec = getLoginRecord(ip)
-  if (rec.n >= MAX_FAILS) {
-    const waitH = Math.ceil((rec.reset - Date.now()) / (60 * 60 * 1000))
+  if (rec.intentos >= MAX_FAILS) {
+    const waitH = Math.ceil((new Date(rec.reset_en) - Date.now()) / (60 * 60 * 1000))
     return res.status(429).json({ error: `Demasiados intentos fallidos. Espera ${waitH} hora${waitH !== 1 ? 's' : ''} e intenta de nuevo.` })
   }
 
@@ -49,7 +53,7 @@ router.post('/login', (req, res) => {
   const user = db.prepare('SELECT * FROM usuarios WHERE email = ? AND activo = 1').get(email.trim().toLowerCase())
   if (!user || !bcrypt.compareSync(password, user.password_hash)) {
     recordFail(ip)
-    const restantes = MAX_FAILS - getLoginRecord(ip).n
+    const restantes = MAX_FAILS - getLoginRecord(ip).intentos
     const msg = restantes > 0
       ? `Credenciales incorrectas. ${restantes} intento${restantes !== 1 ? 's' : ''} restante${restantes !== 1 ? 's' : ''}.`
       : 'Demasiados intentos fallidos. Espera 5 horas e intenta de nuevo.'
@@ -136,6 +140,13 @@ router.post('/reset-password/:token', (req, res) => {
   db.prepare('UPDATE reset_tokens SET usado = 1 WHERE token = ?').run(req.params.token)
 
   logActividad(row.usuario_id, 'RESET_PASSWORD', 'Contraseña restablecida vía enlace de recuperación', req)
+  res.json({ ok: true })
+})
+
+// ── Logout (invalida el token actual) ────────────────────────────────────────
+router.post('/logout', requireAuth, (req, res) => {
+  db.prepare('UPDATE usuarios SET token_invalid_before = ? WHERE id = ?')
+    .run(new Date().toISOString(), req.user.id)
   res.json({ ok: true })
 })
 

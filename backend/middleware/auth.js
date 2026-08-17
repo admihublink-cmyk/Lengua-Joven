@@ -13,7 +13,16 @@ function requireAuth(req, res, next) {
   }
   try {
     const token = header.slice(7)
-    req.user = jwt.verify(token, JWT_SECRET)
+    const payload = jwt.verify(token, JWT_SECRET)
+    // Verificar que el token no haya sido revocado (logout)
+    const userData = db.prepare('SELECT token_invalid_before FROM usuarios WHERE id = ?').get(payload.id)
+    if (userData?.token_invalid_before) {
+      const invalidBefore = new Date(userData.token_invalid_before).getTime() / 1000
+      if (payload.iat < invalidBefore) {
+        return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión de nuevo.' })
+      }
+    }
+    req.user = payload
     // Coordinadores: cargar lista de planteles asignados desde DB
     if (req.user.rol === 'coordinador') {
       const rows = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(req.user.id)
