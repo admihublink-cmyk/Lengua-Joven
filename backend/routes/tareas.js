@@ -19,7 +19,30 @@ const storage = multer.diskStorage({
     cb(null, uuidv4() + ext)
   }
 })
-const upload = multer({ storage, limits: { fileSize: 50 * 1024 * 1024 } })
+const MIME_PERMITIDOS = new Set([
+  'application/pdf',
+  'application/msword',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/vnd.ms-excel',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.ms-powerpoint',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/zip',
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'text/plain',
+])
+
+const upload = multer({
+  storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB
+  fileFilter(req, file, cb) {
+    if (MIME_PERMITIDOS.has(file.mimetype)) return cb(null, true)
+    cb(new Error('Tipo de archivo no permitido. Solo se aceptan PDF, documentos de Office, imágenes y texto plano.'))
+  },
+})
 
 router.get('/', requireAuth, (req, res) => {
   const me = req.user
