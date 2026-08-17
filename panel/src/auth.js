@@ -38,6 +38,8 @@ export const P = {
   BUZON_GESTIONAR: 'BUZON_GESTIONAR', // ver, responder y cambiar estatus del buzón
   // v2.4
   CONVENIO_GESTIONAR: 'CONVENIO_GESTIONAR', // gestionar convenios y documentos con planteles
+  // v2.5
+  USUARIOS_ADMIN: 'USUARIOS_ADMIN', // ver y gestionar TODOS los usuarios (superadmin + coordinador)
 }
 
 const TODOS = Object.values(P)
@@ -83,6 +85,7 @@ export const ROL_PERMISOS = {
       P.BUZON_ENVIAR,
       P.CONVENIO_GESTIONAR,
       P.USUARIOS_GESTIONAR,
+      P.USUARIOS_ADMIN,
     ],
     scope: 'multi-plantel',
     label: 'Coordinador LJ',

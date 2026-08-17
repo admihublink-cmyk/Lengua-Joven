@@ -3,6 +3,9 @@ const bcrypt = require('bcryptjs')
 const db = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
+// Agregar columna created_at si no existe (migración idempotente)
+try { db.prepare("ALTER TABLE usuarios ADD COLUMN created_at TEXT DEFAULT (datetime('now'))").run() } catch (_) {}
+
 const safe = u => { const { password_hash, ...r } = u; return { ...r, activo: r.activo === 1 } }
 
 // Roles que puede asignar un coordinador (no puede crear superadmin ni otros coordinadores)
@@ -79,8 +82,8 @@ router.post('/', requireAuth, (req, res) => {
   const newId = 'u' + (maxNum + 1)
 
   const hash = bcrypt.hashSync(password, 10)
-  db.prepare(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`).run(
+  db.prepare(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, created_at)
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
     newId, nombre, email.toLowerCase(), hash, rol,
     plantel_id || null, activo !== false ? 1 : 0,
     matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null
