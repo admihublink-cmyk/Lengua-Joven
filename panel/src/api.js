@@ -345,7 +345,7 @@ export async function descargarConvenioDOCX(plantelId) {
 }
 
 // ── Tutor ─────────────────────────────────────────────────────────────────────
-export const getTutorAlumnos = () => get('/usuarios/mis-alumnos')
+export const getMisAlumnos = () => get('/usuarios/mis-alumnos')
 
 // ── Períodos de inscripción ───────────────────────────────────────────────────
 export const getPeriodos = (params = {}) => {
