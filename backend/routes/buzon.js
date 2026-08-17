@@ -7,8 +7,16 @@ router.get('/', requireAuth, (req, res) => {
   let rows
   if (me.rol === 'superadmin') {
     rows = db.prepare('SELECT * FROM buzon ORDER BY fecha DESC').all()
-  } else if (['director', 'coordinador'].includes(me.rol) && me.plantel_id) {
+  } else if (me.rol === 'director' && me.plantel_id) {
     rows = db.prepare('SELECT * FROM buzon WHERE plantel_id = ? ORDER BY fecha DESC').all(me.plantel_id)
+  } else if (me.rol === 'coordinador') {
+    const pids = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(me.id).map(r => r.plantel_id)
+    if (pids.length > 0) {
+      const ph = pids.map(() => '?').join(',')
+      rows = db.prepare(`SELECT * FROM buzon WHERE plantel_id IN (${ph}) ORDER BY fecha DESC`).all(...pids)
+    } else {
+      rows = []
+    }
   } else {
     rows = db.prepare('SELECT * FROM buzon WHERE autor_id = ? ORDER BY fecha DESC').all(me.id)
   }

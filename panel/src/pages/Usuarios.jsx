@@ -36,12 +36,13 @@ export default function Usuarios() {
   async function cargar() {
     setCargando(true)
     try {
+      const canSeeTutorAlumnos = ['superadmin', 'coordinador', 'director'].includes(usuario.rol)
       const [u, g, ins, p, ta] = await Promise.all([
         api.getUsuarios(),
         api.getGrupos(),
         api.getInscripciones(),
         api.getPlanteles(),
-        api.getTutorAlumnos(),
+        canSeeTutorAlumnos ? api.getTutorAlumnos() : Promise.resolve([]),
       ])
       setUsuarios(u)
       setGrupos(g)

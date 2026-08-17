@@ -112,7 +112,9 @@ export default function Pagos() {
   async function confirmarPago(p) {
     try {
       await api.actualizarPago(p.id, { estado: 'pagado', fecha: new Date().toISOString().slice(0, 10) })
-      await api.actualizarInscripcion(p.inscripcion_id, { estado: 'pagada' })
+      if (p.inscripcion_id) {
+        await api.actualizarInscripcion(p.inscripcion_id, { estado: 'pagada' })
+      }
       await cargar()
     } catch (e) {
       alert('Error: ' + e.message)
