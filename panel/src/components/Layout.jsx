@@ -10,28 +10,28 @@ const NAV_ITEMS = [
   { id: 'mensajes',      icon: '💬',  label: 'Mensajes',          permiso: P.MENSAJE_ENVIAR },
   { id: 'tareas',        icon: '📝',  label: 'Tareas',            permiso: P.TAREA_VER },
   // — Académico —
-  { seccion: 'Académico' },
+  { seccion: 'Académico', icon: '🏫' },
   { id: 'planteles',     icon: '🏫',  label: 'Planteles',         permiso: P.PLAN_VER },
   { id: 'oferta',        icon: '🏷',   label: 'Oferta Educativa',  permiso: P.CONFIG_SISTEMA },
   { id: 'idiomas',       icon: '🌐',  label: 'Idiomas y Niveles', permiso: P.IDIOMA_VER },
   { id: 'grupos',        icon: '👥',  label: 'Grupos',            permiso: P.GRUPO_VER },
   // — Alumnos —
-  { seccion: 'Alumnos' },
+  { seccion: 'Alumnos', icon: '🎓' },
   { id: 'placement',     icon: '🎯',  label: 'Placement Test',    permiso: P.PLACEMENT_VER },
   { id: 'inscripciones', icon: '📋',  label: 'Inscripciones',     permiso: P.INSC_VER },
   { id: 'pagos',         icon: '💳',  label: 'Pagos',             permiso: P.PAGO_VER },
   // — Seguimiento —
-  { seccion: 'Seguimiento' },
+  { seccion: 'Seguimiento', icon: '📊' },
   { id: 'asistencia',    icon: '✓',   label: 'Asistencia',        permiso: P.ASIST_VER },
   { id: 'evaluacion',    icon: '📊',  label: 'Evaluación',        permiso: P.EVAL_VER },
   { id: 'avisos',        icon: '📢',  label: 'Avisos',            permiso: P.AVISO_VER },
   { id: 'buzon',         icon: '📮',  label: 'Buzón',             permiso: P.BUZON_ENVIAR },
   // — Administración —
-  { seccion: 'Administración' },
+  { seccion: 'Administración', icon: '📄' },
   { id: 'convenios',     icon: '📄',  label: 'Convenios',         permiso: P.CONVENIO_GESTIONAR },
   { id: 'reportes',      icon: '📈',  label: 'Reportes',          permiso: P.REPORTE_VER_PLANTEL },
   // — Sistema —
-  { seccion: 'Sistema' },
+  { seccion: 'Sistema', icon: '⚙' },
   { id: 'usuarios',      icon: '🧑‍💼', label: 'Usuarios',          permiso: P.USUARIOS_ADMIN },
   { id: 'configuracion', icon: '⚙',   label: 'Configuración',     permiso: [P.CONFIG_SISTEMA, P.USUARIOS_GESTIONAR] },
   { id: 'actividad',    icon: '🛡',   label: 'Panel de actividad', permiso: P.CONFIG_SISTEMA },
@@ -166,16 +166,12 @@ export default function Layout({ children }) {
                 const abierta = seccionesAbiertas.has(item.seccion)
                 return (
                   <button key={'sec-' + i} onClick={() => toggleSeccion(item.seccion)}
-                    style={{
-                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-                      width: '100%', background: 'none', border: 'none', cursor: 'pointer',
-                      fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
-                      textTransform: 'uppercase', color: 'var(--texto-muted, #aaa)',
-                      padding: '14px 14px 4px', userSelect: 'none',
-                    }}>
-                    {item.seccion}
-                    <svg width="12" height="12" viewBox="0 0 12 12" style={{ transition: 'transform .2s', transform: abierta ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
-                      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                    className="nav-item"
+                    style={{ marginTop: 6, fontWeight: 600, fontSize: 13 }}>
+                    <span className="nav-icon">{item.icon}</span>
+                    <span style={{ flex: 1, textAlign: 'left' }}>{item.seccion}</span>
+                    <svg width="12" height="12" viewBox="0 0 12 12" style={{ transition: 'transform .2s', transform: abierta ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0, opacity: 0.5 }}>
+                      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.8" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
                     </svg>
                   </button>
                 )
