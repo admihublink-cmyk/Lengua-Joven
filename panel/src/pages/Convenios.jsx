@@ -215,46 +215,49 @@ export default function Convenios() {
         <table className="tabla">
           <thead>
             <tr>
-              <th>Plantel</th><th>Ciudad</th><th>Razón social</th>
-              <th>Vencimiento</th><th>Estado</th><th>Datos</th><th></th>
+              <th>Plantel</th>
+              <th>Ciudad</th>
+              <th>Vencimiento</th>
+              <th>Estado convenio</th>
+              <th>Datos legales</th>
+              <th style={{ textAlign: 'center' }}>Fecha</th>
+              <th style={{ textAlign: 'center' }}>Datos</th>
+              <th style={{ textAlign: 'center' }}>Docs</th>
             </tr>
           </thead>
           <tbody>
             {filas.map(p => (
               <tr key={p.id}>
                 <td><strong>{p.nombre}</strong></td>
-                <td>{p.ciudad}</td>
-                <td style={{ fontSize: 12 }}>
-                  {p.razon_social
-                    ? <span style={{ color: 'var(--verde, #27ae60)' }}>✓ {p.razon_social}</span>
-                    : <span className="texto-muted">Sin datos legales</span>}
-                </td>
-                <td>{p.convenio_vencimiento || '—'}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.ciudad}</td>
+                <td style={{ whiteSpace: 'nowrap' }}>{p.convenio_vencimiento || '—'}</td>
                 <td><span className={'badge ' + p.estadoInfo.clase}>{p.estadoInfo.label}</span></td>
                 <td>
                   <span className={'badge ' + (datosCompletos(p) ? 'asignada' : 'buzon-en_revision')}>
                     {datosCompletos(p) ? '✓ Completo' : 'Pendiente'}
                   </span>
                 </td>
-                <td>
-                  <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                    <button className="btn-mini" onClick={() => abrirRenovar(p)}>
-                      {p.convenio_vencimiento ? 'Renovar' : 'Fecha'}
-                    </button>
-                    <button className="btn-mini" style={{ background: '#2980b9', color: '#fff', borderColor: '#2980b9' }}
-                      onClick={() => abrirDatos(p)}>
-                      📋 Datos
-                    </button>
-                    <button className="btn-mini" style={{ background: '#8e44ad', color: '#fff', borderColor: '#8e44ad' }}
-                      onClick={() => abrirDocumentos(p)}>
-                      📎 Docs
-                    </button>
-                  </div>
+                <td style={{ textAlign: 'center' }}>
+                  <button className="btn-mini" onClick={() => abrirRenovar(p)}>
+                    {p.convenio_vencimiento ? 'Renovar' : 'Fecha'}
+                  </button>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button className="btn-mini" style={{ background: '#2980b9', color: '#fff', borderColor: '#2980b9' }}
+                    onClick={() => abrirDatos(p)}>
+                    📋 Datos
+                  </button>
+                </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button className="btn-mini" style={{ background: '#8e44ad', color: '#fff', borderColor: '#8e44ad' }}
+                    onClick={() => abrirDocumentos(p)}>
+                    📎 Docs
+                  </button>
                 </td>
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td colSpan={7} className="tabla-vacio">Sin planteles registrados.</td></tr>
+              <tr><td colSpan={8} className="tabla-vacio">Sin planteles registrados.</td></tr>
             )}
           </tbody>
         </table>
