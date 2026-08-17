@@ -128,12 +128,17 @@ router.post('/enviar-liga/:inscripcionId', requireAuth, async (req, res) => {
     </div>
   </div>`
 
-  await transporter.sendMail({
-    from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
-    to: insc.email_alumno,
-    subject: `Tu liga de pago Lengua Joven — Folio ${insc.folio}`,
-    html,
-  })
+  try {
+    await transporter.sendMail({
+      from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
+      to: insc.email_alumno,
+      subject: `Tu liga de pago Lengua Joven — Folio ${insc.folio}`,
+      html,
+    })
+  } catch (mailErr) {
+    console.error('sendMail error:', mailErr)
+    return res.status(502).json({ error: 'No se pudo enviar el correo. Verifica las credenciales de Gmail.' })
+  }
 
   // Marcar que se envió la liga
   db.prepare("UPDATE pagos SET estado = 'liga_enviada' WHERE inscripcion_id = ? AND estado = 'pendiente'").run(insc.id)

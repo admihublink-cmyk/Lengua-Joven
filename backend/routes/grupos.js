@@ -9,7 +9,7 @@ router.get('/', requireAuth, (req, res) => {
   if (me.rol === 'superadmin') {
     rows = db.prepare('SELECT * FROM grupos ORDER BY codigo').all()
   } else if (me.rol === 'profesor') {
-    rows = db.prepare('SELECT * FROM grupos WHERE plantel_id = ? AND (profesor_id = ? OR profesor_id IS NULL) ORDER BY codigo').all(me.plantel_id, me.id)
+    rows = db.prepare('SELECT * FROM grupos WHERE plantel_id = ? AND profesor_id = ? ORDER BY codigo').all(me.plantel_id, me.id)
   } else if (me.rol === 'coordinador') {
     // Incluye todos los planteles asignados al coordinador
     const asignados = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(me.id).map(r => r.plantel_id)
