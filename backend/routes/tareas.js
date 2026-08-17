@@ -71,6 +71,9 @@ router.post('/', requireAuth, (req, upload_next) => {
 })
 
 router.put('/:id', requireAuth, upload.single('archivo'), (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const fields = ['titulo', 'descripcion', 'fecha_limite', 'ponderacion']
   const sets = []; const vals = []
   for (const f of fields) {
@@ -85,6 +88,9 @@ router.put('/:id', requireAuth, upload.single('archivo'), (req, res) => {
 })
 
 router.delete('/:id', requireAuth, (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   db.prepare('DELETE FROM tareas WHERE id = ?').run(req.params.id)
   res.json({ ok: true })
 })

@@ -53,12 +53,14 @@ router.post('/:id/niveles', requireAuth, (req, res) => {
 })
 
 router.put('/niveles/:nid', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const { nombre, orden } = req.body
   db.prepare('UPDATE niveles SET nombre = ?, orden = ? WHERE id = ?').run(nombre, orden, req.params.nid)
   res.json(db.prepare('SELECT * FROM niveles WHERE id = ?').get(req.params.nid))
 })
 
 router.delete('/niveles/:nid', requireAuth, (req, res) => {
+  if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   db.prepare('DELETE FROM niveles WHERE id = ?').run(req.params.nid)
   res.json({ ok: true })
 })

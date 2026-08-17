@@ -34,6 +34,7 @@ router.post('/', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const o = req.body
   const fields = ['proveedor','sede','idioma','costo','costo_tipo','categoria','edades','modalidad','sistema','no_niveles','material_nivel','horario','examen_ubicacion','nivel']
   const sets = []; const vals = []
