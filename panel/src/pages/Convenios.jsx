@@ -217,6 +217,7 @@ export default function Convenios() {
             <tr>
               <th>Plantel</th>
               <th>Ciudad</th>
+              <th>Razón social</th>
               <th>Vencimiento</th>
               <th>Estado convenio</th>
               <th>Datos legales</th>
@@ -230,6 +231,11 @@ export default function Convenios() {
               <tr key={p.id}>
                 <td><strong>{p.nombre}</strong></td>
                 <td style={{ whiteSpace: 'nowrap' }}>{p.ciudad}</td>
+                <td style={{ fontSize: 12 }}>
+                  {p.razon_social
+                    ? <span style={{ color: 'var(--verde, #27ae60)' }}>✓ {p.razon_social}</span>
+                    : <span className="texto-muted">Sin datos legales</span>}
+                </td>
                 <td style={{ whiteSpace: 'nowrap' }}>{p.convenio_vencimiento || '—'}</td>
                 <td><span className={'badge ' + p.estadoInfo.clase}>{p.estadoInfo.label}</span></td>
                 <td>
@@ -257,7 +263,7 @@ export default function Convenios() {
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td colSpan={8} className="tabla-vacio">Sin planteles registrados.</td></tr>
+              <tr><td colSpan={9} className="tabla-vacio">Sin planteles registrados.</td></tr>
             )}
           </tbody>
         </table>
