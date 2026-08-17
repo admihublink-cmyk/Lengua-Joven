@@ -426,6 +426,8 @@ try { db.exec("ALTER TABLE pre_registros ADD COLUMN tutor_nombre TEXT") } catch 
 try { db.exec("ALTER TABLE pre_registros ADD COLUMN tutor_tel TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE pre_registros ADD COLUMN tutor_email TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE pre_registros ADD COLUMN grupo_interes_id TEXT") } catch (_) {}
+try { db.exec("ALTER TABLE pre_registros ADD COLUMN genero_nacimiento TEXT") } catch (_) {}
+try { db.exec("ALTER TABLE pre_registros ADD COLUMN estado_nacimiento TEXT") } catch (_) {}
 try {
   db.exec(`CREATE TABLE IF NOT EXISTS suscripciones_apertura (
     id TEXT PRIMARY KEY,
