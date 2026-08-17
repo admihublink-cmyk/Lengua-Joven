@@ -51,7 +51,17 @@ export default function Planteles() {
   }
 
   function idiomasDelPlantel(plantelId) {
-    return idiomas.filter(i => i.plantel_id === plantelId)
+    // Idiomas explícitamente asignados al plantel
+    const directos = idiomas.filter(i => i.plantel_id === plantelId)
+    // Idiomas inferidos desde los grupos de ese plantel
+    const idsDeGrupos = [...new Set(
+      grupos.filter(g => g.plantel_id === plantelId && g.idioma_id).map(g => g.idioma_id)
+    )]
+    const deGrupos = idsDeGrupos
+      .map(id => idiomas.find(i => i.id === id))
+      .filter(Boolean)
+      .filter(i => !directos.some(d => d.id === i.id))
+    return [...directos, ...deGrupos]
   }
   function gruposActivos(idioma_id, plantelId) {
     return grupos.filter(g => g.idioma_id === idioma_id && g.plantel_id === plantelId && g.activo)
