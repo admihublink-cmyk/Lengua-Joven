@@ -29,6 +29,15 @@ router.get('/', requireAuth, (req, res) => {
   res.json(rows.map(safe))
 })
 
+// Endpoint admin: obtener todas las relaciones tutor→alumno
+router.get('/tutor-alumnos', requireAuth, (req, res) => {
+  if (!['superadmin', 'coordinador', 'director'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const rows = db.prepare('SELECT tutor_id, alumno_id FROM tutor_alumnos').all()
+  res.json(rows)
+})
+
 // Endpoint para tutores: obtener sus alumnos menores con info básica
 router.get('/mis-alumnos', requireAuth, (req, res) => {
   if (req.user.rol !== 'tutor') return res.status(403).json({ error: 'Sin permiso' })

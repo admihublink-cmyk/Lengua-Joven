@@ -25,6 +25,7 @@ export default function Usuarios() {
   const [grupos, setGrupos] = useState([])
   const [inscripciones, setInscripciones] = useState([])
   const [planteles, setPlanteles] = useState([])
+  const [tutorAlumnos, setTutorAlumnos] = useState([])
   const [cargando, setCargando] = useState(true)
   const [toggling, setToggling] = useState(null)
   const [busqueda, setBusqueda] = useState('')
@@ -35,16 +36,18 @@ export default function Usuarios() {
   async function cargar() {
     setCargando(true)
     try {
-      const [u, g, ins, p] = await Promise.all([
+      const [u, g, ins, p, ta] = await Promise.all([
         api.getUsuarios(),
         api.getGrupos(),
         api.getInscripciones(),
         api.getPlanteles(),
+        api.getTutorAlumnos(),
       ])
       setUsuarios(u)
       setGrupos(g)
       setInscripciones(ins)
       setPlanteles(p)
+      setTutorAlumnos(ta)
     } catch (e) {
       console.error('Error cargando usuarios:', e)
     }
@@ -72,6 +75,11 @@ export default function Usuarios() {
 
   function nombrePlantel(id) {
     return planteles.find(p => p.id === id)?.nombre || id || '—'
+  }
+
+  function alumnosDelTutor(tutorId) {
+    const ids = tutorAlumnos.filter(ta => ta.tutor_id === tutorId).map(ta => ta.alumno_id)
+    return usuarios.filter(u => ids.includes(u.id))
   }
 
   async function toggleActivo(u) {
@@ -170,10 +178,12 @@ export default function Usuarios() {
               </tr>
             </thead>
             <tbody>
-              {filtrados.map(u => {
+              {filtrados.flatMap(u => {
                 const gs = gruposDeUsuario(u)
                 const color = ROL_COLOR[u.rol] || '#888'
-                return (
+                const menores = u.rol === 'tutor' ? alumnosDelTutor(u.id) : []
+
+                const filaUsuario = (
                   <tr key={u.id}>
                     <td>
                       <div style={{ fontWeight: 600 }}>{u.nombre}</div>
@@ -226,6 +236,45 @@ export default function Usuarios() {
                     )}
                   </tr>
                 )
+
+                if (menores.length === 0) return [filaUsuario]
+
+                const filaMenores = (
+                  <tr key={u.id + '_menores'} style={{ background: 'rgba(241,139,17,0.04)' }}>
+                    <td colSpan={puedeToggle ? 8 : 7} style={{ paddingLeft: 32, paddingTop: 4, paddingBottom: 8 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--naranja)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 6 }}>
+                        👦 Menor(es) asociado(s)
+                      </div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                        {menores.map(m => {
+                          const mGs = gruposDeUsuario(m)
+                          return (
+                            <div key={m.id} style={{
+                              background: 'var(--bg-2)', border: '1px solid var(--borde)',
+                              borderRadius: 8, padding: '6px 12px', fontSize: 12,
+                            }}>
+                              <div style={{ fontWeight: 600 }}>{m.nombre}</div>
+                              <div style={{ color: 'var(--texto-muted)', fontSize: 11 }}>{m.email}</div>
+                              {mGs.length > 0 && (
+                                <div style={{ marginTop: 3 }}>
+                                  {mGs.map(c => (
+                                    <span key={c} style={{
+                                      display: 'inline-block', marginRight: 3,
+                                      padding: '1px 6px', borderRadius: 4,
+                                      background: 'var(--bg-3)', fontSize: 10, fontWeight: 600,
+                                    }}>{c}</span>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </td>
+                  </tr>
+                )
+
+                return [filaUsuario, filaMenores]
               })}
               {filtrados.length === 0 && (
                 <tr>

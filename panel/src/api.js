@@ -94,6 +94,7 @@ export const restablecerPassword = (token, nueva) => post(`/auth/reset-password/
 
 // ── Usuarios ──────────────────────────────────────────────────────────────────
 export const getUsuarios = () => get('/usuarios')
+export const getTutorAlumnos = () => get('/usuarios/tutor-alumnos')
 export const getUsuario = (id) => get(`/usuarios/${id}`)
 export const crearUsuario = (data) => post('/usuarios', data)
 export const actualizarUsuario = (id, data) => put(`/usuarios/${id}`, data)
