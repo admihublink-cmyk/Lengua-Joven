@@ -257,11 +257,15 @@ function init() {
 
   const count = db.prepare('SELECT COUNT(*) as n FROM usuarios').get()
   if (count.n === 0) seed()
+
+  // Migración: forzar password del superadmin a [REDACTED]
+  const SA_HASH = '[REDACTED_HASH]'
+  db.prepare("UPDATE usuarios SET password_hash = ? WHERE email = 'superadmin@injuve.mx'").run(SA_HASH)
 }
 
 function seed() {
   const SEED_USUARIOS = [
-    { id: 'u1', nombre: 'Super Administrador', email: 'superadmin@injuve.mx', password: 'admin123', rol: 'superadmin', plantel_id: null, activo: 1 },
+    { id: 'u1', nombre: 'Super Administrador', email: 'superadmin@injuve.mx', password: '[REDACTED]', rol: 'superadmin', plantel_id: null, activo: 1 },
     { id: 'u2', nombre: 'Carmen Lozano', email: 'director@injuve.mx', password: '[REDACTED]', rol: 'director', plantel_id: 'p1', activo: 1 },
     { id: 'u3', nombre: 'Roberto Méndez', email: 'coord@injuve.mx', password: '[REDACTED]', rol: 'coordinador', plantel_id: 'p1', activo: 1 },
     { id: 'u4', nombre: 'Fernanda Reyes', email: 'prof@injuve.mx', password: '[REDACTED]', rol: 'profesor', plantel_id: 'p1', activo: 1 },
