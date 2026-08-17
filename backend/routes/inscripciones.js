@@ -33,9 +33,10 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, grupo_id, plantel_id, estado, nombre_externo, email_externo, tel_externo, oferta_id, placement_nivel, sugerida_por } = req.body
-  const count = db.prepare('SELECT COUNT(*) as n FROM inscripciones').get().n
-  const folio = 'INJ-' + String(count + 1).padStart(4, '0')
-  const newId = 'ins' + (db.prepare('SELECT COUNT(*) as n FROM inscripciones').get().n + 1)
+  const ids = db.prepare('SELECT id FROM inscripciones').all().map(r => r.id)
+  const maxN = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('ins', '')) || 0), 0)
+  const newId = 'ins' + (maxN + 1)
+  const folio = 'INJ-' + String(maxN + 1).padStart(4, '0')
   const fecha = new Date().toISOString().split('T')[0]
   let pid
   if (req.user.rol === 'superadmin') pid = plantel_id
