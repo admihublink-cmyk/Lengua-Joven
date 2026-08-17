@@ -63,6 +63,7 @@ export default function App() {
   const [usuario, setUsuario] = useState(() => getUsuarioActual())
   const [ruta, setRuta] = useState('dashboard')
   const [params, setParams] = useState({})
+  const [vistaComoRol, setVistaComoRol] = useState(null) // null = modo real
   const tema = 'light'
 
   useEffect(() => {
@@ -83,20 +84,33 @@ export default function App() {
   }, [])
 
   function entrar(u) {
-    setUsuario(u); setRuta('dashboard'); setParams({})
+    setUsuario(u); setRuta('dashboard'); setParams({}); setVistaComoRol(null)
   }
   function salir() {
     apiLogout()
     setUsuario(null)
+    setVistaComoRol(null)
   }
   function navegar(r, p = {}) { setRuta(r); setParams(p) }
 
   if (!usuario) return <Login onLogin={entrar} />
 
+  // Usuario efectivo para permisos: si hay simulación, sobreescribir el rol
+  const usuarioEfectivo = vistaComoRol
+    ? { ...usuario, rol: vistaComoRol, plantel_id: usuario.plantel_id }
+    : usuario
+
   const Pagina = RUTAS[ruta] || Dashboard
 
   return (
-    <AuthCtx.Provider value={{ usuario, salir, tienePermiso: (p) => tienePermiso(usuario, p) }}>
+    <AuthCtx.Provider value={{
+      usuario: usuarioEfectivo,
+      usuarioReal: usuario,
+      vistaComoRol,
+      setVistaComoRol,
+      salir,
+      tienePermiso: (p) => tienePermiso(usuarioEfectivo, p),
+    }}>
       <NavCtx.Provider value={{ ruta, navegar, params }}>
         <TemaCtx.Provider value={{ tema }}>
           <Layout>
