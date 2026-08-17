@@ -29,6 +29,9 @@ router.post('/', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   db.prepare('UPDATE asistencias SET presente = ? WHERE id = ?').run(req.body.presente ? 1 : 0, req.params.id)
   res.json(db.prepare('SELECT * FROM asistencias WHERE id = ?').get(req.params.id))
 })

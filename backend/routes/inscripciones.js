@@ -29,6 +29,9 @@ router.get('/:id', requireAuth, (req, res) => {
 })
 
 router.post('/', requireAuth, (req, res) => {
+  if (!['superadmin', 'coordinador', 'director', 'admin_ventas'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const { alumno_id, grupo_id, plantel_id, estado, nombre_externo, email_externo, tel_externo, oferta_id, placement_nivel, sugerida_por } = req.body
   const count = db.prepare('SELECT COUNT(*) as n FROM inscripciones').get().n
   const folio = 'INJ-' + String(count + 1).padStart(4, '0')

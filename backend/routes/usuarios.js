@@ -122,7 +122,7 @@ router.put('/:id', requireAuth, (req, res) => {
   if (plantel_id !== undefined && me.rol === 'superadmin') updates.plantel_id = plantel_id || null
   if (plantel_id !== undefined && me.rol === 'director' && me.plantel_id) updates.plantel_id = me.plantel_id
   if (plantel_id !== undefined && me.rol === 'coordinador' && (me.planteles || []).includes(plantel_id)) updates.plantel_id = plantel_id || null
-  if (activo !== undefined && me.rol !== req.params.id) updates.activo = activo ? 1 : 0
+  if (activo !== undefined && me.id !== req.params.id) updates.activo = activo ? 1 : 0
   if (matricula !== undefined) updates.matricula = matricula || null
   if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
   if (estado_entidad !== undefined) updates.estado_entidad = estado_entidad || null

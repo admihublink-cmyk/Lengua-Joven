@@ -38,6 +38,9 @@ router.post('/', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const { calificacion, observaciones, tipo } = req.body
   db.prepare('UPDATE evaluaciones SET calificacion = ?, observaciones = ?, tipo = ? WHERE id = ?')
     .run(calificacion, observaciones, tipo, req.params.id)
@@ -45,6 +48,9 @@ router.put('/:id', requireAuth, (req, res) => {
 })
 
 router.delete('/:id', requireAuth, (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   db.prepare('DELETE FROM evaluaciones WHERE id = ?').run(req.params.id)
   res.json({ ok: true })
 })

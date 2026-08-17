@@ -36,6 +36,9 @@ router.post('/', requireAuth, (req, res) => {
 })
 
 router.put('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const { titulo, contenido, activo } = req.body
   const sets = []; const vals = []
   if (titulo !== undefined) { sets.push('titulo = ?'); vals.push(titulo) }
@@ -46,6 +49,9 @@ router.put('/:id', requireAuth, (req, res) => {
 })
 
 router.delete('/:id', requireAuth, (req, res) => {
+  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   db.prepare('UPDATE avisos SET activo = 0 WHERE id = ?').run(req.params.id)
   res.json({ ok: true })
 })
