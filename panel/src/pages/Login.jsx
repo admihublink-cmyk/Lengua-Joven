@@ -21,6 +21,7 @@ function inputStyle(focused) {
 export default function Login({ onLogin }) {
   const [email, setEmail]       = useState('')
   const [password, setPassword] = useState('')
+  const [showPwd, setShowPwd]   = useState(false)
   const [loginErr, setLoginErr] = useState('')
   const [modal, setModal]       = useState(null) // 'login' | 'prereg' | 'ok' | 'forgot' | 'forgot_ok' | 'reset' | 'reset_ok'
   const [folioOk, setFolioOk]   = useState('')
@@ -42,6 +43,7 @@ export default function Login({ onLogin }) {
     estado_entidad: '', idioma_interes: '', proveedor_interes: '',
     horario_preferido: '', como_entero: '',
     tutor_nombre: '', tutor_tel: '', tutor_email: '',
+    genero_nacimiento: '', estado_nacimiento: '',
   })
   const [preErr, setPreErr] = useState('')
   const [focusedInput, setFocusedInput] = useState('')
@@ -155,6 +157,7 @@ export default function Login({ onLogin }) {
     if (!pre.nombre.trim()) { setPreErr('El nombre es requerido.'); return }
     if (!pre.email.trim())  { setPreErr('El correo es requerido.'); return }
     if (!pre.tel.trim())    { setPreErr('El teléfono es requerido.'); return }
+    if (!pre.curp.trim() || pre.curp.trim().length < 18) { setPreErr('El CURP es requerido (18 caracteres).'); return }
     if (edadActual !== null && edadActual < 12) { setPreErr('El programa es para personas de 12 años en adelante.'); return }
     if (esMenorDeEdad) {
       if (!pre.tutor_nombre.trim()) { setPreErr('El nombre del tutor es requerido para menores de edad.'); return }
@@ -167,7 +170,7 @@ export default function Login({ onLogin }) {
       setModal('ok')
       setGrupoInteres('')
       setGruposDisponibles([])
-      setPre({ nombre: '', email: '', tel: '', curp: '', fecha_nacimiento: '', estado_entidad: '', idioma_interes: '', proveedor_interes: '', horario_preferido: '', como_entero: '', tutor_nombre: '', tutor_tel: '', tutor_email: '' })
+      setPre({ nombre: '', email: '', tel: '', curp: '', fecha_nacimiento: '', estado_entidad: '', idioma_interes: '', proveedor_interes: '', horario_preferido: '', como_entero: '', tutor_nombre: '', tutor_tel: '', tutor_email: '', genero_nacimiento: '', estado_nacimiento: '' })
     } catch (err) {
       setPreErr(err.message || 'Error al enviar, intenta de nuevo.')
     }
@@ -232,6 +235,33 @@ export default function Login({ onLogin }) {
     }
   }
 
+  const CURP_ESTADOS = {
+    AS:'Aguascalientes',BC:'Baja California',BS:'Baja California Sur',CC:'Campeche',
+    CS:'Chiapas',CH:'Chihuahua',CL:'Colima',DF:'Ciudad de México',DG:'Durango',
+    GT:'Guanajuato',GR:'Guerrero',HG:'Hidalgo',JC:'Jalisco',MC:'Estado de México',
+    MN:'Michoacán',MS:'Morelos',NT:'Nayarit',NL:'Nuevo León',OC:'Oaxaca',
+    PL:'Puebla',QT:'Querétaro',QR:'Quintana Roo',SP:'San Luis Potosí',SL:'Sinaloa',
+    SR:'Sonora',TC:'Tabasco',TS:'Tamaulipas',TL:'Tlaxcala',VZ:'Veracruz',
+    YN:'Yucatán',ZS:'Zacatecas',NE:'Nacido en el extranjero',
+  }
+
+  function parseCurp(curp) {
+    if (!curp || curp.length < 18) return {}
+    const yy = curp.slice(4, 6)
+    const mm = curp.slice(6, 8)
+    const dd = curp.slice(8, 10)
+    const sexo = curp[10]
+    const estadoCod = curp.slice(11, 13).toUpperCase()
+    const yyNum = parseInt(yy, 10)
+    const currentYY = new Date().getFullYear() % 100
+    const century = yyNum <= currentYY ? '20' : '19'
+    return {
+      fecha_nacimiento: `${century}${yy}-${mm}-${dd}`,
+      genero_nacimiento: sexo === 'H' ? 'Masculino' : sexo === 'M' ? 'Femenino' : '',
+      estado_nacimiento: CURP_ESTADOS[estadoCod] || estadoCod,
+    }
+  }
+
   const glass = {
     bg:     'rgba(255,255,255,0.65)',
     border: 'rgba(0,0,0,0.07)',
@@ -277,7 +307,7 @@ export default function Login({ onLogin }) {
       {/* ── MODALES ── */}
       {(modal === 'login' || modal === 'prereg' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok' || modal === 'suscribir' || modal === 'suscribir_ok') && (
         <div onClick={cerrar} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.9)', color: txt }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: modal === 'prereg' ? 'rgba(253,220,212,0.97)' : glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.9)', color: txt }}>
 
             {/* LOGIN */}
             {modal === 'login' && (
@@ -296,9 +326,16 @@ export default function Login({ onLogin }) {
                   </label>
                   <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: txtMid }}>
                     Contraseña
-                    <input type="password" value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
-                      style={inputStyle(focusedInput === 'loginPwd')}
-                      onFocus={() => setFocusedInput('loginPwd')} onBlur={() => setFocusedInput('')} />
+                    <div style={{ position: 'relative' }}>
+                      <input type={showPwd ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="••••••••"
+                        style={{ ...inputStyle(focusedInput === 'loginPwd'), paddingRight: 40 }}
+                        onFocus={() => setFocusedInput('loginPwd')} onBlur={() => setFocusedInput('')} />
+                      <button type="button" onClick={() => setShowPwd(v => !v)}
+                        style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 17, color: '#aaa', lineHeight: 1, padding: 0 }}
+                        tabIndex={-1} aria-label={showPwd ? 'Ocultar contraseña' : 'Mostrar contraseña'}>
+                        {showPwd ? '🙈' : '👁️'}
+                      </button>
+                    </div>
                   </label>
                   <button type="submit" style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '12px', fontWeight: 700, fontSize: 15, cursor: 'pointer', marginTop: 4, boxShadow: '0 4px 18px rgba(241,139,17,.4)' }}>Iniciar sesión</button>
                   <p style={{ textAlign: 'center', fontSize: 12, color: '#aaa', margin: 0 }}>
@@ -485,14 +522,21 @@ export default function Login({ onLogin }) {
                         style={inputStyle(focusedInput === 'tel')} onFocus={() => setFocusedInput('tel')} onBlur={() => setFocusedInput('')} />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      CURP (opcional)
-                      <input value={pre.curp} onChange={e => setPre({ ...pre, curp: e.target.value.toUpperCase() })} placeholder="XXXX000000XXXXXX00"
+                      CURP *
+                      <input value={pre.curp} onChange={e => {
+                        const val = e.target.value.toUpperCase()
+                        const parsed = parseCurp(val)
+                        setPre(p => ({ ...p, curp: val, ...parsed }))
+                      }} placeholder="XXXX000000XXXXXX00" maxLength={18}
                         style={inputStyle(focusedInput === 'curp')} onFocus={() => setFocusedInput('curp')} onBlur={() => setFocusedInput('')} />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
                       Fecha de nacimiento
-                      <input type="date" value={pre.fecha_nacimiento} onChange={e => setPre({ ...pre, fecha_nacimiento: e.target.value })}
-                        style={inputStyle(focusedInput === 'fnac')} onFocus={() => setFocusedInput('fnac')} onBlur={() => setFocusedInput('')} />
+                      <input type="date" value={pre.fecha_nacimiento}
+                        readOnly={pre.curp.length >= 18}
+                        onChange={e => pre.curp.length < 18 && setPre({ ...pre, fecha_nacimiento: e.target.value })}
+                        style={{ ...inputStyle(focusedInput === 'fnac'), background: pre.curp.length >= 18 ? '#f5f5f5' : undefined, color: pre.curp.length >= 18 ? '#888' : undefined }}
+                        onFocus={() => setFocusedInput('fnac')} onBlur={() => setFocusedInput('')} />
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
                       Municipio de residencia
@@ -813,16 +857,6 @@ export default function Login({ onLogin }) {
             )
           })()}
 
-          {!cargandoPeriodo && (!filtroPlantel || !filtroIdioma) && (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 16, marginBottom: 28, opacity: 0.35, pointerEvents: 'none' }}>
-              {['Pre-registro en línea','Examen de ubicación','Asignación de grupo','Inicio de clases'].map((t, i) => (
-                <div key={t} style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderTop: '3px solid rgba(255,255,255,0.2)', borderRadius: 14, padding: '20px' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: 'rgba(255,255,255,0.3)', marginBottom: 8, textTransform: 'uppercase' }}>— — —</div>
-                  <div style={{ fontSize: 15, fontWeight: 700, color: 'rgba(255,255,255,0.5)' }}>{t}</div>
-                </div>
-              ))}
-            </div>
-          )}
 
           {/* Grupos disponibles para el plantel+idioma seleccionado */}
           {!cargandoPeriodo && filtroPlantel && filtroIdioma && gruposPeriodo.length > 0 && (

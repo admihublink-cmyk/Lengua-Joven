@@ -7,8 +7,16 @@ const { requireAuth } = require('../middleware/auth')
 // POST público — sin auth
 router.post('/publico', (req, res) => {
   const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
-    horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id } = req.body
+    horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
+    genero_nacimiento, estado_nacimiento } = req.body
   if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
+  if (!curp || curp.trim().length < 18) return res.status(400).json({ error: 'El CURP es requerido' })
+
+  // Verificar CURP duplicado
+  const curpExistePre = db.prepare('SELECT id FROM pre_registros WHERE curp = ?').get(curp.trim().toUpperCase())
+  if (curpExistePre) return res.status(400).json({ error: 'Ya existe un pre-registro con ese CURP' })
+  const curpExisteUser = db.prepare('SELECT id FROM usuarios WHERE matricula = ?').get(curp.trim().toUpperCase())
+  if (curpExisteUser) return res.status(400).json({ error: 'Ya existe una cuenta vinculada a ese CURP' })
 
   const esMenor = fecha_nacimiento && calcularEdad(fecha_nacimiento) < 18
   if (esMenor && (!tutor_nombre || !tutor_tel || !tutor_email)) {
@@ -24,13 +32,15 @@ router.post('/publico', (req, res) => {
     (id, folio, nombre, email, tel, curp, fecha_nacimiento, estado_entidad,
      idioma_interes, proveedor_interes, horario_preferido, como_entero,
      estado, fecha_registro, fecha_pago, usuario_id,
-     tutor_nombre, tutor_tel, tutor_email, grupo_interes_id)
-    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
-    newId, folio, nombre, email, tel || '', curp || '', fecha_nacimiento || '', estado_entidad || '',
+     tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
+     genero_nacimiento, estado_nacimiento)
+    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`).run(
+    newId, folio, nombre, email, tel || '', (curp || '').toUpperCase(), fecha_nacimiento || '', estado_entidad || '',
     idioma_interes || '', proveedor_interes || '', horario_preferido || '', como_entero || '',
     'pendiente_pago', fecha, null, null,
     tutor_nombre || null, tutor_tel || null, tutor_email || null,
-    grupo_interes_id || null
+    grupo_interes_id || null,
+    genero_nacimiento || null, estado_nacimiento || null
   )
   res.status(201).json({ folio, id: newId })
 })
