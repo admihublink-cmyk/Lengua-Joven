@@ -42,6 +42,25 @@ export default function Layout({ children }) {
   const { usuario, salir, tienePermiso } = useAuth()
   const { ruta, navegar } = useNav()
   const [abierto, setAbierto] = useState(false)
+
+  // Secciones colapsables — inicializa abriendo la sección que contiene la ruta actual
+  const [seccionesAbiertas, setSeccionesAbiertas] = useState(() => {
+    const abiertas = new Set()
+    let secActual = null
+    for (const item of NAV_ITEMS) {
+      if (item.seccion) { secActual = item.seccion }
+      else if (item.id === ruta && secActual) abiertas.add(secActual)
+    }
+    return abiertas
+  })
+
+  function toggleSeccion(nombre) {
+    setSeccionesAbiertas(prev => {
+      const next = new Set(prev)
+      next.has(nombre) ? next.delete(nombre) : next.add(nombre)
+      return next
+    })
+  }
   const [noLeidos, setNoLeidos] = useState(0)
   const [notifCount, setNotifCount] = useState(0)
   const [notifAbiertas, setNotifAbiertas] = useState(false)
@@ -76,6 +95,18 @@ export default function Layout({ children }) {
   }
 
   useEffect(() => { actualizarContadores() }, [])
+
+  // Abrir sección automáticamente al navegar a una ruta dentro de ella
+  useEffect(() => {
+    let sec = null
+    for (const item of NAV_ITEMS) {
+      if (item.seccion) sec = item.seccion
+      else if (item.id === ruta && sec) {
+        setSeccionesAbiertas(prev => prev.has(sec) ? prev : new Set([...prev, sec]))
+        break
+      }
+    }
+  }, [ruta])
 
   // Cerrar dropdown de notificaciones al hacer clic fuera
   useEffect(() => {
@@ -127,27 +158,47 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {items.map((item, i) => item.seccion ? (
-            <div key={'sec-' + i} style={{
-              fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
-              textTransform: 'uppercase', color: 'var(--texto-muted, #aaa)',
-              padding: '14px 14px 4px', userSelect: 'none',
-            }}>
-              {item.seccion}
-            </div>
-          ) : (
-            <button
-              key={item.id}
-              className={`nav-item ${ruta === item.id ? 'activo' : ''}`}
-              onClick={() => { navegar(item.id); setAbierto(false) }}
-            >
-              <span className="nav-icon">{item.icon}</span>
-              <span style={{ flex: 1 }}>{item.label}</span>
-              {item.id === 'mensajes' && noLeidos > 0 && (
-                <span className="nav-badge">{noLeidos > 9 ? '9+' : noLeidos}</span>
-              )}
-            </button>
-          ))}
+          {(() => {
+            let seccionActual = null
+            return items.map((item, i) => {
+              if (item.seccion) {
+                seccionActual = item.seccion
+                const abierta = seccionesAbiertas.has(item.seccion)
+                return (
+                  <button key={'sec-' + i} onClick={() => toggleSeccion(item.seccion)}
+                    style={{
+                      display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                      width: '100%', background: 'none', border: 'none', cursor: 'pointer',
+                      fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+                      textTransform: 'uppercase', color: 'var(--texto-muted, #aaa)',
+                      padding: '14px 14px 4px', userSelect: 'none',
+                    }}>
+                    {item.seccion}
+                    <svg width="12" height="12" viewBox="0 0 12 12" style={{ transition: 'transform .2s', transform: abierta ? 'rotate(180deg)' : 'rotate(0deg)', flexShrink: 0 }}>
+                      <path d="M2 4l4 4 4-4" stroke="currentColor" strokeWidth="1.5" fill="none" strokeLinecap="round" strokeLinejoin="round"/>
+                    </svg>
+                  </button>
+                )
+              }
+
+              const visible = !seccionActual || seccionesAbiertas.has(seccionActual)
+              if (!visible) return null
+
+              return (
+                <button
+                  key={item.id}
+                  className={`nav-item ${ruta === item.id ? 'activo' : ''}`}
+                  onClick={() => { navegar(item.id); setAbierto(false) }}
+                >
+                  <span className="nav-icon">{item.icon}</span>
+                  <span style={{ flex: 1 }}>{item.label}</span>
+                  {item.id === 'mensajes' && noLeidos > 0 && (
+                    <span className="nav-badge">{noLeidos > 9 ? '9+' : noLeidos}</span>
+                  )}
+                </button>
+              )
+            })
+          })()}
         </nav>
 
         <button className="nav-salir" onClick={salir}>
