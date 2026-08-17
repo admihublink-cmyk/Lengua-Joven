@@ -20,7 +20,7 @@ export default function Evaluacion() {
   async function cargar() {
     try {
       if (usuario.rol === 'tutor') {
-        const [evs, mis] = await Promise.all([api.getEvaluaciones(), api.getTutorAlumnos()])
+        const [evs, mis] = await Promise.all([api.getEvaluaciones(), api.getMisAlumnos()])
         setEvaluaciones(evs)
         setTutorAlumnos(mis)
         return
