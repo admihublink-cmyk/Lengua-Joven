@@ -77,7 +77,8 @@ export async function login(email, password) {
   return data.user
 }
 
-export function logout() {
+export async function logout() {
+  try { await post('/auth/logout', {}) } catch (_) { /* ignorar si el token ya expiró */ }
   setToken(null)
   setUser(null)
 }

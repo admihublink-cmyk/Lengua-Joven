@@ -4,8 +4,22 @@ const { randomBytes } = require('crypto')
 const db = require('../db')
 const { requireAuth } = require('../middleware/auth')
 
+// Rate limiting para el endpoint público (5 por 15 min por IP)
+const _preRegRL = new Map()
+function checkPreRegRL(ip) {
+  const now = Date.now()
+  const rec = _preRegRL.get(ip) || { n: 0, reset: now + 15 * 60 * 1000 }
+  if (now > rec.reset) { rec.n = 0; rec.reset = now + 15 * 60 * 1000 }
+  rec.n++
+  _preRegRL.set(ip, rec)
+  return rec.n <= 5
+}
+
 // POST público — sin auth
 router.post('/publico', (req, res) => {
+  if (!checkPreRegRL(req.ip)) {
+    return res.status(429).json({ error: 'Demasiadas solicitudes. Espera unos minutos e intenta de nuevo.' })
+  }
   const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
     horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
     genero_nacimiento, estado_nacimiento } = req.body

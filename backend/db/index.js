@@ -395,6 +395,12 @@ try { db.exec("ALTER TABLE planteles ADD COLUMN tipo_persona TEXT DEFAULT 'moral
 try { db.exec("ALTER TABLE planteles ADD COLUMN proveedor_nombre TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE inscripciones ADD COLUMN liga_pago TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE inscripciones ADD COLUMN grupo_sugerido_id TEXT") } catch (_) {}
+try { db.exec("ALTER TABLE usuarios ADD COLUMN token_invalid_before TEXT") } catch (_) {}
+db.exec(`CREATE TABLE IF NOT EXISTS login_bloqueos (
+  ip TEXT PRIMARY KEY,
+  intentos INTEGER DEFAULT 0,
+  reset_en TEXT NOT NULL
+)`)
 try {
   db.exec(`CREATE TABLE IF NOT EXISTS documentos_convenio (
     id TEXT PRIMARY KEY,
