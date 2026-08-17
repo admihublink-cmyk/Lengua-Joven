@@ -9,20 +9,23 @@ export default function Planteles() {
   const [planteles, setPlanteles] = useState([])
   const [idiomas, setIdiomas] = useState([])
   const [grupos, setGrupos] = useState([])
+  const [ofertas, setOfertas] = useState([])
   const [niveles, setNiveles] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({ nombre: '', ciudad: '' })
 
   async function cargar() {
     try {
-      const [p, i, g] = await Promise.all([
+      const [p, i, g, o] = await Promise.all([
         api.getPlanteles(),
         api.getIdiomas(),
         api.getGrupos(),
+        api.getOfertas(),
       ])
       setPlanteles(p)
       setIdiomas(i)
       setGrupos(g)
+      setOfertas(o)
       // Cargar todos los niveles de todos los idiomas
       if (i.length > 0) {
         const todos = await Promise.all(i.map(id => api.getNiveles(id.id)))
@@ -51,20 +54,40 @@ export default function Planteles() {
   }
 
   function idiomasDelPlantel(plantelId) {
-    // Idiomas explícitamente asignados al plantel
-    const directos = idiomas.filter(i => i.plantel_id === plantelId)
-    // Idiomas inferidos desde los grupos de ese plantel
-    const idsDeGrupos = [...new Set(
-      grupos.filter(g => g.plantel_id === plantelId && g.idioma_id).map(g => g.idioma_id)
-    )]
-    const deGrupos = idsDeGrupos
-      .map(id => idiomas.find(i => i.id === id))
-      .filter(Boolean)
-      .filter(i => !directos.some(d => d.id === i.id))
-    return [...directos, ...deGrupos]
+    const vistos = new Set()
+    const resultado = []
+
+    // 1. Directamente asignados (idiomas.plantel_id)
+    for (const i of idiomas.filter(i => i.plantel_id === plantelId)) {
+      if (!vistos.has(i.id)) { vistos.add(i.id); resultado.push(i) }
+    }
+    // 2. Desde grupos (idioma_id → objeto idioma)
+    for (const g of grupos.filter(g => g.plantel_id === plantelId && g.idioma_id)) {
+      if (!vistos.has(g.idioma_id)) {
+        const obj = idiomas.find(i => i.id === g.idioma_id)
+        if (obj) { vistos.add(g.idioma_id); resultado.push(obj) }
+      }
+    }
+    // 3. Desde ofertas (idioma como string → objeto idioma por nombre)
+    for (const o of ofertas.filter(o => o.plantel_id === plantelId && o.idioma)) {
+      const obj = idiomas.find(i => i.nombre === o.idioma)
+      if (obj && !vistos.has(obj.id)) { vistos.add(obj.id); resultado.push(obj) }
+      // Si no hay objeto idioma con ese nombre, crear uno virtual para mostrar
+      else if (!obj) {
+        const key = 'virtual_' + o.idioma
+        if (!vistos.has(key)) { vistos.add(key); resultado.push({ id: key, nombre: o.idioma, virtual: true }) }
+      }
+    }
+    return resultado
   }
-  function gruposActivos(idioma_id, plantelId) {
-    return grupos.filter(g => g.idioma_id === idioma_id && g.plantel_id === plantelId && g.activo)
+  function gruposActivos(idioma, plantelId) {
+    if (idioma.virtual) {
+      // Idioma viene de ofertas — buscar ofertas de ese plantel+nombre
+      return ofertas
+        .filter(o => o.plantel_id === plantelId && o.idioma === idioma.nombre)
+        .map(o => ({ id: o.id, horario: o.horario, cupo: null, nivel_id: null, codigo: o.nivel || o.sistema || '' }))
+    }
+    return grupos.filter(g => g.idioma_id === idioma.id && g.plantel_id === plantelId && g.activo)
   }
   function nomNivel(nivel_id) {
     return niveles.find(n => n.id === nivel_id)?.nombre || ''
@@ -116,7 +139,7 @@ export default function Planteles() {
                   </p>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
                     {idiomasList.map(idioma => {
-                      const gps = gruposActivos(idioma.id, p.id)
+                      const gps = gruposActivos(idioma, p.id)
                       return (
                         <div key={idioma.id}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
