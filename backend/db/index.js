@@ -394,6 +394,7 @@ try { db.exec("ALTER TABLE planteles ADD COLUMN domicilio_fiscal TEXT") } catch 
 try { db.exec("ALTER TABLE planteles ADD COLUMN tipo_persona TEXT DEFAULT 'moral'") } catch (_) {}
 try { db.exec("ALTER TABLE planteles ADD COLUMN proveedor_nombre TEXT") } catch (_) {}
 try { db.exec("ALTER TABLE inscripciones ADD COLUMN liga_pago TEXT") } catch (_) {}
+try { db.exec("ALTER TABLE inscripciones ADD COLUMN grupo_sugerido_id TEXT") } catch (_) {}
 try {
   db.exec(`CREATE TABLE IF NOT EXISTS documentos_convenio (
     id TEXT PRIMARY KEY,
