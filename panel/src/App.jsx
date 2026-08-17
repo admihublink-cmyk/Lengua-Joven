@@ -24,6 +24,7 @@ import Buzon from './pages/Buzon.jsx'
 import Convenios from './pages/Convenios.jsx'
 import OfertaEducativa from './pages/OfertaEducativa.jsx'
 import Actividad from './pages/Actividad.jsx'
+import Usuarios from './pages/Usuarios.jsx'
 
 export const AuthCtx = createContext(null)
 export const NavCtx  = createContext(null)
@@ -55,6 +56,7 @@ const RUTAS = {
   convenios: Convenios,
   oferta: OfertaEducativa,
   actividad: Actividad,
+  usuarios: Usuarios,
 }
 
 export default function App() {

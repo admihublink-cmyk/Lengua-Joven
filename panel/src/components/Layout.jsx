@@ -4,23 +4,35 @@ import { P, ROL_PERMISOS } from '../auth.js'
 import * as api from '../api.js'
 
 const NAV_ITEMS = [
+  // — General —
   { id: 'dashboard',     icon: '⊞',  label: 'Inicio',            permiso: null },
   { id: 'calendario',    icon: '📅',  label: 'Calendario',        permiso: P.GRUPO_VER },
   { id: 'mensajes',      icon: '💬',  label: 'Mensajes',          permiso: P.MENSAJE_ENVIAR },
   { id: 'tareas',        icon: '📝',  label: 'Tareas',            permiso: P.TAREA_VER },
+  // — Académico —
+  { seccion: 'Académico' },
   { id: 'planteles',     icon: '🏫',  label: 'Planteles',         permiso: P.PLAN_VER },
+  { id: 'oferta',        icon: '🏷',   label: 'Oferta Educativa',  permiso: P.CONFIG_SISTEMA },
   { id: 'idiomas',       icon: '🌐',  label: 'Idiomas y Niveles', permiso: P.IDIOMA_VER },
   { id: 'grupos',        icon: '👥',  label: 'Grupos',            permiso: P.GRUPO_VER },
-  { id: 'asistencia',    icon: '✓',   label: 'Asistencia',        permiso: P.ASIST_VER },
-  { id: 'evaluacion',    icon: '📊',  label: 'Evaluación',        permiso: P.EVAL_VER },
+  // — Alumnos —
+  { seccion: 'Alumnos' },
   { id: 'placement',     icon: '🎯',  label: 'Placement Test',    permiso: P.PLACEMENT_VER },
   { id: 'inscripciones', icon: '📋',  label: 'Inscripciones',     permiso: P.INSC_VER },
   { id: 'pagos',         icon: '💳',  label: 'Pagos',             permiso: P.PAGO_VER },
+  // — Seguimiento —
+  { seccion: 'Seguimiento' },
+  { id: 'asistencia',    icon: '✓',   label: 'Asistencia',        permiso: P.ASIST_VER },
+  { id: 'evaluacion',    icon: '📊',  label: 'Evaluación',        permiso: P.EVAL_VER },
   { id: 'avisos',        icon: '📢',  label: 'Avisos',            permiso: P.AVISO_VER },
-  { id: 'reportes',      icon: '📈',  label: 'Reportes',          permiso: P.REPORTE_VER_PLANTEL },
   { id: 'buzon',         icon: '📮',  label: 'Buzón',             permiso: P.BUZON_ENVIAR },
+  // — Administración —
+  { seccion: 'Administración' },
   { id: 'convenios',     icon: '📄',  label: 'Convenios',         permiso: P.CONVENIO_GESTIONAR },
-  { id: 'oferta',        icon: '🏷',   label: 'Oferta Educativa',  permiso: P.CONFIG_SISTEMA },
+  { id: 'reportes',      icon: '📈',  label: 'Reportes',          permiso: P.REPORTE_VER_PLANTEL },
+  // — Sistema —
+  { seccion: 'Sistema' },
+  { id: 'usuarios',      icon: '🧑‍💼', label: 'Usuarios',          permiso: P.USUARIOS_ADMIN },
   { id: 'configuracion', icon: '⚙',   label: 'Configuración',     permiso: [P.CONFIG_SISTEMA, P.USUARIOS_GESTIONAR] },
   { id: 'actividad',    icon: '🛡',   label: 'Panel de actividad', permiso: P.CONFIG_SISTEMA },
   { id: 'perfil',        icon: '👤',  label: 'Mi Perfil',         permiso: null },
@@ -39,8 +51,9 @@ export default function Layout({ children }) {
 
   const rolCfg = ROL_PERMISOS[usuario.rol]
 
-  // Soporte para permiso array: visible si tiene al menos uno
+  // Soporte para permiso array y secciones
   const items = NAV_ITEMS.filter(item => {
+    if (item.seccion) return true
     if (!item.permiso) return true
     if (Array.isArray(item.permiso)) return item.permiso.some(p => tienePermiso(p))
     return tienePermiso(item.permiso)
@@ -114,7 +127,15 @@ export default function Layout({ children }) {
         </div>
 
         <nav className="sidebar-nav">
-          {items.map(item => (
+          {items.map((item, i) => item.seccion ? (
+            <div key={'sec-' + i} style={{
+              fontSize: 10, fontWeight: 700, letterSpacing: '.08em',
+              textTransform: 'uppercase', color: 'var(--texto-muted, #aaa)',
+              padding: '14px 14px 4px', userSelect: 'none',
+            }}>
+              {item.seccion}
+            </div>
+          ) : (
             <button
               key={item.id}
               className={`nav-item ${ruta === item.id ? 'activo' : ''}`}
@@ -138,7 +159,7 @@ export default function Layout({ children }) {
         <header className="topbar">
           <button className="hamburger" onClick={() => setAbierto(!abierto)}>☰</button>
           <h1 className="topbar-titulo">
-            {items.find(i => i.id === ruta)?.label || 'Inicio'}
+            {items.find(i => !i.seccion && i.id === ruta)?.label || 'Inicio'}
           </h1>
           <div className="topbar-derecha">
             {/* Campana de notificaciones */}
