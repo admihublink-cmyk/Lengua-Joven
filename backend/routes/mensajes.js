@@ -21,6 +21,15 @@ router.get('/', requireAuth, async (req, res) => {
     if (!esMiembro) return res.status(403).json({ error: 'No eres miembro de este grupo' })
     rows = await query('SELECT * FROM mensajes WHERE chat_grupo_id = $1 ORDER BY fecha ASC', [chat_grupo_id])
   } else if (grupo_id) {
+    const acceso = await queryOne(
+      `SELECT 1 FROM grupos g WHERE g.id = $1 AND (
+        g.profesor_id = $2
+        OR EXISTS (SELECT 1 FROM inscripciones i WHERE i.grupo_id = $1 AND i.alumno_id = $2 AND i.estado NOT IN ('cancelada','rechazada','baja'))
+        OR $3 IN ('superadmin','coordinador','director','admin_ventas')
+      )`,
+      [grupo_id, me.id, me.rol]
+    )
+    if (!acceso) return res.status(403).json({ error: 'No tienes acceso a este grupo' })
     rows = await query('SELECT * FROM mensajes WHERE grupo_id = $1 ORDER BY fecha ASC', [grupo_id])
   } else {
     rows = await query('SELECT * FROM mensajes WHERE de = $1 OR para = $2 ORDER BY fecha DESC', [me.id, me.id])
@@ -30,9 +39,11 @@ router.get('/', requireAuth, async (req, res) => {
 
 router.post('/', requireAuth, async (req, res) => {
   const { para, contenido, grupo_id, chat_grupo_id } = req.body
-  const ids = (await query('SELECT id FROM mensajes', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('m', '')) || 0), 0)
-  const newId = 'm' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM mensajes WHERE id ~ '^m[0-9]+'`,
+    []
+  )
+  const newId = 'm' + (maxNum + 1)
   const fecha = new Date().toISOString()
   await run(
     'INSERT INTO mensajes (id, de, para, contenido, fecha, leido, grupo_id, chat_grupo_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',

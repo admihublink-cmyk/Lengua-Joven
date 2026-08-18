@@ -20,17 +20,25 @@ router.post('/', requireAuth, async (req, res) => {
   if (!Array.isArray(miembros) || miembros.length === 0)
     return res.status(400).json({ error: 'Selecciona al menos un participante' })
 
-  const ids = (await query('SELECT id FROM chat_grupos', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('cg', '')) || 0), 0)
-  const newId = 'cg' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM chat_grupos WHERE id ~ '^cg[0-9]+'`,
+    []
+  )
+  const newId = 'cg' + (maxNum + 1)
   const now = new Date().toISOString()
 
-  await run('INSERT INTO chat_grupos VALUES ($1,$2,$3,$4)', [newId, nombre.trim(), req.user.id, now])
+  await run(
+    'INSERT INTO chat_grupos (id, nombre, creado_por, created_at) VALUES ($1,$2,$3,$4)',
+    [newId, nombre.trim(), req.user.id, now]
+  )
 
   // Agregar al creador + los miembros seleccionados
   const todos = [...new Set([req.user.id, ...miembros])]
   for (const uid of todos) {
-    await run('INSERT INTO chat_grupo_miembros VALUES ($1,$2) ON CONFLICT DO NOTHING', [newId, uid])
+    await run(
+      'INSERT INTO chat_grupo_miembros (chat_grupo_id, usuario_id) VALUES ($1,$2) ON CONFLICT DO NOTHING',
+      [newId, uid]
+    )
   }
 
   res.status(201).json(await queryOne('SELECT * FROM chat_grupos WHERE id = $1', [newId]))
