@@ -109,8 +109,16 @@ export default function Mensajes() {
   }
 
   useEffect(() => {
-    cargar()
-    if (params?.contactId) setTipoSel('contacto')
+    cargar().then(async () => {
+      if (params?.grupoId) {
+        // Auto-seleccionar el grupo que viene desde Grupos.jsx
+        const grupos = await api.getGrupos()
+        const g = grupos.find(x => x.id === params.grupoId)
+        if (g) seleccionarGrupo(g)
+      } else if (params?.contactId) {
+        setTipoSel('contacto')
+      }
+    })
   }, [])
 
   // Cargar mensajes del grupo cuando se selecciona uno

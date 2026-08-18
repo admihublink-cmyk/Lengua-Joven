@@ -1,11 +1,14 @@
 import { useState, useEffect } from 'react'
-import { useAuth } from '../App.jsx'
+import { useAuth, useNav } from '../App.jsx'
 import { P } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
 
+const ROLES_CHAT_GRUPAL = ['superadmin', 'coordinador', 'director', 'profesor']
+
 export default function Grupos({ params = {} }) {
   const { usuario, tienePermiso } = useAuth()
+  const { navegar } = useNav()
   const [grupos, setGrupos] = useState([])
   const [idiomas, setIdiomas] = useState([])
   const [niveles, setNiveles] = useState([])
@@ -159,7 +162,7 @@ export default function Grupos({ params = {} }) {
                 </td>
                 {tienePermiso(P.GRUPO_ASIGNAR) && (
                   <td>
-                    <div style={{ display: 'flex', gap: 4 }}>
+                    <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
                       <button className="btn-mini" onClick={() => { setForm({ ...g }); setModal('editar') }}>
                         Editar
                       </button>
@@ -167,6 +170,14 @@ export default function Grupos({ params = {} }) {
                         <button className="btn-mini" style={{ background: '#2980b9', color: '#fff', borderColor: '#2980b9' }}
                           onClick={() => { setForm({ ...g }); setModal('fechas') }}>
                           📅 Fechas
+                        </button>
+                      )}
+                      {ROLES_CHAT_GRUPAL.includes(usuario.rol) && (
+                        <button className="btn-mini"
+                          style={{ background: '#27ae60', color: '#fff', borderColor: '#27ae60' }}
+                          onClick={() => navegar('mensajes', { grupoId: g.id })}
+                          title="Abrir chat grupal">
+                          💬 Chat
                         </button>
                       )}
                     </div>
