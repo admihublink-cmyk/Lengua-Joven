@@ -179,15 +179,15 @@ export default function Usuarios() {
             <form onSubmit={submitCrear} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Nombre completo *</label>
-                <input className="input-busqueda" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre completo" style={{ width: '100%' }} />
+                <input autoComplete="off" className="input-busqueda" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre completo" style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Correo electrónico *</label>
-                <input className="input-busqueda" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@ejemplo.com" style={{ width: '100%' }} />
+                <input autoComplete="off" className="input-busqueda" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@ejemplo.com" style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Contraseña *</label>
-                <input className="input-busqueda" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" style={{ width: '100%' }} />
+                <input autoComplete="new-password" className="input-busqueda" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" style={{ width: '100%' }} />
               </div>
               <div>
                 <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Rol *</label>
