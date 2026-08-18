@@ -3,17 +3,31 @@ const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
 router.get('/', requireAuth, async (req, res) => {
+  const me = req.user
   const { grupo_id, alumno_id, fecha } = req.query
   let sql = 'SELECT * FROM asistencias WHERE 1=1'
   const vals = []
-  if (grupo_id) { sql += ` AND grupo_id = $${vals.length + 1}`; vals.push(grupo_id) }
-  if (alumno_id) { sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(alumno_id) }
+  // Alumnos solo ven su propia asistencia
+  if (me.rol === 'alumno') {
+    sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(me.id)
+  } else if (me.rol === 'tutor') {
+    const alumnos = me.alumnos || []
+    if (alumnos.length === 0) return res.json([])
+    sql += ` AND alumno_id IN (${alumnos.map((_, i) => `$${i + 1}`).join(',')})`
+    vals.push(...alumnos)
+  } else {
+    if (grupo_id) { sql += ` AND grupo_id = $${vals.length + 1}`; vals.push(grupo_id) }
+    if (alumno_id) { sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(alumno_id) }
+  }
   if (fecha) { sql += ` AND fecha = $${vals.length + 1}`; vals.push(fecha) }
   sql += ' ORDER BY fecha DESC'
   res.json(await query(sql, vals))
 })
 
 router.post('/', requireAuth, async (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const registros = Array.isArray(req.body) ? req.body : [req.body]
   const ids = (await query('SELECT id FROM asistencias', [])).map(r => r.id)
   let max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('a', '')) || 0), 0)
