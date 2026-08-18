@@ -22,53 +22,84 @@ function fmtFechaLarga(isoStr) {
 export default function Mensajes() {
   const { usuario } = useAuth()
   const { params } = useNav()
-  const [todos, setTodos] = useState([]) // todos los mensajes del usuario
+  const [todos, setTodos] = useState([])
   const [contactos, setContactos] = useState([])
+  const [contactables, setContactables] = useState([])
   const [usuariosMap, setUsuariosMap] = useState({})
   const [selId, setSelId] = useState(params?.contactId || null)
   const [texto, setTexto] = useState('')
+  const [modalNuevo, setModalNuevo] = useState(false)
+  const [busqueda, setBusqueda] = useState('')
   const bottomRef = useRef(null)
   const inputRef = useRef(null)
+  const busquedaRef = useRef(null)
 
   async function cargar() {
     try {
-      const [msgs, u] = await Promise.all([api.getMensajes(), api.getUsuarios()])
+      const [msgs, u, grupos, inscripciones] = await Promise.all([
+        api.getMensajes(), api.getUsuarios(), api.getGrupos(), api.getInscripciones(),
+      ])
       const map = {}
       u.forEach(x => { map[x.id] = x })
-      // Si llegamos desde el botón COORDINADOR, cargar ese usuario aunque no esté en la lista
       if (params?.contactId && !map[params.contactId]) {
         try {
-          const coordi = await api.getUsuario(params.contactId)
-          if (coordi) map[coordi.id] = coordi
+          const c = await api.getUsuario(params.contactId)
+          if (c) map[c.id] = c
         } catch {}
       }
       setUsuariosMap(map)
       setTodos(msgs)
 
-      // Construir lista de contactos: todos los usuarios que compartieron mensaje con el usuario actual
-      const ids = new Set()
-      msgs.forEach(m => {
-        if (m.de === usuario.id) ids.add(m.para)
-        if (m.para === usuario.id) ids.add(m.de)
-      })
-      // También añadir compañeros de grupo
-      const grupos = await api.getGrupos()
-      const inscripciones = await api.getInscripciones()
-      const misGrupos = new Set(inscripciones.filter(i => i.alumno_id === usuario.id || i.grupo_id).map(i => i.grupo_id))
-      inscripciones.forEach(i => {
-        if (misGrupos.has(i.grupo_id) && i.alumno_id && i.alumno_id !== usuario.id) ids.add(i.alumno_id)
-      })
+      // Mis grupos según rol
+      const misGruposIds = new Set()
+      if (usuario.rol === 'alumno') {
+        inscripciones.filter(i => i.alumno_id === usuario.id).forEach(i => misGruposIds.add(i.grupo_id))
+      } else if (usuario.rol === 'profesor') {
+        grupos.filter(g => g.profesor_id === usuario.id).forEach(g => misGruposIds.add(g.id))
+      } else {
+        // Para otros roles: todos los grupos de su plantel
+        grupos.filter(g => !usuario.plantel_id || g.plantel_id === usuario.plantel_id).forEach(g => misGruposIds.add(g.id))
+      }
 
-      // Incluir el contacto de params aunque no haya mensajes previos
-      if (params?.contactId) ids.add(params.contactId)
-      const contactosList = [...ids].map(id => map[id]).filter(Boolean)
-      const enriched = contactosList.map(c => {
-        const conv = msgs.filter(m => (m.de === usuario.id && m.para === c.id) || (m.de === c.id && m.para === usuario.id))
-          .sort((a, b) => (a.fecha || a.creado_en || '').localeCompare(b.fecha || b.creado_en || ''))
-        const noLeidos = conv.filter(m => m.para === usuario.id && !m.leido).length
-        const ultimo = conv[conv.length - 1]
-        return { ...c, noLeidos, ultimoMsg: ultimo?.contenido || '', ultimaFecha: ultimo?.fecha || ultimo?.creado_en || '' }
-      }).sort((a, b) => (b.ultimaFecha || '').localeCompare(a.ultimaFecha || ''))
+      // Personas contactables: compañeros + profesores de mis grupos + historial de mensajes
+      const contactablesIds = new Set()
+      inscripciones.forEach(i => {
+        if (misGruposIds.has(i.grupo_id) && i.alumno_id && i.alumno_id !== usuario.id) {
+          contactablesIds.add(i.alumno_id)
+        }
+      })
+      grupos.forEach(g => {
+        if (misGruposIds.has(g.id) && g.profesor_id && g.profesor_id !== usuario.id) {
+          contactablesIds.add(g.profesor_id)
+        }
+      })
+      msgs.forEach(m => {
+        if (m.de === usuario.id) contactablesIds.add(m.para)
+        if (m.para === usuario.id) contactablesIds.add(m.de)
+      })
+      if (params?.contactId) contactablesIds.add(params.contactId)
+
+      setContactables([...contactablesIds].map(id => map[id]).filter(Boolean))
+
+      // Contactos que ya tienen historial de mensajes (para la lista principal)
+      const conMensajesIds = new Set()
+      msgs.forEach(m => {
+        if (m.de === usuario.id) conMensajesIds.add(m.para)
+        if (m.para === usuario.id) conMensajesIds.add(m.de)
+      })
+      if (params?.contactId) conMensajesIds.add(params.contactId)
+
+      const enriched = [...conMensajesIds]
+        .map(id => map[id]).filter(Boolean)
+        .map(c => {
+          const conv = msgs
+            .filter(m => (m.de === usuario.id && m.para === c.id) || (m.de === c.id && m.para === usuario.id))
+            .sort((a, b) => (a.fecha || a.creado_en || '').localeCompare(b.fecha || b.creado_en || ''))
+          const noLeidos = conv.filter(m => m.para === usuario.id && !m.leido).length
+          const ultimo = conv[conv.length - 1]
+          return { ...c, noLeidos, ultimoMsg: ultimo?.contenido || '', ultimaFecha: ultimo?.fecha || ultimo?.creado_en || '' }
+        })
+        .sort((a, b) => (b.ultimaFecha || '').localeCompare(a.ultimaFecha || ''))
       setContactos(enriched)
     } catch (e) {
       console.error('Error cargando mensajes:', e)
@@ -78,17 +109,19 @@ export default function Mensajes() {
   useEffect(() => { cargar() }, [])
 
   function mensajesConContacto(contactoId) {
-    return todos.filter(m => (m.de === usuario.id && m.para === contactoId) || (m.de === contactoId && m.para === usuario.id))
+    return todos
+      .filter(m => (m.de === usuario.id && m.para === contactoId) || (m.de === contactoId && m.para === usuario.id))
       .sort((a, b) => (a.fecha || a.creado_en || '').localeCompare(b.fecha || b.creado_en || ''))
   }
 
   async function seleccionar(contacto) {
     setSelId(contacto.id)
-    // Marcar mensajes de este contacto como leídos
+    setModalNuevo(false)
+    setBusqueda('')
     try {
       await api.marcarMensajesLeidos(contacto.id)
       await cargar()
-    } catch (e) { /* ignorar */ }
+    } catch {}
     setTimeout(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }); inputRef.current?.focus() }, 80)
   }
 
@@ -105,10 +138,7 @@ export default function Mensajes() {
   }
 
   function onKeyDown(e) {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault()
-      enviar()
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() }
   }
 
   function agruparPorDia(msgs) {
@@ -117,10 +147,7 @@ export default function Mensajes() {
     msgs.forEach(m => {
       const fecha = m.fecha || m.creado_en || ''
       const dia = fecha.slice(0, 10)
-      if (dia !== diaActual) {
-        grupos.push({ tipo: 'sep', fecha, dia })
-        diaActual = dia
-      }
+      if (dia !== diaActual) { grupos.push({ tipo: 'sep', fecha, dia }); diaActual = dia }
       grupos.push({ tipo: 'msg', ...m })
     })
     return grupos
@@ -128,9 +155,25 @@ export default function Mensajes() {
 
   useEffect(() => { bottomRef.current?.scrollIntoView({ behavior: 'smooth' }) }, [selId, todos])
 
-  const contactoSel = contactos.find(c => c.id === selId)
+  // Abrir modal: enfocar el buscador automáticamente
+  useEffect(() => {
+    if (modalNuevo) setTimeout(() => busquedaRef.current?.focus(), 50)
+  }, [modalNuevo])
+
+  const contactoSel = contactos.find(c => c.id === selId) || (selId ? usuariosMap[selId] : null)
   const mensajes = mensajesConContacto(selId)
   const items = agruparPorDia(mensajes)
+
+  // Filtrar contactables por búsqueda, excluyendo los que ya están en la lista de contactos
+  const contactablesEnLista = new Set(contactos.map(c => c.id))
+  const sugeridos = contactables.filter(c => {
+    if (contactablesEnLista.has(c.id)) return false
+    if (!busqueda.trim()) return true
+    return c.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  })
+  const existentesFiltrados = contactos.filter(c =>
+    !busqueda.trim() || c.nombre.toLowerCase().includes(busqueda.toLowerCase())
+  )
 
   return (
     <div>
@@ -140,20 +183,94 @@ export default function Mensajes() {
 
       <div className="chat-layout">
         <div className="chat-contactos">
-          <div className="chat-contactos-head">
-            💬 Conversaciones
-            {contactos.some(c => c.noLeidos > 0) && (
-              <span className="chat-unread" style={{ marginLeft: 8 }}>
-                {contactos.reduce((s, c) => s + c.noLeidos, 0)}
-              </span>
-            )}
+          <div className="chat-contactos-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <span>
+              💬 Conversaciones
+              {contactos.some(c => c.noLeidos > 0) && (
+                <span className="chat-unread" style={{ marginLeft: 8 }}>
+                  {contactos.reduce((s, c) => s + c.noLeidos, 0)}
+                </span>
+              )}
+            </span>
+            <button
+              onClick={() => { setModalNuevo(v => !v); setBusqueda('') }}
+              title="Nuevo mensaje"
+              style={{
+                background: 'var(--primario, #F18B11)', color: '#fff',
+                border: 'none', borderRadius: 8, padding: '3px 10px',
+                fontSize: 12, fontWeight: 700, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 4,
+              }}
+            >
+              + Nuevo
+            </button>
           </div>
+
+          {/* Modal "Nuevo mensaje" */}
+          {modalNuevo && (
+            <div style={{
+              position: 'absolute', zIndex: 50,
+              background: 'var(--bg-2)', border: '1px solid var(--borde)',
+              borderRadius: 10, boxShadow: '0 8px 32px rgba(0,0,0,0.18)',
+              width: 280, maxHeight: 360, display: 'flex', flexDirection: 'column',
+              overflow: 'hidden',
+            }}>
+              <div style={{ padding: '10px 12px', borderBottom: '1px solid var(--borde)' }}>
+                <input
+                  ref={busquedaRef}
+                  value={busqueda}
+                  onChange={e => setBusqueda(e.target.value)}
+                  placeholder="Buscar persona…"
+                  style={{
+                    width: '100%', boxSizing: 'border-box',
+                    padding: '7px 10px', borderRadius: 7, fontSize: 13,
+                    border: '1px solid var(--borde)', background: 'var(--bg-3)',
+                    color: 'var(--texto)', outline: 'none',
+                  }}
+                />
+              </div>
+              <div style={{ overflowY: 'auto', flex: 1 }}>
+                {existentesFiltrados.length > 0 && (
+                  <>
+                    <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 700, color: 'var(--texto-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      Conversaciones recientes
+                    </div>
+                    {existentesFiltrados.map(c => (
+                      <NuevoMsgItem key={c.id} c={c} onSelect={() => seleccionar(c)} />
+                    ))}
+                  </>
+                )}
+                {sugeridos.length > 0 && (
+                  <>
+                    <div style={{ padding: '6px 12px 2px', fontSize: 11, fontWeight: 700, color: 'var(--texto-muted)', textTransform: 'uppercase', letterSpacing: '.05em' }}>
+                      De tus grupos
+                    </div>
+                    {sugeridos.map(c => (
+                      <NuevoMsgItem key={c.id} c={c} onSelect={() => seleccionar(c)} />
+                    ))}
+                  </>
+                )}
+                {existentesFiltrados.length === 0 && sugeridos.length === 0 && (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--texto-muted)', fontSize: 13 }}>
+                    No se encontraron personas.
+                  </div>
+                )}
+              </div>
+              <div style={{ padding: '8px 12px', borderTop: '1px solid var(--borde)', textAlign: 'right' }}>
+                <button onClick={() => { setModalNuevo(false); setBusqueda('') }}
+                  style={{ background: 'none', border: 'none', fontSize: 12, color: 'var(--texto-muted)', cursor: 'pointer' }}>
+                  Cancelar
+                </button>
+              </div>
+            </div>
+          )}
+
           <div className="chat-contactos-lista">
             {contactos.length === 0 && (
               <div style={{ padding: 24, textAlign: 'center', color: 'var(--texto-muted)', fontSize: 13 }}>
-                No hay contactos disponibles.<br />
+                No hay conversaciones aún.<br />
                 <span style={{ fontSize: 12, marginTop: 4, display: 'block' }}>
-                  Los contactos aparecen según los grupos en los que participas.
+                  Usa "+ Nuevo" para iniciar una.
                 </span>
               </div>
             )}
@@ -190,7 +307,7 @@ export default function Mensajes() {
           <div className="chat-conversacion">
             <div className="chat-conv-head">
               <div className="avatar" style={{ background: ROL_PERMISOS[contactoSel?.rol]?.color || '#888', width: 34, height: 34, fontSize: 14 }}>
-                {contactoSel?.nombre.charAt(0)}
+                {contactoSel?.nombre?.charAt(0)}
               </div>
               <div>
                 <div style={{ fontWeight: 600, fontSize: 14 }}>{contactoSel?.nombre}</div>
@@ -246,6 +363,36 @@ export default function Mensajes() {
             </div>
           </div>
         )}
+      </div>
+
+      {/* Cerrar modal al hacer clic fuera */}
+      {modalNuevo && (
+        <div onClick={() => { setModalNuevo(false); setBusqueda('') }}
+          style={{ position: 'fixed', inset: 0, zIndex: 40 }} />
+      )}
+    </div>
+  )
+}
+
+function NuevoMsgItem({ c, onSelect }) {
+  const rolCfg = ROL_PERMISOS[c.rol]
+  return (
+    <div
+      onClick={onSelect}
+      style={{
+        display: 'flex', alignItems: 'center', gap: 10,
+        padding: '8px 12px', cursor: 'pointer',
+        transition: 'background .12s',
+      }}
+      onMouseEnter={e => e.currentTarget.style.background = 'var(--bg-3)'}
+      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+    >
+      <div className="avatar" style={{ background: rolCfg?.color || '#888', width: 32, height: 32, fontSize: 13, flexShrink: 0 }}>
+        {c.nombre.charAt(0)}
+      </div>
+      <div style={{ minWidth: 0 }}>
+        <div style={{ fontSize: 13, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.nombre}</div>
+        <div style={{ fontSize: 11, color: 'var(--texto-muted)' }}>{rolCfg?.label || c.rol}</div>
       </div>
     </div>
   )
