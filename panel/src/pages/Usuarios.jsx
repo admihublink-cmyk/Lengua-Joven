@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../App.jsx'
 import { ROL_PERMISOS } from '../auth.js'
 import * as api from '../api.js'
+
+const ROLES_COORDINADOR = ['director', 'profesor', 'alumno', 'admin_ventas']
 
 const ROL_LABEL = Object.fromEntries(
   Object.entries(ROL_PERMISOS).map(([k, v]) => [k, v.label])
@@ -17,9 +19,12 @@ function fmtFecha(iso) {
     ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 }
 
+const FORM_VACIO = { nombre: '', email: '', password: '', rol: '', plantel_id: '', matricula: '', fecha_nacimiento: '', estado_entidad: '' }
+
 export default function Usuarios() {
   const { usuario } = useAuth()
   const puedeToggle = ['superadmin', 'coordinador'].includes(usuario.rol)
+  const puedeCrear  = ['superadmin', 'coordinador'].includes(usuario.rol)
 
   const [usuarios, setUsuarios] = useState([])
   const [grupos, setGrupos] = useState([])
@@ -32,6 +37,11 @@ export default function Usuarios() {
   const [filtroRol, setFiltroRol] = useState('')
   const [filtroEstatus, setFiltroEstatus] = useState('')
   const [filtroPlantel, setFiltroPlantel] = useState('')
+
+  const [modalCrear, setModalCrear] = useState(false)
+  const [form, setForm] = useState(FORM_VACIO)
+  const [guardando, setGuardando] = useState(false)
+  const [errorForm, setErrorForm] = useState('')
 
   async function cargar() {
     setCargando(true)
@@ -95,6 +105,37 @@ export default function Usuarios() {
     setToggling(null)
   }
 
+  async function submitCrear(e) {
+    e.preventDefault()
+    setErrorForm('')
+    if (!form.nombre.trim() || !form.email.trim() || !form.password.trim() || !form.rol) {
+      return setErrorForm('Nombre, correo, contraseña y rol son requeridos.')
+    }
+    setGuardando(true)
+    try {
+      await api.crearUsuario({
+        nombre: form.nombre.trim(),
+        email: form.email.trim(),
+        password: form.password,
+        rol: form.rol,
+        plantel_id: form.plantel_id || null,
+        matricula: form.matricula || null,
+        fecha_nacimiento: form.fecha_nacimiento || null,
+        estado_entidad: form.estado_entidad || null,
+      })
+      setModalCrear(false)
+      setForm(FORM_VACIO)
+      await cargar()
+    } catch (err) {
+      setErrorForm(err.message || 'Error al crear usuario')
+    }
+    setGuardando(false)
+  }
+
+  const rolesDisponibles = usuario.rol === 'superadmin'
+    ? Object.keys(ROL_PERMISOS)
+    : ROLES_COORDINADOR
+
   const rolesUnicos = [...new Set(usuarios.map(u => u.rol))].sort()
 
   const filtrados = usuarios.filter(u => {
@@ -111,10 +152,82 @@ export default function Usuarios() {
     <div>
       <div className="page-header">
         <h2>Usuarios</h2>
-        <span style={{ fontSize: 13, color: 'var(--texto-muted)' }}>
-          {filtrados.length} {filtrados.length === 1 ? 'usuario' : 'usuarios'}
-        </span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 13, color: 'var(--texto-muted)' }}>
+            {filtrados.length} {filtrados.length === 1 ? 'usuario' : 'usuarios'}
+          </span>
+          {puedeCrear && (
+            <button className="btn-primario" onClick={() => { setForm(FORM_VACIO); setErrorForm(''); setModalCrear(true) }}>
+              + Nuevo usuario
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* Modal crear usuario */}
+      {modalCrear && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000
+        }} onClick={e => e.target === e.currentTarget && setModalCrear(false)}>
+          <div style={{
+            background: 'var(--bg-2)', borderRadius: 14, padding: '28px 32px',
+            width: '100%', maxWidth: 480, boxShadow: '0 8px 40px rgba(0,0,0,.25)',
+            maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            <h3 style={{ marginBottom: 20 }}>Nuevo usuario</h3>
+            <form onSubmit={submitCrear} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Nombre completo *</label>
+                <input className="input-busqueda" value={form.nombre} onChange={e => setForm(f => ({ ...f, nombre: e.target.value }))} placeholder="Nombre completo" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Correo electrónico *</label>
+                <input className="input-busqueda" type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} placeholder="correo@ejemplo.com" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Contraseña *</label>
+                <input className="input-busqueda" type="password" value={form.password} onChange={e => setForm(f => ({ ...f, password: e.target.value }))} placeholder="Mínimo 6 caracteres" style={{ width: '100%' }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Rol *</label>
+                <select className="select-filtro" value={form.rol} onChange={e => setForm(f => ({ ...f, rol: e.target.value }))} style={{ width: '100%' }}>
+                  <option value="">Selecciona un rol…</option>
+                  {rolesDisponibles.map(r => (
+                    <option key={r} value={r}>{ROL_PERMISOS[r]?.label || r}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Plantel</label>
+                <select className="select-filtro" value={form.plantel_id} onChange={e => setForm(f => ({ ...f, plantel_id: e.target.value }))} style={{ width: '100%' }}>
+                  <option value="">Sin plantel</option>
+                  {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+                </select>
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Matrícula</label>
+                <input className="input-busqueda" value={form.matricula} onChange={e => setForm(f => ({ ...f, matricula: e.target.value }))} placeholder="Opcional" style={{ width: '100%' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Fecha de nacimiento</label>
+                  <input className="input-busqueda" type="date" value={form.fecha_nacimiento} onChange={e => setForm(f => ({ ...f, fecha_nacimiento: e.target.value }))} style={{ width: '100%' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Estado</label>
+                  <input className="input-busqueda" value={form.estado_entidad} onChange={e => setForm(f => ({ ...f, estado_entidad: e.target.value }))} placeholder="Nuevo León" style={{ width: '100%' }} />
+                </div>
+              </div>
+              {errorForm && <div style={{ color: '#e74c3c', fontSize: 13, background: 'rgba(231,76,60,.08)', padding: '8px 12px', borderRadius: 8 }}>{errorForm}</div>}
+              <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+                <button type="button" className="btn-mini" onClick={() => setModalCrear(false)}>Cancelar</button>
+                <button type="submit" className="btn-primario" disabled={guardando}>{guardando ? 'Guardando…' : 'Crear usuario'}</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Filtros */}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 18 }}>
