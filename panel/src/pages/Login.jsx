@@ -548,6 +548,19 @@ export default function Login({ onLogin }) {
                         onChange={e => pre.curp.length < 18 && setPre({ ...pre, fecha_nacimiento: e.target.value })}
                         style={{ ...inputStyle(focusedInput === 'fnac'), background: pre.curp.length >= 18 ? '#f5f5f5' : undefined, color: pre.curp.length >= 18 ? '#888' : undefined }}
                         onFocus={() => setFocusedInput('fnac')} onBlur={() => setFocusedInput('')} />
+                      {edadActual !== null && (
+                        <span style={{
+                          display: 'inline-flex', alignItems: 'center', gap: 5,
+                          fontSize: 12, fontWeight: 600, marginTop: 2,
+                          color: edadActual < 12 ? '#c0392b' : edadActual < 18 ? '#e67e22' : '#27ae60',
+                        }}>
+                          {edadActual < 12
+                            ? `⚠️ ${edadActual} años — el programa es para mayores de 12 años`
+                            : edadActual < 18
+                              ? `🔔 ${edadActual} años — menor de edad (se pedirán datos del tutor)`
+                              : `✓ ${edadActual} años`}
+                        </span>
+                      )}
                     </label>
                     <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
                       Municipio de residencia

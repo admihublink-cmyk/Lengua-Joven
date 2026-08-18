@@ -82,11 +82,20 @@ export default function Layout({ children }) {
   const rolCfg = ROL_PERMISOS[usuario.rol]
 
   // Soporte para permiso array y secciones
-  const items = NAV_ITEMS.filter(item => {
+  const itemsConPermiso = NAV_ITEMS.filter(item => {
     if (item.seccion) return true
     if (!item.permiso) return true
     if (Array.isArray(item.permiso)) return item.permiso.some(p => tienePermiso(p))
     return tienePermiso(item.permiso)
+  })
+  // Eliminar secciones que no tienen ningún ítem visible debajo de ellas
+  const items = itemsConPermiso.filter((item, i) => {
+    if (!item.seccion) return true
+    for (let j = i + 1; j < itemsConPermiso.length; j++) {
+      if (itemsConPermiso[j].seccion) break
+      return true
+    }
+    return false
   })
 
   async function actualizarContadores() {
