@@ -58,12 +58,28 @@ router.delete('/:id', requireAuth, async (req, res) => {
 
 // Placements
 router.get('/placements', requireAuth, async (req, res) => {
+  const me = req.user
   const { alumno_id } = req.query
+  // Alumnos solo ven su propio placement
+  if (me.rol === 'alumno') {
+    return res.json(await query('SELECT * FROM placements WHERE alumno_id = $1', [me.id]))
+  }
+  // Tutores solo ven los de sus alumnos
+  if (me.rol === 'tutor') {
+    const alumnos = me.alumnos || []
+    if (alumnos.length === 0) return res.json([])
+    const phs = alumnos.map((_, i) => `$${i + 1}`).join(',')
+    return res.json(await query(`SELECT * FROM placements WHERE alumno_id IN (${phs})`, alumnos))
+  }
+  // Roles con acceso completo pueden filtrar por alumno_id
   if (alumno_id) return res.json(await query('SELECT * FROM placements WHERE alumno_id = $1', [alumno_id]))
   res.json(await query('SELECT * FROM placements', []))
 })
 
 router.post('/placements', requireAuth, async (req, res) => {
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
   const { alumno_id, nivel_sugerido, calificacion, notas } = req.body
   const ids = (await query('SELECT id FROM placements', [])).map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('pl', '')) || 0), 0)

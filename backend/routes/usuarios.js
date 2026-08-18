@@ -6,7 +6,7 @@ const { requireAuth } = require('../middleware/auth')
 const safe = u => { const { password_hash, ...r } = u; return { ...r, activo: r.activo === 1 } }
 
 // Roles que puede asignar un coordinador (no puede crear superadmin ni otros coordinadores)
-const ROLES_INSTITUCION = ['director', 'maestro', 'profesor', 'alumno', 'admin_ventas']
+const ROLES_INSTITUCION = ['maestro', 'profesor', 'alumno', 'admin_ventas', 'tutor']
 
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
@@ -139,6 +139,11 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const target = await queryOne('SELECT plantel_id FROM usuarios WHERE id = $1', [req.params.id])
+  if (!target) return res.status(404).json({ error: 'No encontrado' })
+  if (req.user.rol === 'director' && target.plantel_id !== req.user.plantel_id) {
+    return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
   await run('UPDATE usuarios SET activo = 0 WHERE id = $1', [req.params.id])
   res.json({ ok: true })
 })

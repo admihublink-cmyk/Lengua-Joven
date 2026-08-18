@@ -25,6 +25,19 @@ router.get('/', requireAuth, async (req, res) => {
 router.get('/:id', requireAuth, async (req, res) => {
   const i = await queryOne('SELECT * FROM inscripciones WHERE id = $1', [req.params.id])
   if (!i) return res.status(404).json({ error: 'No encontrado' })
+  const me = req.user
+  if (me.rol === 'superadmin') return res.json(i)
+  if (me.rol === 'alumno' && i.alumno_id !== me.id) return res.status(403).json({ error: 'Sin permiso' })
+  if (me.rol === 'tutor') {
+    if (!(me.alumnos || []).includes(i.alumno_id)) return res.status(403).json({ error: 'Sin permiso' })
+    return res.json(i)
+  }
+  if (me.rol === 'coordinador') {
+    if (!(me.planteles || []).includes(i.plantel_id)) return res.status(403).json({ error: 'Sin permiso' })
+    return res.json(i)
+  }
+  // director, profesor, admin_ventas: solo su plantel
+  if (me.plantel_id && i.plantel_id !== me.plantel_id) return res.status(403).json({ error: 'Sin permiso' })
   res.json(i)
 })
 
