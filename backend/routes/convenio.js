@@ -1,5 +1,5 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 const path = require('path')
 const {
@@ -91,7 +91,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   if (!puedeVerPlantel(req.user, req.params.id)) return res.status(403).json({ error: 'Sin permiso' })
 
-  const plantel = db.prepare('SELECT * FROM planteles WHERE id = ?').get(req.params.id)
+  const plantel = await queryOne('SELECT * FROM planteles WHERE id = $1', [req.params.id])
   if (!plantel) return res.status(404).json({ error: 'Plantel no encontrado' })
 
   const razonSocial = plantel.razon_social || '[RAZÓN SOCIAL DE LA INSTITUCIÓN]'
@@ -104,15 +104,15 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   const anio = new Date().getFullYear()
 
   // Obtener idiomas del plantel
-  const idiomas = db.prepare('SELECT DISTINCT nombre FROM idiomas WHERE plantel_id = ? ORDER BY nombre').all(plantel.id)
+  const idiomas = await query('SELECT DISTINCT nombre FROM idiomas WHERE plantel_id = $1 ORDER BY nombre', [plantel.id])
 
   // Obtener oferta educativa del proveedor
-  const ofertaRaw = db.prepare(`
+  const ofertaRaw = await query(`
     SELECT idioma, categoria, edades, costo, modalidad
     FROM ofertas
-    WHERE proveedor LIKE ?
+    WHERE proveedor LIKE $1
     ORDER BY idioma, categoria
-  `).all(`%${proveedorNombre}%`)
+  `, [`%${proveedorNombre}%`])
 
   // Agrupar por idioma+modalidad → una tabla por combinación
   const porIdiomaModalidad = {}
@@ -126,7 +126,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
     }
   } else {
     // Fallback: usar idiomas del plantel con precios de la config
-    const cfg = db.prepare("SELECT value FROM config WHERE key = 'costo_inscripcion'").get()
+    const cfg = await queryOne("SELECT value FROM config WHERE key = 'costo_inscripcion'", [])
     const costo = cfg ? parseFloat(cfg.value) || 1500 : 1500
     for (const idm of idiomas) {
       const key = `${idm.nombre}___Presencial`

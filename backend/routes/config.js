@@ -1,21 +1,20 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
-router.get('/', requireAuth, (req, res) => {
-  const rows = db.prepare('SELECT * FROM config').all()
+router.get('/', requireAuth, async (req, res) => {
+  const rows = await query('SELECT * FROM config', [])
   const config = {}
   for (const r of rows) config[r.key] = r.value
   res.json(config)
 })
 
-router.put('/', requireAuth, (req, res) => {
+router.put('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
-  const upsert = db.prepare('INSERT OR REPLACE INTO config VALUES (?,?)')
   for (const [key, value] of Object.entries(req.body)) {
-    upsert.run(key, String(value))
+    await run('INSERT INTO config VALUES ($1,$2) ON CONFLICT (key) DO UPDATE SET value=EXCLUDED.value', [key, String(value)])
   }
-  const rows = db.prepare('SELECT * FROM config').all()
+  const rows = await query('SELECT * FROM config', [])
   const config = {}
   for (const r of rows) config[r.key] = r.value
   res.json(config)

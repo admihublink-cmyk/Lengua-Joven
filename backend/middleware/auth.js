@@ -1,5 +1,5 @@
 const jwt = require('jsonwebtoken')
-const db = require('../db')
+const { queryOne, query } = require('../db/pool')
 
 if (!process.env.JWT_SECRET) {
   console.warn('[SEGURIDAD] JWT_SECRET no configurado — usando clave por defecto. No usar en producción.')
@@ -7,6 +7,10 @@ if (!process.env.JWT_SECRET) {
 const JWT_SECRET = process.env.JWT_SECRET || 'lengua-joven-secret-2026'
 
 function requireAuth(req, res, next) {
+  _authAsync(req, res, next).catch(next)
+}
+
+async function _authAsync(req, res, next) {
   const header = req.headers.authorization
   if (!header || !header.startsWith('Bearer ')) {
     return res.status(401).json({ error: 'No autenticado' })
@@ -14,23 +18,23 @@ function requireAuth(req, res, next) {
   try {
     const token = header.slice(7)
     const payload = jwt.verify(token, JWT_SECRET)
-    // Verificar que el token no haya sido revocado (logout)
-    const userData = db.prepare('SELECT token_invalid_before FROM usuarios WHERE id = ?').get(payload.id)
+
+    const userData = await queryOne('SELECT token_invalid_before FROM usuarios WHERE id = $1', [payload.id])
     if (userData?.token_invalid_before) {
       const invalidBefore = new Date(userData.token_invalid_before).getTime() / 1000
       if (payload.iat < invalidBefore) {
         return res.status(401).json({ error: 'Sesión cerrada. Inicia sesión de nuevo.' })
       }
     }
+
     req.user = payload
-    // Coordinadores: cargar lista de planteles asignados desde DB
+
     if (req.user.rol === 'coordinador') {
-      const rows = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(req.user.id)
+      const rows = await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [req.user.id])
       req.user.planteles = rows.map(r => r.plantel_id)
     }
-    // Tutores: cargar lista de alumnos menores asociados
     if (req.user.rol === 'tutor') {
-      const rows = db.prepare('SELECT alumno_id FROM tutor_alumnos WHERE tutor_id = ?').all(req.user.id)
+      const rows = await query('SELECT alumno_id FROM tutor_alumnos WHERE tutor_id = $1', [req.user.id])
       req.user.alumnos = rows.map(r => r.alumno_id)
     }
     next()
@@ -48,7 +52,6 @@ function requireRole(...roles) {
   }
 }
 
-// Devuelve true si el usuario puede ver/gestionar el plantel dado
 function puedeVerPlantel(user, plantelId) {
   if (user.rol === 'superadmin') return true
   if (user.rol === 'coordinador') return (user.planteles || []).includes(plantelId)

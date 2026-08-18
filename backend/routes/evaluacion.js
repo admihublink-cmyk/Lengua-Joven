@@ -1,77 +1,78 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const { grupo_id, alumno_id } = req.query
   const me = req.user
   let sql = 'SELECT * FROM evaluaciones WHERE 1=1'
   const vals = []
   if (me.rol === 'alumno') {
-    sql += ' AND alumno_id = ?'; vals.push(me.id)
+    sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(me.id)
   } else if (me.rol === 'tutor') {
     const alumnos = me.alumnos || []
     if (alumnos.length === 0) return res.json([])
-    sql += ` AND alumno_id IN (${alumnos.map(() => '?').join(',')})`
+    const placeholders = alumnos.map((_, i) => `$${i + 1}`).join(',')
+    sql += ` AND alumno_id IN (${placeholders})`
     vals.push(...alumnos)
-    if (alumno_id) { sql += ' AND alumno_id = ?'; vals.push(alumno_id) }
+    if (alumno_id) { sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(alumno_id) }
   } else {
-    if (grupo_id) { sql += ' AND grupo_id = ?'; vals.push(grupo_id) }
-    if (alumno_id) { sql += ' AND alumno_id = ?'; vals.push(alumno_id) }
+    if (grupo_id) { sql += ` AND grupo_id = $${vals.length + 1}`; vals.push(grupo_id) }
+    if (alumno_id) { sql += ` AND alumno_id = $${vals.length + 1}`; vals.push(alumno_id) }
   }
-  res.json(db.prepare(sql).all(...vals))
+  res.json(await query(sql, vals))
 })
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, grupo_id, tipo, calificacion, observaciones, fecha } = req.body
-  const ids = db.prepare('SELECT id FROM evaluaciones').all().map(r => r.id)
+  const ids = (await query('SELECT id FROM evaluaciones', [])).map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('e', '')) || 0), 0)
   const newId = 'e' + (max + 1)
-  db.prepare('INSERT INTO evaluaciones VALUES (?,?,?,?,?,?,?,?)').run(
+  await run('INSERT INTO evaluaciones VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
     newId, alumno_id, grupo_id, tipo, parseFloat(calificacion),
     fecha || new Date().toISOString().split('T')[0], req.user.id, observaciones || ''
-  )
-  res.status(201).json(db.prepare('SELECT * FROM evaluaciones WHERE id = ?').get(newId))
+  ])
+  res.status(201).json(await queryOne('SELECT * FROM evaluaciones WHERE id = $1', [newId]))
 })
 
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { calificacion, observaciones, tipo } = req.body
-  db.prepare('UPDATE evaluaciones SET calificacion = ?, observaciones = ?, tipo = ? WHERE id = ?')
-    .run(calificacion, observaciones, tipo, req.params.id)
-  res.json(db.prepare('SELECT * FROM evaluaciones WHERE id = ?').get(req.params.id))
+  await run('UPDATE evaluaciones SET calificacion = $1, observaciones = $2, tipo = $3 WHERE id = $4',
+    [calificacion, observaciones, tipo, req.params.id])
+  res.json(await queryOne('SELECT * FROM evaluaciones WHERE id = $1', [req.params.id]))
 })
 
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  db.prepare('DELETE FROM evaluaciones WHERE id = ?').run(req.params.id)
+  await run('DELETE FROM evaluaciones WHERE id = $1', [req.params.id])
   res.json({ ok: true })
 })
 
 // Placements
-router.get('/placements', requireAuth, (req, res) => {
+router.get('/placements', requireAuth, async (req, res) => {
   const { alumno_id } = req.query
-  if (alumno_id) return res.json(db.prepare('SELECT * FROM placements WHERE alumno_id = ?').all(alumno_id))
-  res.json(db.prepare('SELECT * FROM placements').all())
+  if (alumno_id) return res.json(await query('SELECT * FROM placements WHERE alumno_id = $1', [alumno_id]))
+  res.json(await query('SELECT * FROM placements', []))
 })
 
-router.post('/placements', requireAuth, (req, res) => {
+router.post('/placements', requireAuth, async (req, res) => {
   const { alumno_id, nivel_sugerido, calificacion, notas } = req.body
-  const ids = db.prepare('SELECT id FROM placements').all().map(r => r.id)
+  const ids = (await query('SELECT id FROM placements', [])).map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('pl', '')) || 0), 0)
   const newId = 'pl' + (max + 1)
   const fecha = new Date().toISOString().split('T')[0]
-  db.prepare('INSERT INTO placements VALUES (?,?,?,?,?,?,?)').run(
+  await run('INSERT INTO placements VALUES ($1,$2,$3,$4,$5,$6,$7)', [
     newId, alumno_id, nivel_sugerido, parseFloat(calificacion), fecha, req.user.id, notas || ''
-  )
-  res.status(201).json(db.prepare('SELECT * FROM placements WHERE id = ?').get(newId))
+  ])
+  res.status(201).json(await queryOne('SELECT * FROM placements WHERE id = $1', [newId]))
 })
 
 module.exports = router

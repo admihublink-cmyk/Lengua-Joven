@@ -1,45 +1,45 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   const { grupo_id, contacto_id } = req.query
   let rows
   if (contacto_id) {
-    rows = db.prepare(`
+    rows = await query(`
       SELECT * FROM mensajes
-      WHERE (de = ? AND para = ?) OR (de = ? AND para = ?)
+      WHERE (de = $1 AND para = $2) OR (de = $3 AND para = $4)
       ORDER BY fecha ASC
-    `).all(me.id, contacto_id, contacto_id, me.id)
+    `, [me.id, contacto_id, contacto_id, me.id])
   } else if (grupo_id) {
-    rows = db.prepare('SELECT * FROM mensajes WHERE grupo_id = ? ORDER BY fecha ASC').all(grupo_id)
+    rows = await query('SELECT * FROM mensajes WHERE grupo_id = $1 ORDER BY fecha ASC', [grupo_id])
   } else {
-    rows = db.prepare('SELECT * FROM mensajes WHERE de = ? OR para = ? ORDER BY fecha DESC').all(me.id, me.id)
+    rows = await query('SELECT * FROM mensajes WHERE de = $1 OR para = $2 ORDER BY fecha DESC', [me.id, me.id])
   }
   res.json(rows.map(r => ({ ...r, leido: r.leido === 1 })))
 })
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const { para, contenido, grupo_id } = req.body
-  const ids = db.prepare('SELECT id FROM mensajes').all().map(r => r.id)
+  const ids = (await query('SELECT id FROM mensajes', [])).map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('m', '')) || 0), 0)
   const newId = 'm' + (max + 1)
   const fecha = new Date().toISOString()
-  db.prepare('INSERT INTO mensajes VALUES (?,?,?,?,?,?,?)').run(
+  await run('INSERT INTO mensajes VALUES ($1,$2,$3,$4,$5,$6,$7)', [
     newId, req.user.id, para, contenido, fecha, 0, grupo_id || null
-  )
-  res.status(201).json(db.prepare('SELECT * FROM mensajes WHERE id = ?').get(newId))
+  ])
+  res.status(201).json(await queryOne('SELECT * FROM mensajes WHERE id = $1', [newId]))
 })
 
-router.put('/:id/leido', requireAuth, (req, res) => {
-  db.prepare('UPDATE mensajes SET leido = 1 WHERE id = ? AND para = ?').run(req.params.id, req.user.id)
+router.put('/:id/leido', requireAuth, async (req, res) => {
+  await run('UPDATE mensajes SET leido = 1 WHERE id = $1 AND para = $2', [req.params.id, req.user.id])
   res.json({ ok: true })
 })
 
-router.put('/marcar-leidos', requireAuth, (req, res) => {
+router.put('/marcar-leidos', requireAuth, async (req, res) => {
   const { de } = req.body
-  db.prepare('UPDATE mensajes SET leido = 1 WHERE para = ? AND de = ?').run(req.user.id, de)
+  await run('UPDATE mensajes SET leido = 1 WHERE para = $1 AND de = $2', [req.user.id, de])
   res.json({ ok: true })
 })
 
