@@ -4,7 +4,7 @@ const { requireAuth } = require('../middleware/auth')
 
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
-  const { grupo_id, contacto_id } = req.query
+  const { grupo_id, chat_grupo_id, contacto_id } = req.query
   let rows
   if (contacto_id) {
     rows = await query(`
@@ -12,6 +12,14 @@ router.get('/', requireAuth, async (req, res) => {
       WHERE (de = $1 AND para = $2) OR (de = $3 AND para = $4)
       ORDER BY fecha ASC
     `, [me.id, contacto_id, contacto_id, me.id])
+  } else if (chat_grupo_id) {
+    // Verificar que el usuario es miembro
+    const esMiembro = await queryOne(
+      'SELECT 1 FROM chat_grupo_miembros WHERE chat_grupo_id = $1 AND usuario_id = $2',
+      [chat_grupo_id, me.id]
+    )
+    if (!esMiembro) return res.status(403).json({ error: 'No eres miembro de este grupo' })
+    rows = await query('SELECT * FROM mensajes WHERE chat_grupo_id = $1 ORDER BY fecha ASC', [chat_grupo_id])
   } else if (grupo_id) {
     rows = await query('SELECT * FROM mensajes WHERE grupo_id = $1 ORDER BY fecha ASC', [grupo_id])
   } else {
@@ -21,14 +29,15 @@ router.get('/', requireAuth, async (req, res) => {
 })
 
 router.post('/', requireAuth, async (req, res) => {
-  const { para, contenido, grupo_id } = req.body
+  const { para, contenido, grupo_id, chat_grupo_id } = req.body
   const ids = (await query('SELECT id FROM mensajes', [])).map(r => r.id)
   const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('m', '')) || 0), 0)
   const newId = 'm' + (max + 1)
   const fecha = new Date().toISOString()
-  await run('INSERT INTO mensajes VALUES ($1,$2,$3,$4,$5,$6,$7)', [
-    newId, req.user.id, para, contenido, fecha, 0, grupo_id || null
-  ])
+  await run(
+    'INSERT INTO mensajes (id, de, para, contenido, fecha, leido, grupo_id, chat_grupo_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [newId, req.user.id, para || null, contenido, fecha, 0, grupo_id || null, chat_grupo_id || null]
+  )
   res.status(201).json(await queryOne('SELECT * FROM mensajes WHERE id = $1', [newId]))
 })
 
