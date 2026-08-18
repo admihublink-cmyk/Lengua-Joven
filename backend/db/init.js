@@ -333,6 +333,26 @@ async function initDB() {
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT`)
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT`)
 
+  // Chat grupos ad-hoc (independientes de los grupos de clase)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_grupos (
+      id TEXT PRIMARY KEY,
+      nombre TEXT NOT NULL,
+      creado_por TEXT NOT NULL,
+      created_at TEXT
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_grupo_miembros (
+      chat_grupo_id TEXT NOT NULL,
+      usuario_id TEXT NOT NULL,
+      PRIMARY KEY (chat_grupo_id, usuario_id)
+    )
+  `)
+  // Hacer nullable la columna "para" en mensajes (para mensajes de chat grupal)
+  await pool.query(`ALTER TABLE mensajes ALTER COLUMN para DROP NOT NULL`)
+  await pool.query(`ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS chat_grupo_id TEXT`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 

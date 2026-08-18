@@ -225,6 +225,12 @@ export const enviarMensaje = (data) => post('/mensajes', data)
 export const marcarMensajeLeido = (id) => put(`/mensajes/${id}/leido`)
 export const marcarMensajesLeidos = (de) => put('/mensajes/marcar-leidos', { de })
 
+// ── Chat grupos ad-hoc ────────────────────────────────────────────────────────
+export const getChatGrupos = () => get('/chat-grupos')
+export const crearChatGrupo = (data) => post('/chat-grupos', data)
+export const getChatGrupoMiembros = (id) => get(`/chat-grupos/${id}/miembros`)
+export const eliminarChatGrupo = (id) => del(`/chat-grupos/${id}`)
+
 // ── Avisos ────────────────────────────────────────────────────────────────────
 export const getAvisos = () => get('/avisos')
 export const crearAviso = (data) => post('/avisos', data)
