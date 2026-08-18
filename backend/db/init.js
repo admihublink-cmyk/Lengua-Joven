@@ -329,6 +329,10 @@ async function initDB() {
   // Sync planteles from ofertas providers
   await syncPlantalesOferta()
 
+  // Migraciones incrementales
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT`)
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 

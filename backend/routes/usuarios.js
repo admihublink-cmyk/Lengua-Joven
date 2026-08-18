@@ -67,7 +67,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor } = req.body
+  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento } = req.body
   if (!nombre || !email || !password || !rol) return res.status(400).json({ error: 'Campos requeridos: nombre, email, password, rol' })
   // Coordinadores solo pueden crear personal de la institución
   if (me.rol === 'coordinador' && !ROLES_INSTITUCION.includes(rol)) {
@@ -89,11 +89,12 @@ router.post('/', requireAuth, async (req, res) => {
   const newId = 'u' + (maxNum + 1)
 
   const hash = bcrypt.hashSync(password, 10)
-  await run(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, created_at)
-    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+  await run(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, NOW())`,
     [newId, nombre, email.toLowerCase(), hash, rol,
     plantel_id || null, activo !== false ? 1 : 0,
-    matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null])
+    matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null,
+    curp || null, genero_nacimiento || null])
   const created = await queryOne('SELECT * FROM usuarios WHERE id = $1', [newId])
   res.status(201).json(safe(created))
 })
@@ -110,7 +111,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
   if (!canEdit) return res.status(403).json({ error: 'Sin permiso' })
 
-  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor } = req.body
+  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento } = req.body
   const updates = {}
   if (nombre !== undefined) updates.nombre = nombre
   if (email !== undefined) updates.email = email.toLowerCase()
@@ -124,6 +125,8 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
   if (estado_entidad !== undefined) updates.estado_entidad = estado_entidad || null
   if (proveedor !== undefined) updates.proveedor = proveedor || null
+  if (curp !== undefined) updates.curp = curp || null
+  if (genero_nacimiento !== undefined) updates.genero_nacimiento = genero_nacimiento || null
   if (password) updates.password_hash = bcrypt.hashSync(password, 10)
 
   const setClauses = Object.keys(updates).map((k, i) => `${k} = $${i + 1}`).join(', ')

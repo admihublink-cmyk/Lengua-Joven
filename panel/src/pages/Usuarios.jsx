@@ -19,7 +19,7 @@ function fmtFecha(iso) {
     ' ' + d.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
 }
 
-const FORM_VACIO = { nombre: '', email: '', password: '', rol: '', plantel_id: '', matricula: '', fecha_nacimiento: '', estado_entidad: '' }
+const FORM_VACIO = { nombre: '', email: '', password: '', rol: '', plantel_id: '', matricula: '', fecha_nacimiento: '', estado_entidad: '', curp: '', genero_nacimiento: '' }
 
 export default function Usuarios() {
   const { usuario } = useAuth()
@@ -122,6 +122,8 @@ export default function Usuarios() {
         matricula: form.matricula || null,
         fecha_nacimiento: form.fecha_nacimiento || null,
         estado_entidad: form.estado_entidad || null,
+        curp: form.curp || null,
+        genero_nacimiento: form.genero_nacimiento || null,
       })
       setModalCrear(false)
       setForm(FORM_VACIO)
@@ -219,6 +221,30 @@ export default function Usuarios() {
                   <input className="input-busqueda" value={form.estado_entidad} onChange={e => setForm(f => ({ ...f, estado_entidad: e.target.value }))} placeholder="Nuevo León" style={{ width: '100%' }} />
                 </div>
               </div>
+
+              {form.rol === 'alumno' && (
+                <>
+                  <div style={{ borderTop: '1px solid var(--borde)', paddingTop: 12, marginTop: 2 }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--naranja)', textTransform: 'uppercase', letterSpacing: '.05em', marginBottom: 12 }}>
+                      Datos del alumno
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>CURP</label>
+                        <input autoComplete="off" className="input-busqueda" value={form.curp} onChange={e => setForm(f => ({ ...f, curp: e.target.value.toUpperCase() }))} placeholder="CURP de 18 caracteres" maxLength={18} style={{ width: '100%', textTransform: 'uppercase' }} />
+                      </div>
+                      <div>
+                        <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 5 }}>Género de nacimiento</label>
+                        <select className="select-filtro" value={form.genero_nacimiento} onChange={e => setForm(f => ({ ...f, genero_nacimiento: e.target.value }))} style={{ width: '100%' }}>
+                          <option value="">Selecciona…</option>
+                          <option value="M">Masculino</option>
+                          <option value="F">Femenino</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
               {errorForm && <div style={{ color: '#e74c3c', fontSize: 13, background: 'rgba(231,76,60,.08)', padding: '8px 12px', borderRadius: 8 }}>{errorForm}</div>}
               <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
                 <button type="button" className="btn-mini" onClick={() => setModalCrear(false)}>Cancelar</button>
