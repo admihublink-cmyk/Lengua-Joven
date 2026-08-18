@@ -111,14 +111,14 @@ export default function Mensajes() {
         return { ...c, noLeidos, ultimoMsg: ultimo?.contenido || '', ultimaFecha: ultimo?.fecha || '' }
       }).sort((a, b) => (b.ultimaFecha || '').localeCompare(a.ultimaFecha || ''))
       setContactos(enriched)
+      return grupos
     } catch (e) { console.error('Error cargando mensajes:', e) }
   }
 
   useEffect(() => {
-    cargar().then(async () => {
+    cargar().then(async (grupos) => {
       if (params?.grupoId) {
-        const grupos = await api.getGrupos()
-        const g = grupos.find(x => x.id === params.grupoId)
+        const g = grupos?.find(x => x.id === params.grupoId)
         if (g) seleccionarGrupoClase(g)
       } else if (params?.contactId) {
         setTipoSel('contacto'); setSelId(params.contactId)
@@ -507,11 +507,7 @@ function ContactoItem({ c, activo, onClick }) {
         </div>
       </div>
       <div className="chat-contacto-meta">
-        {c.ultimaFecha && <span className="chat-contacto-hora">{(function fmtFechaCorta(isoStr){
-          if(!isoStr)return'';const hoy=new Date().toISOString().slice(0,10);
-          if(isoStr.slice(0,10)===hoy)return new Date(isoStr).toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
-          return new Date(isoStr).toLocaleDateString('es-MX',{day:'numeric',month:'short'})
-        })(c.ultimaFecha)}</span>}
+        {c.ultimaFecha && <span className="chat-contacto-hora">{fmtFechaCorta(c.ultimaFecha)}</span>}
         {c.noLeidos > 0 && <span className="chat-unread">{c.noLeidos}</span>}
       </div>
     </div>
