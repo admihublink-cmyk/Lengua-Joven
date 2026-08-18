@@ -1,17 +1,17 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 const { enviarBienvenida } = require('../services/email')
 
 // Exportar CSV con el formato que Banorte necesita para generar ligas de pago
 // Campos: referencia (folio), monto, nombre, email
-router.get('/exportar-csv', requireAuth, (req, res) => {
+router.get('/exportar-csv', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
 
   const me = req.user
-  let query = `
+  let sql = `
     SELECT i.folio, i.id as inscripcion_id,
            COALESCE(u.nombre, i.nombre_externo) as nombre,
            COALESCE(u.email, i.email_externo) as email,
@@ -23,12 +23,12 @@ router.get('/exportar-csv', requireAuth, (req, res) => {
   `
   const params = []
   if (me.rol !== 'superadmin') {
-    query += ' AND i.plantel_id = ?'
+    sql += ` AND i.plantel_id = $${params.length + 1}`
     params.push(me.plantel_id)
   }
 
-  const filas = db.prepare(query).all(...params)
-  const cfg = db.prepare("SELECT value FROM config WHERE key = 'costo_inscripcion'").get()
+  const filas = await query(sql, params)
+  const cfg = await queryOne("SELECT value FROM config WHERE key = 'costo_inscripcion'", [])
   const costoDefault = cfg ? parseFloat(cfg.value) || 1500 : 1500
 
   // Generar CSV
@@ -48,7 +48,7 @@ router.get('/exportar-csv', requireAuth, (req, res) => {
 // Cargar el Excel de Banorte con las ligas de pago
 // Banorte regresa: REFERENCIA (folio) y LIGA_PAGO (URL)
 // El frontend parsea el Excel y manda JSON: [{ referencia, liga_pago }]
-router.post('/cargar-ligas', requireAuth, (req, res) => {
+router.post('/cargar-ligas', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
@@ -64,9 +64,9 @@ router.post('/cargar-ligas', requireAuth, (req, res) => {
 
   for (const { referencia, liga_pago } of ligas) {
     if (!referencia || !liga_pago) continue
-    const insc = db.prepare('SELECT id FROM inscripciones WHERE folio = ?').get(String(referencia).trim())
+    const insc = await queryOne('SELECT id FROM inscripciones WHERE folio = $1', [String(referencia).trim()])
     if (!insc) { noEncontradas++; errores.push(referencia); continue }
-    db.prepare('UPDATE inscripciones SET liga_pago = ? WHERE id = ?').run(liga_pago.trim(), insc.id)
+    await run('UPDATE inscripciones SET liga_pago = $1 WHERE id = $2', [liga_pago.trim(), insc.id])
     actualizadas++
   }
 
@@ -79,13 +79,13 @@ router.post('/enviar-liga/:inscripcionId', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
 
-  const insc = db.prepare(`
+  const insc = await queryOne(`
     SELECT i.*, COALESCE(u.nombre, i.nombre_externo) as nombre_alumno,
            COALESCE(u.email, i.email_externo) as email_alumno
     FROM inscripciones i
     LEFT JOIN usuarios u ON u.id = i.alumno_id
-    WHERE i.id = ?
-  `).get(req.params.inscripcionId)
+    WHERE i.id = $1
+  `, [req.params.inscripcionId])
 
   if (!insc) return res.status(404).json({ error: 'Inscripción no encontrada' })
   if (!insc.liga_pago) return res.status(400).json({ error: 'Esta inscripción no tiene liga de pago asignada' })
@@ -141,7 +141,7 @@ router.post('/enviar-liga/:inscripcionId', requireAuth, async (req, res) => {
   }
 
   // Marcar que se envió la liga
-  db.prepare("UPDATE pagos SET estado = 'liga_enviada' WHERE inscripcion_id = ? AND estado = 'pendiente'").run(insc.id)
+  await run("UPDATE pagos SET estado = 'liga_enviada' WHERE inscripcion_id = $1 AND estado = 'pendiente'", [insc.id])
 
   res.json({ ok: true, enviado_a: insc.email_alumno })
 })

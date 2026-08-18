@@ -1,28 +1,25 @@
 const router = require('express').Router()
 const bcrypt = require('bcryptjs')
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
-
-// Agregar columna created_at si no existe (migración idempotente)
-try { db.prepare("ALTER TABLE usuarios ADD COLUMN created_at TEXT DEFAULT (datetime('now'))").run() } catch (_) {}
 
 const safe = u => { const { password_hash, ...r } = u; return { ...r, activo: r.activo === 1 } }
 
 // Roles que puede asignar un coordinador (no puede crear superadmin ni otros coordinadores)
 const ROLES_INSTITUCION = ['director', 'maestro', 'profesor', 'alumno', 'admin_ventas']
 
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   let rows
   if (me.rol === 'superadmin') {
-    rows = db.prepare('SELECT * FROM usuarios ORDER BY nombre').all()
+    rows = await query('SELECT * FROM usuarios ORDER BY nombre', [])
   } else if (me.rol === 'coordinador') {
     const ids = me.planteles || []
     if (ids.length === 0) return res.json([])
-    const placeholders = ids.map(() => '?').join(',')
-    rows = db.prepare(`SELECT * FROM usuarios WHERE plantel_id IN (${placeholders}) ORDER BY nombre`).all(...ids)
+    const placeholders = ids.map((_, i) => `$${i + 1}`).join(',')
+    rows = await query(`SELECT * FROM usuarios WHERE plantel_id IN (${placeholders}) ORDER BY nombre`, ids)
   } else if (me.plantel_id) {
-    rows = db.prepare('SELECT * FROM usuarios WHERE plantel_id = ? ORDER BY nombre').all(me.plantel_id)
+    rows = await query('SELECT * FROM usuarios WHERE plantel_id = $1 ORDER BY nombre', [me.plantel_id])
   } else {
     rows = []
   }
@@ -30,25 +27,26 @@ router.get('/', requireAuth, (req, res) => {
 })
 
 // Endpoint admin: obtener todas las relaciones tutor→alumno
-router.get('/tutor-alumnos', requireAuth, (req, res) => {
+router.get('/tutor-alumnos', requireAuth, async (req, res) => {
   if (!['superadmin', 'coordinador', 'director'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  const rows = db.prepare('SELECT tutor_id, alumno_id FROM tutor_alumnos').all()
+  const rows = await query('SELECT tutor_id, alumno_id FROM tutor_alumnos', [])
   res.json(rows)
 })
 
 // Endpoint para tutores: obtener sus alumnos menores con info básica
-router.get('/mis-alumnos', requireAuth, (req, res) => {
+router.get('/mis-alumnos', requireAuth, async (req, res) => {
   if (req.user.rol !== 'tutor') return res.status(403).json({ error: 'Sin permiso' })
   const alumnos = req.user.alumnos || []
   if (alumnos.length === 0) return res.json([])
-  const rows = db.prepare(`SELECT id, nombre, email, plantel_id, fecha_nacimiento FROM usuarios WHERE id IN (${alumnos.map(() => '?').join(',')})`).all(...alumnos)
+  const placeholders = alumnos.map((_, i) => `$${i + 1}`).join(',')
+  const rows = await query(`SELECT id, nombre, email, plantel_id, fecha_nacimiento FROM usuarios WHERE id IN (${placeholders})`, alumnos)
   res.json(rows)
 })
 
-router.get('/:id', requireAuth, (req, res) => {
-  const u = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+router.get('/:id', requireAuth, async (req, res) => {
+  const u = await queryOne('SELECT * FROM usuarios WHERE id = $1', [req.params.id])
   if (!u) return res.status(404).json({ error: 'No encontrado' })
   const me = req.user
   if (me.rol === 'superadmin') return res.json(safe(u))
@@ -64,7 +62,7 @@ router.get('/:id', requireAuth, (req, res) => {
   res.json(safe(u))
 })
 
-router.post('/', requireAuth, (req, res) => {
+router.post('/', requireAuth, async (req, res) => {
   const me = req.user
   if (!['superadmin', 'director', 'coordinador'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
@@ -80,10 +78,10 @@ router.post('/', requireAuth, (req, res) => {
     return res.status(403).json({ error: 'Plantel no asignado' })
   }
 
-  const existing = db.prepare('SELECT id FROM usuarios WHERE email = ?').get(email.toLowerCase())
+  const existing = await queryOne('SELECT id FROM usuarios WHERE email = $1', [email.toLowerCase()])
   if (existing) return res.status(400).json({ error: 'Email ya registrado' })
 
-  const ids = db.prepare('SELECT id FROM usuarios ORDER BY id').all().map(r => r.id)
+  const ids = (await query('SELECT id FROM usuarios ORDER BY id', [])).map(r => r.id)
   const maxNum = ids.reduce((m, id) => {
     const n = parseInt(id.replace('u', ''))
     return isNaN(n) ? m : Math.max(m, n)
@@ -91,19 +89,18 @@ router.post('/', requireAuth, (req, res) => {
   const newId = 'u' + (maxNum + 1)
 
   const hash = bcrypt.hashSync(password, 10)
-  db.prepare(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, created_at)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'))`).run(
-    newId, nombre, email.toLowerCase(), hash, rol,
+  await run(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, created_at)
+    VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, NOW())`,
+    [newId, nombre, email.toLowerCase(), hash, rol,
     plantel_id || null, activo !== false ? 1 : 0,
-    matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null
-  )
-  const created = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(newId)
+    matricula || null, fecha_nacimiento || null, estado_entidad || null, proveedor || null])
+  const created = await queryOne('SELECT * FROM usuarios WHERE id = $1', [newId])
   res.status(201).json(safe(created))
 })
 
-router.put('/:id', requireAuth, (req, res) => {
+router.put('/:id', requireAuth, async (req, res) => {
   const me = req.user
-  const target = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+  const target = await queryOne('SELECT * FROM usuarios WHERE id = $1', [req.params.id])
   if (!target) return res.status(404).json({ error: 'No encontrado' })
 
   const canEdit = me.rol === 'superadmin' ||
@@ -129,36 +126,37 @@ router.put('/:id', requireAuth, (req, res) => {
   if (proveedor !== undefined) updates.proveedor = proveedor || null
   if (password) updates.password_hash = bcrypt.hashSync(password, 10)
 
-  const setClauses = Object.keys(updates).map(k => `${k} = ?`).join(', ')
+  const setClauses = Object.keys(updates).map((k, i) => `${k} = $${i + 1}`).join(', ')
   if (setClauses) {
-    db.prepare(`UPDATE usuarios SET ${setClauses} WHERE id = ?`).run(...Object.values(updates), req.params.id)
+    await run(`UPDATE usuarios SET ${setClauses} WHERE id = $${Object.keys(updates).length + 1}`, [...Object.values(updates), req.params.id])
   }
-  const updated = db.prepare('SELECT * FROM usuarios WHERE id = ?').get(req.params.id)
+  const updated = await queryOne('SELECT * FROM usuarios WHERE id = $1', [req.params.id])
   res.json(safe(updated))
 })
 
-router.delete('/:id', requireAuth, (req, res) => {
+router.delete('/:id', requireAuth, async (req, res) => {
   if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
-  db.prepare('UPDATE usuarios SET activo = 0 WHERE id = ?').run(req.params.id)
+  await run('UPDATE usuarios SET activo = 0 WHERE id = $1', [req.params.id])
   res.json({ ok: true })
 })
 
 // ── Asignación de planteles a coordinadores ───────────────────────────────────
-router.get('/:id/planteles', requireAuth, (req, res) => {
+router.get('/:id/planteles', requireAuth, async (req, res) => {
   if (req.user.rol !== 'superadmin' && req.user.id !== req.params.id) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  const rows = db.prepare('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = ?').all(req.params.id)
+  const rows = await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [req.params.id])
   res.json(rows.map(r => r.plantel_id))
 })
 
-router.put('/:id/planteles', requireAuth, (req, res) => {
+router.put('/:id/planteles', requireAuth, async (req, res) => {
   if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
   const { plantel_ids } = req.body  // array de IDs
   if (!Array.isArray(plantel_ids)) return res.status(400).json({ error: 'plantel_ids debe ser un array' })
-  db.prepare('DELETE FROM coordinador_planteles WHERE coordinador_id = ?').run(req.params.id)
-  const insert = db.prepare('INSERT INTO coordinador_planteles VALUES (?, ?)')
-  for (const pid of plantel_ids) insert.run(req.params.id, pid)
+  await run('DELETE FROM coordinador_planteles WHERE coordinador_id = $1', [req.params.id])
+  for (const pid of plantel_ids) {
+    await run('INSERT INTO coordinador_planteles VALUES ($1, $2)', [req.params.id, pid])
+  }
   res.json({ ok: true, plantel_ids })
 })
 

@@ -54,43 +54,58 @@ app.use('/api/ofertas', require('./routes/ofertas'))
 app.use('/api/pre-registros', require('./routes/pre_registros'))
 app.use('/api/periodos', require('./routes/periodos'))
 
-// Endpoints públicos para landing page (solo lectura, sin datos sensibles)
-const db = require('./db')
-app.get('/api/publico/planteles', (req, res) => {
-  res.json(db.prepare(`
-    SELECT DISTINCT p.id, p.nombre, p.ciudad
-    FROM planteles p
-    INNER JOIN ofertas o ON o.plantel_id = p.id
-    ORDER BY p.nombre
-  `).all())
+// Endpoints públicos para landing page
+const { query, queryOne, run } = require('./db/pool')
+
+app.get('/api/publico/planteles', async (req, res) => {
+  try {
+    const rows = await query(`
+      SELECT DISTINCT p.id, p.nombre, p.ciudad
+      FROM planteles p
+      INNER JOIN ofertas o ON o.plantel_id = p.id
+      ORDER BY p.nombre
+    `)
+    res.json(rows)
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
-app.get('/api/publico/idiomas', (req, res) => {
-  res.json(db.prepare('SELECT id, nombre FROM idiomas ORDER BY nombre').all())
+
+app.get('/api/publico/idiomas', async (req, res) => {
+  try {
+    const rows = await query('SELECT id, nombre FROM idiomas ORDER BY nombre')
+    res.json(rows)
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
-app.post('/api/publico/suscribir-apertura', (req, res) => {
+
+app.post('/api/publico/suscribir-apertura', async (req, res) => {
   const { nombre, email, whatsapp, municipio, idioma, plantel_nombre } = req.body
   if (!nombre?.trim() || !email?.trim()) return res.status(400).json({ error: 'Nombre y email son requeridos' })
-  const id = 'sub' + Date.now() + Math.random().toString(36).slice(2, 6)
-  db.prepare(`INSERT INTO suscripciones_apertura (id, nombre, email, whatsapp, municipio, idioma, plantel_nombre, fecha)
-    VALUES (?,?,?,?,?,?,?,?)`)
-    .run(id, nombre.trim(), email.trim().toLowerCase(), whatsapp || '', municipio || '', idioma || '', plantel_nombre || '', new Date().toISOString())
-  res.status(201).json({ ok: true })
+  try {
+    const id = 'sub' + Date.now() + Math.random().toString(36).slice(2, 6)
+    await run(
+      `INSERT INTO suscripciones_apertura (id, nombre, email, whatsapp, municipio, idioma, plantel_nombre, fecha) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [id, nombre.trim(), email.trim().toLowerCase(), whatsapp || '', municipio || '', idioma || '', plantel_nombre || '', new Date().toISOString()]
+    )
+    res.status(201).json({ ok: true })
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
-app.get('/api/publico/grupos', (req, res) => {
+
+app.get('/api/publico/grupos', async (req, res) => {
   const { plantel_id, idioma } = req.query
   if (!plantel_id || !idioma) return res.json([])
-  const rows = db.prepare(`
-    SELECT g.id, g.codigo, g.horario, g.cupo, g.nivel_id,
-           n.nombre AS nivel_nombre, n.orden AS nivel_orden,
-           (SELECT COUNT(*) FROM inscripciones
-            WHERE grupo_id = g.id AND estado NOT IN ('cancelada','rechazada','baja')) AS inscritos
-    FROM grupos g
-    LEFT JOIN niveles n ON n.id = g.nivel_id
-    LEFT JOIN idiomas i ON i.id = g.idioma_id
-    WHERE g.plantel_id = ? AND i.nombre = ? AND g.activo = 1
-    ORDER BY n.orden, g.horario
-  `).all(plantel_id, idioma)
-  res.json(rows.map(r => ({ ...r, cupo_disponible: Math.max(0, r.cupo - r.inscritos) })))
+  try {
+    const rows = await query(`
+      SELECT g.id, g.codigo, g.horario, g.cupo, g.nivel_id,
+             n.nombre AS nivel_nombre, n.orden AS nivel_orden,
+             (SELECT COUNT(*) FROM inscripciones
+              WHERE grupo_id = g.id AND estado NOT IN ('cancelada','rechazada','baja')) AS inscritos
+      FROM grupos g
+      LEFT JOIN niveles n ON n.id = g.nivel_id
+      LEFT JOIN idiomas i ON i.id = g.idioma_id
+      WHERE g.plantel_id = $1 AND i.nombre = $2 AND g.activo = 1
+      ORDER BY n.orden, g.horario
+    `, [plantel_id, idioma])
+    res.json(rows.map(r => ({ ...r, cupo_disponible: Math.max(0, r.cupo - r.inscritos) })))
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 // Rutas protegidas
@@ -121,7 +136,6 @@ app.use((err, req, res, next) => {
     console.warn(`JSON inválido en ${req.method} ${req.path}`)
     return res.status(400).json({ error: 'JSON inválido' })
   }
-  // Errores de multer (tipo de archivo o tamaño)
   if (err.code === 'LIMIT_FILE_SIZE') {
     return res.status(400).json({ error: 'El archivo excede el tamaño máximo permitido (20 MB).' })
   }
@@ -131,6 +145,15 @@ app.use((err, req, res, next) => {
   next(err)
 })
 
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Lengua Joven API corriendo en http://0.0.0.0:${PORT}`)
-})
+// Inicializar DB y arrancar servidor
+const { initDB } = require('./db/init')
+initDB()
+  .then(() => {
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Lengua Joven API corriendo en http://0.0.0.0:${PORT}`)
+    })
+  })
+  .catch(err => {
+    console.error('Error inicializando la base de datos:', err)
+    process.exit(1)
+  })

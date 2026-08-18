@@ -1,5 +1,5 @@
 const router = require('express').Router({ mergeParams: true })
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 const multer = require('multer')
 const path = require('path')
@@ -43,8 +43,8 @@ function puedeGestionar(req) {
 }
 
 // GET /api/planteles/:id/documentos
-router.get('/', requireAuth, (req, res) => {
-  const docs = db.prepare('SELECT * FROM documentos_convenio WHERE plantel_id = ? ORDER BY tipo').all(req.params.id)
+router.get('/', requireAuth, async (req, res) => {
+  const docs = await query('SELECT * FROM documentos_convenio WHERE plantel_id = $1 ORDER BY tipo', [req.params.id])
   res.json(docs)
 })
 
@@ -53,44 +53,44 @@ router.post('/:tipo', requireAuth, (req, res) => {
   if (!puedeGestionar(req)) return res.status(403).json({ error: 'Sin permiso' })
   if (!TIPOS_VALIDOS.includes(req.params.tipo)) return res.status(400).json({ error: 'Tipo de documento no válido' })
 
-  upload.single('archivo')(req, res, (err) => {
+  upload.single('archivo')(req, res, async (err) => {
     if (err) return res.status(400).json({ error: err.message })
     if (!req.file) return res.status(400).json({ error: 'No se recibió ningún archivo' })
 
     // Borrar el anterior si existe
-    const anterior = db.prepare('SELECT * FROM documentos_convenio WHERE plantel_id = ? AND tipo = ?').get(req.params.id, req.params.tipo)
+    const anterior = await queryOne('SELECT * FROM documentos_convenio WHERE plantel_id = $1 AND tipo = $2', [req.params.id, req.params.tipo])
     if (anterior) {
       try { fs.unlinkSync(path.join(__dirname, '..', anterior.ruta)) } catch (_) {}
-      db.prepare('DELETE FROM documentos_convenio WHERE id = ?').run(anterior.id)
+      await run('DELETE FROM documentos_convenio WHERE id = $1', [anterior.id])
     }
 
     const id = crypto.randomUUID()
     const rutaRelativa = path.join('uploads', 'convenios', req.params.id, req.file.filename)
-    db.prepare('INSERT INTO documentos_convenio VALUES (?,?,?,?,?,?,?)').run(
+    await run('INSERT INTO documentos_convenio VALUES ($1,$2,$3,$4,$5,$6,$7)', [
       id, req.params.id, req.params.tipo,
       req.file.originalname,
       rutaRelativa,
       new Date().toISOString(),
       req.file.mimetype
-    )
+    ])
 
-    res.status(201).json(db.prepare('SELECT * FROM documentos_convenio WHERE id = ?').get(id))
+    res.status(201).json(await queryOne('SELECT * FROM documentos_convenio WHERE id = $1', [id]))
   })
 })
 
 // DELETE /api/planteles/:id/documentos/:tipo
-router.delete('/:tipo', requireAuth, (req, res) => {
+router.delete('/:tipo', requireAuth, async (req, res) => {
   if (!puedeGestionar(req)) return res.status(403).json({ error: 'Sin permiso' })
-  const doc = db.prepare('SELECT * FROM documentos_convenio WHERE plantel_id = ? AND tipo = ?').get(req.params.id, req.params.tipo)
+  const doc = await queryOne('SELECT * FROM documentos_convenio WHERE plantel_id = $1 AND tipo = $2', [req.params.id, req.params.tipo])
   if (!doc) return res.status(404).json({ error: 'Documento no encontrado' })
   try { fs.unlinkSync(path.join(__dirname, '..', doc.ruta)) } catch (_) {}
-  db.prepare('DELETE FROM documentos_convenio WHERE id = ?').run(doc.id)
+  await run('DELETE FROM documentos_convenio WHERE id = $1', [doc.id])
   res.json({ ok: true })
 })
 
 // GET /api/planteles/:id/documentos/:tipo/archivo  (sirve el archivo)
-router.get('/:tipo/archivo', requireAuth, (req, res) => {
-  const doc = db.prepare('SELECT * FROM documentos_convenio WHERE plantel_id = ? AND tipo = ?').get(req.params.id, req.params.tipo)
+router.get('/:tipo/archivo', requireAuth, async (req, res) => {
+  const doc = await queryOne('SELECT * FROM documentos_convenio WHERE plantel_id = $1 AND tipo = $2', [req.params.id, req.params.tipo])
   if (!doc) return res.status(404).json({ error: 'No encontrado' })
   const filePath = path.join(__dirname, '..', doc.ruta)
   if (!fs.existsSync(filePath)) return res.status(404).json({ error: 'Archivo no encontrado en disco' })

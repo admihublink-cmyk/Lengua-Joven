@@ -1,32 +1,32 @@
 const router = require('express').Router()
-const db = require('../db')
+const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
-function buildQuery(query) {
-  const { tipo, desde, hasta } = query
+function buildQuery(q) {
+  const { tipo, desde, hasta } = q
   let sql = `SELECT l.*, u.nombre as usuario_nombre, u.email as usuario_email
              FROM logs_actividad l
              LEFT JOIN usuarios u ON l.usuario_id = u.id
              WHERE 1=1`
   const vals = []
-  if (tipo) { sql += ' AND l.tipo = ?'; vals.push(tipo) }
-  if (desde) { sql += ' AND l.fecha >= ?'; vals.push(desde) }
-  if (hasta) { sql += ' AND l.fecha <= ?'; vals.push(hasta + 'T23:59:59.999Z') }
+  if (tipo) { sql += ` AND l.tipo = $${vals.length + 1}`; vals.push(tipo) }
+  if (desde) { sql += ` AND l.fecha >= $${vals.length + 1}`; vals.push(desde) }
+  if (hasta) { sql += ` AND l.fecha <= $${vals.length + 1}`; vals.push(hasta + 'T23:59:59.999Z') }
   sql += ' ORDER BY l.fecha DESC'
   return { sql, vals }
 }
 
-router.get('/', requireAuth, (req, res) => {
+router.get('/', requireAuth, async (req, res) => {
   if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
   const { sql, vals } = buildQuery(req.query)
-  res.json(db.prepare(sql).all(...vals))
+  res.json(await query(sql, vals))
 })
 
-router.get('/txt', requireAuth, (req, res) => {
+router.get('/txt', requireAuth, async (req, res) => {
   if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
   const { desde, hasta, tipo } = req.query
   const { sql, vals } = buildQuery(req.query)
-  const logs = db.prepare(sql).all(...vals)
+  const logs = await query(sql, vals)
 
   const sep = '='.repeat(62)
   const lineas = [
