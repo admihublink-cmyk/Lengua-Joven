@@ -46,6 +46,14 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, grupo_id, plantel_id, estado, nombre_externo, email_externo, tel_externo, oferta_id, placement_nivel, sugerida_por } = req.body
+  if (alumno_id && grupo_id) {
+    const dup = await queryOne(
+      `SELECT id FROM inscripciones WHERE alumno_id = $1 AND grupo_id = $2 AND estado NOT IN ('cancelada','rechazada','baja')`,
+      [alumno_id, grupo_id]
+    )
+    if (dup) return res.status(400).json({ error: 'El alumno ya tiene una inscripción activa en este grupo' })
+  }
+
   const ids = (await query('SELECT id FROM inscripciones', [])).map(r => r.id)
   const maxN = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('ins', '')) || 0), 0)
   const newId = 'ins' + (maxN + 1)
@@ -60,12 +68,11 @@ router.post('/', requireAuth, async (req, res) => {
     pid = plantel_id
   }
   else pid = req.user.plantel_id
-  await run(`INSERT INTO inscripciones VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
-    newId, alumno_id || null, grupo_id || null, pid,
-    estado || 'nueva', folio, fecha,
-    placement_nivel || null, sugerida_por || null,
-    nombre_externo || null, email_externo || null, tel_externo || null, oferta_id || null
-  ])
+  await run(
+    `INSERT INTO inscripciones (id, alumno_id, grupo_id, plantel_id, estado, folio, fecha_registro, placement_nivel, sugerida_por, nombre_externo, email_externo, tel_externo, oferta_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
+    [newId, alumno_id || null, grupo_id || null, pid, estado || 'nueva', folio, fecha,
+     placement_nivel || null, sugerida_por || null, nombre_externo || null, email_externo || null, tel_externo || null, oferta_id || null]
+  )
   let nivel_sugerido = null
   if (alumno_id && !placement_nivel) {
     const hoy = new Date().toISOString().split('T')[0]

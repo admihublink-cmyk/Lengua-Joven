@@ -368,7 +368,9 @@ export default function Usuarios() {
                             ? { color: '#e74c3c', borderColor: 'rgba(231,76,60,.4)' }
                             : { color: '#27ae60', borderColor: 'rgba(39,174,96,.4)' }
                           }
-                          onClick={() => toggleActivo(u)}
+                          onClick={() => {
+                            if (window.confirm(`¿${u.activo ? 'Deshabilitar' : 'Habilitar'} a ${u.nombre}?`)) toggleActivo(u)
+                          }}
                         >
                           {toggling === u.id ? '…' : u.activo ? 'Deshabilitar' : 'Habilitar'}
                         </button>

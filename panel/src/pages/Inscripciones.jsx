@@ -141,25 +141,29 @@ export default function Inscripciones() {
   })
 
   async function cambiarEstado(id, estado) {
-    await api.actualizarInscripcion(id, { estado })
-    await cargar()
+    try { await api.actualizarInscripcion(id, { estado }); await cargar() }
+    catch (e) { alert('Error al cambiar estado: ' + (e.message || 'intenta de nuevo')) }
   }
 
   async function avanzarEtapa(id, estadoActual) {
     const next = NEXT_ESTADO[estadoActual]
-    if (next) { await api.actualizarInscripcion(id, { estado: next }); await cargar() }
+    if (!next) return
+    try { await api.actualizarInscripcion(id, { estado: next }); await cargar() }
+    catch (e) { alert('Error al avanzar etapa: ' + (e.message || 'intenta de nuevo')) }
   }
 
   async function confirmarSugerencia(ins) {
-    await api.actualizarInscripcion(ins.id, { grupo_id: ins.grupo_sugerido_id, estado: 'asignada' })
-    setSel(null)
-    await cargar()
+    try {
+      await api.actualizarInscripcion(ins.id, { grupo_id: ins.grupo_sugerido_id, estado: 'asignada' })
+      setSel(null); await cargar()
+    } catch (e) { alert('Error al confirmar: ' + (e.message || 'intenta de nuevo')) }
   }
 
   async function rechazarSugerencia(ins) {
-    await api.actualizarInscripcion(ins.id, { grupo_sugerido_id: null })
-    setSel(null)
-    await cargar()
+    try {
+      await api.actualizarInscripcion(ins.id, { grupo_sugerido_id: null })
+      setSel(null); await cargar()
+    } catch (e) { alert('Error al rechazar: ' + (e.message || 'intenta de nuevo')) }
   }
 
   // Import CSV handlers
@@ -927,9 +931,13 @@ export default function Inscripciones() {
             <div>
               <h4>Asignar grupo manualmente</h4>
               <select defaultValue={sel.grupo_id || ''} onChange={async e => {
-                await api.actualizarInscripcion(sel.id, { grupo_id: e.target.value, estado: 'asignada' })
-                setSel(null)
-                await cargar()
+                const grupoId = e.target.value
+                if (!grupoId) return
+                if (!window.confirm('¿Asignar este grupo a la inscripción?')) return
+                try {
+                  await api.actualizarInscripcion(sel.id, { grupo_id: grupoId, estado: 'asignada' })
+                  setSel(null); await cargar()
+                } catch (err) { alert('Error al asignar grupo: ' + (err.message || 'intenta de nuevo')) }
               }}>
                 <option value="">Seleccionar grupo…</option>
                 {grupos.map(g => <option key={g.id} value={g.id}>{g.codigo}</option>)}

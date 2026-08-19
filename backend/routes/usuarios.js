@@ -163,7 +163,7 @@ router.put('/:id/planteles', requireAuth, async (req, res) => {
   if (!Array.isArray(plantel_ids)) return res.status(400).json({ error: 'plantel_ids debe ser un array' })
   await run('DELETE FROM coordinador_planteles WHERE coordinador_id = $1', [req.params.id])
   for (const pid of plantel_ids) {
-    await run('INSERT INTO coordinador_planteles VALUES ($1, $2)', [req.params.id, pid])
+    await run('INSERT INTO coordinador_planteles (coordinador_id, plantel_id) VALUES ($1, $2)', [req.params.id, pid])
   }
   res.json({ ok: true, plantel_ids })
 })

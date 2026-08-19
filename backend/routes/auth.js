@@ -33,9 +33,10 @@ async function clearFails(ip) {
 async function logActividad(usuario_id, tipo, descripcion, req) {
   const id = 'log' + Date.now() + Math.random().toString(36).slice(2, 6)
   const ip = req?.ip || ''
-  await run('INSERT INTO logs_actividad VALUES ($1,$2,$3,$4,$5,$6)', [
-    id, usuario_id, tipo, descripcion, ip, new Date().toISOString()
-  ])
+  await run(
+    'INSERT INTO logs_actividad (id, usuario_id, tipo, descripcion, ip, fecha) VALUES ($1,$2,$3,$4,$5,$6)',
+    [id, usuario_id, tipo, descripcion, ip, new Date().toISOString()]
+  )
 }
 
 // ── Login ─────────────────────────────────────────────────────────────────────

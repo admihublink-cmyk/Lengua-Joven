@@ -24,7 +24,10 @@ router.post('/publico', async (req, res) => { try {
     horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
     genero_nacimiento, estado_nacimiento } = req.body
   if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
-  if (!curp || curp.trim().length < 18) return res.status(400).json({ error: 'El CURP es requerido' })
+  const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/
+  if (!curp || !CURP_REGEX.test(curp.trim().toUpperCase())) {
+    return res.status(400).json({ error: 'CURP inválido. Verifica que tenga el formato correcto (18 caracteres).' })
+  }
 
   // Verificar CURP duplicado
   const curpExistePre = await queryOne('SELECT id FROM pre_registros WHERE curp = $1', [curp.trim().toUpperCase()])

@@ -66,10 +66,10 @@ router.post('/sesiones', requireAuth, async (req, res) => {
   )
   const newId = 's' + (maxNum + 1)
   const { grupo_id, titulo, tipo, fecha, hora_inicio, hora_fin, dia_semana, fecha_inicio, fecha_fin } = req.body
-  await run('INSERT INTO sesiones VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [
-    newId, grupo_id, titulo, tipo, fecha || null, hora_inicio, hora_fin, 1,
-    dia_semana ?? null, fecha_inicio || null, fecha_fin || null
-  ])
+  await run(
+    'INSERT INTO sesiones (id, grupo_id, titulo, tipo, fecha, hora_inicio, hora_fin, activa, dia_semana, fecha_inicio, fecha_fin) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+    [newId, grupo_id, titulo, tipo, fecha || null, hora_inicio, hora_fin, 1, dia_semana ?? null, fecha_inicio || null, fecha_fin || null]
+  )
   res.status(201).json(await queryOne('SELECT * FROM sesiones WHERE id = $1', [newId]))
 })
 
