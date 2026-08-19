@@ -23,8 +23,17 @@ router.get('/exportar-csv', requireAuth, async (req, res) => {
   `
   const params = []
   if (me.rol !== 'superadmin') {
-    sql += ` AND i.plantel_id = $${params.length + 1}`
-    params.push(me.plantel_id)
+    if (me.rol === 'coordinador') {
+      const pids = (await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [me.id])).map(r => r.plantel_id)
+      if (me.plantel_id && !pids.includes(me.plantel_id)) pids.push(me.plantel_id)
+      if (pids.length === 0) return res.setHeader('Content-Type', 'text/csv; charset=utf-8').send('REFERENCIA,MONTO,NOMBRE,EMAIL\r\n')
+      const ph = pids.map((_, i) => `$${i + 1}`).join(',')
+      sql += ` AND i.plantel_id IN (${ph})`
+      params.push(...pids)
+    } else {
+      sql += ` AND i.plantel_id = $${params.length + 1}`
+      params.push(me.plantel_id)
+    }
   }
 
   const filas = await query(sql, params)

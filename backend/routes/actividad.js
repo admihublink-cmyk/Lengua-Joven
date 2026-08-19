@@ -53,7 +53,8 @@ router.get('/txt', requireAuth, async (req, res) => {
 
   if (logs.length === 0) lineas.push('(Sin movimientos en el período seleccionado)')
 
-  const nombreArchivo = `actividad_${desde || 'inicio'}_al_${hasta || 'hoy'}.txt`
+  const sanitize = s => (s || '').replace(/[^a-zA-Z0-9_\-]/g, '_')
+  const nombreArchivo = `actividad_${sanitize(desde) || 'inicio'}_al_${sanitize(hasta) || 'hoy'}.txt`
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
   res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`)
   res.send(lineas.join('\n'))
