@@ -1,4 +1,4 @@
-// Cliente API — reemplaza store.js para todas las llamadas al backend
+// Cliente API — token en cookie httpOnly, no en localStorage
 
 const BASE = (import.meta.env.VITE_API_URL || '') + '/api'
 
@@ -6,18 +6,10 @@ function getStorage() {
   return typeof window !== 'undefined' ? window.localStorage : undefined
 }
 
-function getToken() {
-  try { return getStorage()?.getItem('lj_token') || null } catch { return null }
-}
-
-function setToken(t) {
-  try {
-    if (t) getStorage()?.setItem('lj_token', t)
-    else getStorage()?.removeItem('lj_token')
-  } catch {}
-}
-
-function getUser() {
+// El token vive en una cookie httpOnly gestionada por el servidor.
+// Solo guardamos el objeto de usuario (no sensible) en localStorage para
+// restaurar la sesión en el cliente sin una petición extra al cargar la página.
+export function getUser() {
   try {
     const raw = getStorage()?.getItem('lj_user') || 'null'
     return JSON.parse(raw)
@@ -33,14 +25,13 @@ function setUser(u) {
 
 async function req(method, path, body, options = {}) {
   const headers = { 'Content-Type': 'application/json' }
-  const token = getToken()
-  if (token) headers['Authorization'] = `Bearer ${token}`
 
   let res
   try {
     res = await fetch(BASE + path, {
       method,
-      headers: options.isFormData ? { Authorization: headers['Authorization'] } : headers,
+      credentials: 'include', // envía la cookie httpOnly automáticamente
+      headers: options.isFormData ? {} : headers,
       body: options.isFormData ? body : body !== undefined ? JSON.stringify(body) : undefined,
     })
   } catch (error) {
@@ -70,10 +61,7 @@ const put = (path, body) => req('PUT', path, body)
 const del = (path) => req('DELETE', path)
 
 export async function fetchBlob(path) {
-  const headers = {}
-  const token = getToken()
-  if (token) headers['Authorization'] = `Bearer ${token}`
-  const res = await fetch(BASE + path, { headers })
+  const res = await fetch(BASE + path, { credentials: 'include' })
   if (!res.ok) throw new Error(`Error ${res.status}`)
   return res
 }
@@ -81,14 +69,13 @@ export async function fetchBlob(path) {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export async function login(email, password) {
   const data = await post('/auth/login', { email, password })
-  setToken(data.token)
+  // El token lo guarda el servidor como cookie httpOnly — aquí solo guardamos el perfil
   setUser(data.user)
   return data.user
 }
 
 export async function logout() {
   try { await post('/auth/logout', {}) } catch (_) { /* ignorar si el token ya expiró */ }
-  setToken(null)
   setUser(null)
 }
 
@@ -187,10 +174,9 @@ export function getArchivoEntregaUrl(tareaId, entregaId) {
   return `${BASE}/tareas/${tareaId}/entregas/${entregaId}/archivo`
 }
 
-// Descargar archivo con token en header
+// Descargar archivo autenticado (usa cookie httpOnly automáticamente)
 export async function descargarArchivo(url, filename) {
-  const token = getToken()
-  const res = await fetch(url, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  const res = await fetch(url, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al descargar')
   const blob = await res.blob()
   const link = document.createElement('a')
@@ -285,9 +271,8 @@ export const actualizarPago = (id, data) => put(`/pagos/${id}`, data)
 export const importarPagosCSV = (filas) => post('/pagos/importar-csv', { filas })
 
 export async function descargarPagosTxt(desde, hasta) {
-  const token = getToken()
   const q = new URLSearchParams({ ...(desde && { desde }), ...(hasta && { hasta }) }).toString()
-  const res = await fetch(`${BASE}/pagos/txt?${q}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  const res = await fetch(`${BASE}/pagos/txt?${q}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al generar reporte')
   const blob = await res.blob()
   const link = document.createElement('a')
@@ -303,9 +288,8 @@ export const getActividad = (params = {}) => {
 }
 
 export async function descargarActividadTxt(params = {}) {
-  const token = getToken()
   const q = new URLSearchParams(params).toString()
-  const res = await fetch(`${BASE}/actividad/txt?${q}`, { headers: token ? { Authorization: `Bearer ${token}` } : {} })
+  const res = await fetch(`${BASE}/actividad/txt?${q}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al generar reporte')
   const blob = await res.blob()
   const link = document.createElement('a')
@@ -324,12 +308,11 @@ export function getUrlDocumentoConvenio(plantelId, tipo) {
 }
 
 export async function subirDocumentoConvenio(plantelId, tipo, archivo) {
-  const token = getToken()
   const fd = new FormData()
   fd.append('archivo', archivo)
   const res = await fetch(`${BASE}/planteles/${plantelId}/documentos/${tipo}`, {
     method: 'POST',
-    headers: token ? { Authorization: `Bearer ${token}` } : {},
+    credentials: 'include',
     body: fd,
   })
   if (!res.ok) {
@@ -341,9 +324,8 @@ export async function subirDocumentoConvenio(plantelId, tipo, archivo) {
 
 // ── Convenios ─────────────────────────────────────────────────────────────────
 export async function descargarConvenioDOCX(plantelId) {
-  const token = getToken()
   const res = await fetch(`${BASE}/planteles/${plantelId}/generar-convenio`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
+    credentials: 'include'
   })
   if (!res.ok) {
     const err = await res.json().catch(() => ({}))
@@ -374,9 +356,8 @@ export const eliminarPeriodo = (id) => del(`/periodos/${id}`)
 
 // ── Banorte ───────────────────────────────────────────────────────────────────
 export async function descargarCSVBanorte() {
-  const token = getToken()
   const res = await fetch(`${BASE}/banorte/exportar-csv`, {
-    headers: token ? { Authorization: `Bearer ${token}` } : {}
+    credentials: 'include'
   })
   if (!res.ok) throw new Error('Error al exportar CSV')
   const blob = await res.blob()

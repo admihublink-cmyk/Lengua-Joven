@@ -11,12 +11,12 @@ function requireAuth(req, res, next) {
 }
 
 async function _authAsync(req, res, next) {
+  // Prefer httpOnly cookie; fall back to Authorization header for API clients
+  const cookieToken = req.cookies?.lj_token
   const header = req.headers.authorization
-  if (!header || !header.startsWith('Bearer ')) {
-    return res.status(401).json({ error: 'No autenticado' })
-  }
+  const token = cookieToken || (header?.startsWith('Bearer ') ? header.slice(7) : null)
+  if (!token) return res.status(401).json({ error: 'No autenticado' })
   try {
-    const token = header.slice(7)
     const payload = jwt.verify(token, JWT_SECRET)
 
     const userData = await queryOne('SELECT token_invalid_before FROM usuarios WHERE id = $1', [payload.id])
