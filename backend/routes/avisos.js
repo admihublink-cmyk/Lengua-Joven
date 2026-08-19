@@ -24,20 +24,36 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { titulo, contenido, plantel_id, grupo_id } = req.body
-  const ids = (await query('SELECT id FROM avisos', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('av', '')) || 0), 0)
-  const newId = 'av' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM avisos WHERE id ~ '^av[0-9]+'`, []
+  )
+  const newId = 'av' + (maxNum + 1)
   const fecha = new Date().toISOString().split('T')[0]
   const pid = req.user.rol === 'superadmin' ? (plantel_id || null) : req.user.plantel_id
-  await run('INSERT INTO avisos VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
+  await run('INSERT INTO avisos (id, titulo, contenido, plantel_id, grupo_id, creado_por, fecha, activo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
     newId, titulo, contenido, pid, grupo_id || null, req.user.id, fecha, 1
   ])
   res.status(201).json(await queryOne('SELECT * FROM avisos WHERE id = $1', [newId]))
 })
 
 router.put('/:id', requireAuth, async (req, res) => {
-  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(req.user.rol)) {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const aviso = await queryOne('SELECT * FROM avisos WHERE id = $1', [req.params.id])
+  if (!aviso) return res.status(404).json({ error: 'No encontrado' })
+  if (me.rol === 'director' && aviso.plantel_id && aviso.plantel_id !== me.plantel_id) {
+    return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
+  if (me.rol === 'coordinador') {
+    const asignados = (await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [me.id])).map(r => r.plantel_id)
+    if (aviso.plantel_id && !asignados.includes(aviso.plantel_id) && aviso.plantel_id !== me.plantel_id) {
+      return res.status(403).json({ error: 'Sin permiso para este plantel' })
+    }
+  }
+  if (me.rol === 'profesor' && aviso.creado_por !== me.id) {
+    return res.status(403).json({ error: 'Solo puedes editar tus propios avisos' })
   }
   const { titulo, contenido, activo } = req.body
   const sets = []; const vals = []
@@ -49,8 +65,23 @@ router.put('/:id', requireAuth, async (req, res) => {
 })
 
 router.delete('/:id', requireAuth, async (req, res) => {
-  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(req.user.rol)) {
+  const me = req.user
+  if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(me.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const aviso = await queryOne('SELECT * FROM avisos WHERE id = $1', [req.params.id])
+  if (!aviso) return res.status(404).json({ error: 'No encontrado' })
+  if (me.rol === 'director' && aviso.plantel_id && aviso.plantel_id !== me.plantel_id) {
+    return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
+  if (me.rol === 'coordinador') {
+    const asignados = (await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [me.id])).map(r => r.plantel_id)
+    if (aviso.plantel_id && !asignados.includes(aviso.plantel_id) && aviso.plantel_id !== me.plantel_id) {
+      return res.status(403).json({ error: 'Sin permiso para este plantel' })
+    }
+  }
+  if (me.rol === 'profesor' && aviso.creado_por !== me.id) {
+    return res.status(403).json({ error: 'Solo puedes eliminar tus propios avisos' })
   }
   await run('UPDATE avisos SET activo = 0 WHERE id = $1', [req.params.id])
   res.json({ ok: true })
