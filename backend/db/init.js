@@ -320,6 +320,16 @@ async function initDB() {
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
   `)
 
+  // Tabla de precios por plantel + idioma
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS precios (
+      plantel_id TEXT NOT NULL,
+      idioma_id  TEXT NOT NULL,
+      monto      REAL NOT NULL,
+      PRIMARY KEY (plantel_id, idioma_id)
+    );
+  `)
+
   // Seed if empty
   const { n } = await queryOne('SELECT COUNT(*) AS n FROM usuarios') || { n: '0' }
   if (parseInt(n) === 0) {

@@ -32,21 +32,25 @@ export default function Configuracion() {
   const [periodos, setPeriodos] = useState([])
   const [modalPeriodo, setModalPeriodo] = useState(null) // null | 'crear' | objeto
   const [formPer, setFormPer] = useState({})
+  const [precios, setPrecios] = useState([])
+  const [formPrecio, setFormPrecio] = useState({ plantel_id: '', idioma_id: '', monto: '' })
 
   async function cargar() {
     try {
-      const [cfg, p, prov, u, ids] = await Promise.all([
+      const [cfg, p, prov, u, ids, prec] = await Promise.all([
         api.getConfig(),
         api.getPlanteles(),
         api.getProveedoresOferta(),
         api.getUsuarios(),
         api.getIdiomas(),
+        api.getPrecios(),
       ])
       setConfig(cfg)
       setPlanteles(p)
       setProveedores(prov)
       setUsuarios(u)
       setIdiomas(ids)
+      setPrecios(prec)
     } catch (e) {
       console.error('Error cargando configuración:', e)
     }
@@ -341,6 +345,71 @@ export default function Configuracion() {
             <button className="btn-primario" onClick={guardarUsuario}>Guardar</button>
           </div>
         </Modal>
+      )}
+
+      {/* ── Precios por plantel e idioma ── */}
+      {esAdmin && (
+        <div className="card" style={{ marginTop: 24 }}>
+          <h3>Precios por plantel e idioma</h3>
+          <p className="texto-muted chico" style={{ marginBottom: 16 }}>
+            El CSV de Banorte usa estos montos automáticamente. Si un alumno no tiene precio configurado, se usa el costo de inscripción global.
+          </p>
+
+          <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+            <label style={{ flex: 1, minWidth: 150 }}>Plantel
+              <select value={formPrecio.plantel_id} onChange={e => setFormPrecio({ ...formPrecio, plantel_id: e.target.value })}>
+                <option value="">Seleccionar…</option>
+                {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </label>
+            <label style={{ flex: 1, minWidth: 150 }}>Idioma
+              <select value={formPrecio.idioma_id} onChange={e => setFormPrecio({ ...formPrecio, idioma_id: e.target.value })}>
+                <option value="">Seleccionar…</option>
+                {idiomas.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+              </select>
+            </label>
+            <label style={{ width: 130 }}>Monto ($)
+              <input type="number" min="0" value={formPrecio.monto}
+                onChange={e => setFormPrecio({ ...formPrecio, monto: e.target.value })} />
+            </label>
+            <button className="btn-primario" style={{ marginBottom: 1 }} onClick={async () => {
+              if (!formPrecio.plantel_id || !formPrecio.idioma_id || !formPrecio.monto) return alert('Completa todos los campos.')
+              try {
+                await api.upsertPrecio(formPrecio)
+                setFormPrecio({ plantel_id: '', idioma_id: '', monto: '' })
+                await cargar()
+              } catch (e) { alert('Error: ' + e.message) }
+            }}>Guardar precio</button>
+          </div>
+
+          <div className="tabla-wrap">
+            <table className="tabla chica">
+              <thead>
+                <tr><th>Plantel</th><th>Idioma</th><th>Monto</th><th></th></tr>
+              </thead>
+              <tbody>
+                {precios.map(p => (
+                  <tr key={`${p.plantel_id}|${p.idioma_id}`}>
+                    <td>{planteles.find(pl => pl.id === p.plantel_id)?.nombre || p.plantel_id}</td>
+                    <td>{idiomas.find(i => i.id === p.idioma_id)?.nombre || p.idioma_id}</td>
+                    <td>${(p.monto || 0).toLocaleString()}</td>
+                    <td>
+                      <button className="btn-mini" style={{ color: '#e74c3c' }}
+                        onClick={async () => {
+                          if (!confirm('¿Eliminar este precio?')) return
+                          await api.eliminarPrecio(p.plantel_id, p.idioma_id)
+                          await cargar()
+                        }}>✕</button>
+                    </td>
+                  </tr>
+                ))}
+                {precios.length === 0 && (
+                  <tr><td colSpan={4} className="tabla-vacio">Sin precios configurados — se usa el costo global.</td></tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
       )}
 
       {/* ── Períodos de inscripción ── */}

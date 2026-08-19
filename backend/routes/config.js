@@ -27,4 +27,28 @@ router.put('/', requireAuth, async (req, res) => {
   res.json(config)
 })
 
+// ── Precios por plantel + idioma ──────────────────────────────────────────────
+router.get('/precios', requireAuth, async (req, res) => {
+  if (['alumno', 'tutor'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const rows = await query('SELECT * FROM precios ORDER BY plantel_id, idioma_id')
+  res.json(rows)
+})
+
+router.put('/precios', requireAuth, async (req, res) => {
+  if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const { plantel_id, idioma_id, monto } = req.body
+  if (!plantel_id || !idioma_id || monto == null) return res.status(400).json({ error: 'plantel_id, idioma_id y monto son requeridos' })
+  await run(
+    'INSERT INTO precios (plantel_id, idioma_id, monto) VALUES ($1,$2,$3) ON CONFLICT (plantel_id, idioma_id) DO UPDATE SET monto = EXCLUDED.monto',
+    [plantel_id, idioma_id, parseFloat(monto)]
+  )
+  res.json({ ok: true })
+})
+
+router.delete('/precios/:plantel_id/:idioma_id', requireAuth, async (req, res) => {
+  if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  await run('DELETE FROM precios WHERE plantel_id = $1 AND idioma_id = $2', [req.params.plantel_id, req.params.idioma_id])
+  res.json({ ok: true })
+})
+
 module.exports = router
