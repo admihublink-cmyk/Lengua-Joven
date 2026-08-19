@@ -21,10 +21,9 @@ export default function Grupos({ params = {} }) {
 
   async function cargar() {
     try {
-      // Idiomas: usar endpoint público para que coordinadores vean todos los idiomas
       const [g, i, o, p, u, ins] = await Promise.all([
         api.getGrupos(),
-        fetch('/api/publico/idiomas').then(r => r.json()),
+        api.getIdiomas(),
         api.getOfertas(),
         api.getPlanteles(),
         api.getUsuarios(),
@@ -130,7 +129,7 @@ export default function Grupos({ params = {} }) {
           <thead>
             <tr>
               <th>Código</th><th>Idioma</th><th>Nivel</th><th>Plantel</th>
-              <th>Profesor</th><th>Horario</th><th>Alumnos</th><th>Estado</th>
+              <th>Horario</th><th>Alumnos</th><th>Estado</th>
               <th>Inscripciones</th><th>Ciclo de clases</th>
               {tienePermiso(P.GRUPO_ASIGNAR) && <th></th>}
             </tr>
@@ -142,7 +141,6 @@ export default function Grupos({ params = {} }) {
                 <td>{nombreIdioma(g.idioma_id)}</td>
                 <td>{nombreNivel(g.nivel_id)}</td>
                 <td>{nombrePlantel(g.plantel_id)}</td>
-                <td>{nombreProfesor(g.profesor_id)}</td>
                 <td>{g.horario || '—'}</td>
                 <td>{alumnosEnGrupo(g.id)} / {g.cupo}</td>
                 <td>
@@ -275,15 +273,6 @@ export default function Grupos({ params = {} }) {
               >
                 <option value="">Seleccionar…</option>
                 {nivelesDelIdioma.map(n => <option key={n.id} value={n.id}>{n.nombre}</option>)}
-              </select>
-            </label>
-            <label>Profesor
-              <select
-                value={form.profesor_id || ''}
-                onChange={e => setForm({ ...form, profesor_id: e.target.value })}
-              >
-                <option value="">Sin asignar</option>
-                {profesores.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </label>
             <label>Cupo
