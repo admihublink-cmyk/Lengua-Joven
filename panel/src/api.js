@@ -260,6 +260,7 @@ export const enviarCredenciales = (id, data) => post(`/pre-registros/${id}/envia
 // ── Config ────────────────────────────────────────────────────────────────────
 export const getConfig = () => get('/config')
 export const actualizarConfig = (data) => put('/config', data)
+export const getLigaPago = () => fetch(`${BASE}/config/liga-pago`, { credentials: 'include' }).then(r => r.json())
 
 // ── Pagos ─────────────────────────────────────────────────────────────────────
 export const getPagos = (params = {}) => {
