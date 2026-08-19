@@ -332,6 +332,31 @@ async function initDB() {
     );
   `)
 
+  // Deduplicar idiomas con mismo nombre + plantel_id
+  await pool.query(`
+    DO $$
+    DECLARE
+      dup RECORD;
+      keep_id TEXT;
+      del_id TEXT;
+    BEGIN
+      FOR dup IN
+        SELECT nombre, plantel_id, array_agg(id ORDER BY id) AS ids
+        FROM idiomas
+        GROUP BY nombre, plantel_id
+        HAVING COUNT(*) > 1
+      LOOP
+        keep_id := dup.ids[1];
+        FOR i IN 2..array_length(dup.ids, 1) LOOP
+          del_id := dup.ids[i];
+          UPDATE grupos  SET idioma_id = keep_id WHERE idioma_id = del_id;
+          UPDATE niveles SET idioma_id = keep_id WHERE idioma_id = del_id;
+          DELETE FROM idiomas WHERE id = del_id;
+        END LOOP;
+      END LOOP;
+    END $$;
+  `)
+
   // Seed if empty
   const { n } = await queryOne('SELECT COUNT(*) AS n FROM usuarios') || { n: '0' }
   if (parseInt(n) === 0) {
