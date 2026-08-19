@@ -92,17 +92,13 @@ export default function Convenios() {
   }
 
   async function cargarThumbs(plantelId, lista) {
-    const token = localStorage.getItem('lj_token')
     for (const doc of lista) {
       if (!doc.mimetype?.startsWith('image/')) continue
       try {
-        const res = await fetch(`/api/planteles/${plantelId}/documentos/${doc.tipo}/archivo`,
-          { headers: { Authorization: `Bearer ${token}` } })
-        if (res.ok) {
-          const blob = await res.blob()
-          const url = URL.createObjectURL(blob)
-          setThumbs(t => ({ ...t, [doc.tipo]: url }))
-        }
+        const res = await api.fetchBlob(`/planteles/${plantelId}/documentos/${doc.tipo}/archivo`)
+        const blob = await res.blob()
+        const url = URL.createObjectURL(blob)
+        setThumbs(t => ({ ...t, [doc.tipo]: url }))
       } catch {}
     }
   }
@@ -134,10 +130,8 @@ export default function Convenios() {
   }
 
   async function abrirPreview(doc) {
-    const token = localStorage.getItem('lj_token')
     try {
-      const res = await fetch(`/api/planteles/${plantelSel.id}/documentos/${doc.tipo}/archivo`,
-        { headers: { Authorization: `Bearer ${token}` } })
+      const res = await api.fetchBlob(`/planteles/${plantelSel.id}/documentos/${doc.tipo}/archivo`)
       const blob = await res.blob()
       const url = URL.createObjectURL(blob)
       setPreview({ url, mimetype: doc.mimetype, nombre: doc.nombre_original })

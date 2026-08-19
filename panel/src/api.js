@@ -69,6 +69,15 @@ const post = (path, body) => req('POST', path, body)
 const put = (path, body) => req('PUT', path, body)
 const del = (path) => req('DELETE', path)
 
+export async function fetchBlob(path) {
+  const headers = {}
+  const token = getToken()
+  if (token) headers['Authorization'] = `Bearer ${token}`
+  const res = await fetch(BASE + path, { headers })
+  if (!res.ok) throw new Error(`Error ${res.status}`)
+  return res
+}
+
 // ── Auth ──────────────────────────────────────────────────────────────────────
 export async function login(email, password) {
   const data = await post('/auth/login', { email, password })
