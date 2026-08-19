@@ -81,12 +81,8 @@ router.post('/', requireAuth, async (req, res) => {
   const existing = await queryOne('SELECT id FROM usuarios WHERE email = $1', [email.toLowerCase()])
   if (existing) return res.status(400).json({ error: 'Email ya registrado' })
 
-  const ids = (await query('SELECT id FROM usuarios ORDER BY id', [])).map(r => r.id)
-  const maxNum = ids.reduce((m, id) => {
-    const n = parseInt(id.replace('u', ''))
-    return isNaN(n) ? m : Math.max(m, n)
-  }, 0)
-  const newId = 'u' + (maxNum + 1)
+  const { m } = await queryOne(`SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM usuarios WHERE id ~ '^u[0-9]+'`)
+  const newId = 'u' + (m + 1)
 
   const hash = bcrypt.hashSync(password, 10)
   await run(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento, created_at)
