@@ -25,6 +25,7 @@ import Convenios from './pages/Convenios.jsx'
 import OfertaEducativa from './pages/OfertaEducativa.jsx'
 import Actividad from './pages/Actividad.jsx'
 import Usuarios from './pages/Usuarios.jsx'
+import LigasPago from './pages/LigasPago.jsx'
 
 export const AuthCtx = createContext(null)
 export const NavCtx  = createContext(null)
@@ -57,6 +58,7 @@ const RUTAS = {
   oferta: OfertaEducativa,
   actividad: Actividad,
   usuarios: Usuarios,
+  ligas_pago: LigasPago,
 }
 
 export default function App() {
