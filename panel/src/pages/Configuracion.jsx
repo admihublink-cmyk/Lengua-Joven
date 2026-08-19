@@ -191,6 +191,9 @@ export default function Configuracion() {
             <label>Días de gracia para pago
               <input type="number" value={config.dias_gracia_pago || 0} onChange={e => setConfig({ ...config, dias_gracia_pago: Number(e.target.value) })} />
             </label>
+            <label>Liga de pago Banorte (URL)
+              <input type="url" value={config.liga_pago_url || ''} onChange={e => setConfig({ ...config, liga_pago_url: e.target.value })} placeholder="https://..." />
+            </label>
             <button className="btn-primario" onClick={guardarConfig}>
               {guardado ? '✓ Guardado' : 'Guardar configuración'}
             </button>
