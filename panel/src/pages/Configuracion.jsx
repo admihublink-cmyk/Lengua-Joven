@@ -357,15 +357,16 @@ export default function Configuracion() {
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <label style={{ flex: 1, minWidth: 140 }}>Plantel
-              <select value={formPrecio.plantel_id} onChange={e => setFormPrecio({ ...formPrecio, plantel_id: e.target.value })}>
+              <select value={formPrecio.plantel_id} onChange={e => setFormPrecio({ ...formPrecio, plantel_id: e.target.value, idioma_id: '' })}>
                 <option value="">Seleccionar…</option>
                 {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </label>
             <label style={{ flex: 1, minWidth: 130 }}>Idioma
-              <select value={formPrecio.idioma_id} onChange={e => setFormPrecio({ ...formPrecio, idioma_id: e.target.value })}>
+              <select value={formPrecio.idioma_id} onChange={e => setFormPrecio({ ...formPrecio, idioma_id: e.target.value })}
+                disabled={!formPrecio.plantel_id}>
                 <option value="">Seleccionar…</option>
-                {idiomas.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                {idiomas.filter(i => i.plantel_id === formPrecio.plantel_id).map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
               </select>
             </label>
             <label style={{ minWidth: 120 }}>Categoría
