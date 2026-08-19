@@ -7,7 +7,6 @@ export default function Dashboard() {
   const { usuario, tienePermiso } = useAuth()
   const { navegar } = useNav()
   const [datos, setDatos] = useState({})
-  const [ligaPago, setLigaPago] = useState(null)
   const [buscandoCoordi, setBuscandoCoordi] = useState(false)
   const rolCfg = ROL_PERMISOS[usuario.rol]
 
@@ -23,12 +22,6 @@ export default function Dashboard() {
       setBuscandoCoordi(false)
     }
   }
-
-  useEffect(() => {
-    if (['alumno', 'tutor'].includes(usuario.rol)) {
-      api.getLigaPago().then(d => setLigaPago(d.url)).catch(() => {})
-    }
-  }, [usuario.rol])
 
   useEffect(() => {
     async function cargar() {
@@ -102,17 +95,6 @@ export default function Dashboard() {
       {/* Vista Tutor */}
       {usuario.rol === 'tutor' && (
         <>
-          {ligaPago && (
-            <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div>
-                <strong>Pago de inscripción</strong>
-                <p className="texto-muted chico" style={{ margin: 0 }}>Realiza el pago de inscripción de tu menor a través de Banorte.</p>
-              </div>
-              <a href={ligaPago} target="_blank" rel="noopener noreferrer" className="btn-primario" style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}>
-                Pagar ahora
-              </a>
-            </div>
-          )}
           <div className="metricas-grid">
             <div className="metrica-card">
               <div className="metrica-num">{datos.misAlumnos?.length ?? 0}</div>
@@ -166,17 +148,6 @@ export default function Dashboard() {
       {/* Vista Alumno */}
       {usuario.rol === 'alumno' && (
         <>
-          {ligaPago && (
-            <div className="card" style={{ marginBottom: 20, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16 }}>
-              <div>
-                <strong>Pago de inscripción</strong>
-                <p className="texto-muted chico" style={{ margin: 0 }}>Realiza tu pago de forma segura a través de Banorte.</p>
-              </div>
-              <a href={ligaPago} target="_blank" rel="noopener noreferrer" className="btn-primario" style={{ whiteSpace: 'nowrap', textDecoration: 'none' }}>
-                Pagar ahora
-              </a>
-            </div>
-          )}
           <div className="metricas-grid">
             <div className="metrica-card">
               <div className="metrica-num">{datos.misIns?.length ?? 0}</div>
@@ -206,8 +177,18 @@ export default function Dashboard() {
 
           {datos.misIns?.map(ins => (
             <div key={ins.id} className="card">
-              <h3>Mi inscripción — <span className={'badge ' + ins.estado}>{ins.estado}</span></h3>
-              <p>Folio: <strong>{ins.folio}</strong> · Grupo: <strong>{ins.grupo_id || 'Por asignar'}</strong></p>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+                <div>
+                  <h3 style={{ margin: 0 }}>Mi inscripción — <span className={'badge ' + ins.estado}>{ins.estado}</span></h3>
+                  <p style={{ margin: '4px 0 0' }}>Folio: <strong>{ins.folio}</strong> · Grupo: <strong>{ins.grupo_id || 'Por asignar'}</strong></p>
+                </div>
+                {ins.liga_pago && (
+                  <a href={ins.liga_pago} target="_blank" rel="noopener noreferrer"
+                    className="btn-primario" style={{ textDecoration: 'none', whiteSpace: 'nowrap' }}>
+                    Pagar ahora
+                  </a>
+                )}
+              </div>
             </div>
           ))}
         </>
