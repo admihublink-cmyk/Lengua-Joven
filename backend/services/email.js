@@ -215,4 +215,57 @@ async function enviarNotificacionApertura(destinatario, nombre, idioma, plantelN
   })
 }
 
-module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor, enviarNotificacionApertura }
+async function enviarGrupoAsignado({ destinatario, nombre, folio, grupo, nivel, idioma, plantel }) {
+  const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
+  const nombreCorto = String(nombre || '').trim().split(/\s+/)[0] || 'Alumno'
+  const transporter = crearTransporter()
+  await transporter.sendMail({
+    from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
+    to: destinatario,
+    subject: `¡Ya tienes grupo asignado! — Lengua Joven`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:580px;margin:0 auto;padding:0;background:#f9f9f9;">
+        <div style="background:linear-gradient(135deg,#F18B11 0%,#e07a00 100%);padding:40px 32px;text-align:center;border-radius:12px 12px 0 0;">
+          <div style="font-size:32px;font-weight:800;color:#fff;letter-spacing:-0.5px;">
+            Lengua <span style="color:#fff3d4;">Joven</span>
+          </div>
+          <div style="color:#fff3d4;font-size:14px;margin-top:4px;letter-spacing:1px;text-transform:uppercase;">¡Ya tienes grupo!</div>
+        </div>
+        <div style="background:#fff;padding:36px 32px;">
+          <h1 style="color:#1a1a1a;font-size:22px;margin:0 0 12px;">¡Hola, ${nombreCorto}! 🎉</h1>
+          <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 20px;">
+            Tu inscripción con folio <strong>${folio}</strong> ya tiene un grupo asignado.
+            Aquí están los detalles de tu clase:
+          </p>
+          <div style="background:#fff8f0;border:1.5px solid #f0e0cc;border-radius:10px;padding:20px 24px;margin-bottom:28px;">
+            <div style="font-size:13px;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Tu grupo</div>
+            <div style="font-size:15px;color:#222;line-height:2.2;">
+              ${idioma ? `<div>📚 <strong>Idioma:</strong> ${idioma}</div>` : ''}
+              ${plantel ? `<div>🏫 <strong>Plantel:</strong> ${plantel}</div>` : ''}
+              ${nivel ? `<div>🎓 <strong>Nivel:</strong> ${nivel}</div>` : ''}
+              ${grupo.codigo ? `<div>🏷️ <strong>Grupo:</strong> ${grupo.codigo}</div>` : ''}
+              ${grupo.horario ? `<div>🕐 <strong>Horario:</strong> ${grupo.horario}</div>` : ''}
+              ${grupo.fecha_inicio_clases ? `<div>📅 <strong>Inicio de clases:</strong> ${grupo.fecha_inicio_clases}</div>` : ''}
+            </div>
+          </div>
+          <div style="text-align:center;margin:0 0 28px;">
+            <a href="${portalUrl}" style="background:#F18B11;color:#fff;text-decoration:none;padding:14px 36px;border-radius:8px;font-size:16px;font-weight:700;display:inline-block;">
+              Ver mi inscripción →
+            </a>
+          </div>
+          <p style="color:#888;font-size:13px;line-height:1.6;margin:0;">
+            Si tienes alguna duda, escríbenos a
+            <a href="mailto:soporte@injuve.mx" style="color:#F18B11;text-decoration:none;">soporte@injuve.mx</a>.
+          </p>
+        </div>
+        <div style="background:#f0f0f0;padding:20px 32px;text-align:center;border-radius:0 0 12px 12px;">
+          <p style="color:#aaa;font-size:12px;margin:0;">
+            Lengua Joven · Panel de Gestión Educativa
+          </p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor, enviarNotificacionApertura, enviarGrupoAsignado }
