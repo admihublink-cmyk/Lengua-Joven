@@ -32,10 +32,11 @@ router.post('/', requireAuth, async (req, res) => {
     `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM evaluaciones WHERE id ~ '^e[0-9]+'`, []
   )
   const newId = 'e' + (maxNum + 1)
-  await run('INSERT INTO evaluaciones VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
-    newId, alumno_id, grupo_id, tipo, parseFloat(calificacion),
-    fecha || new Date().toISOString().split('T')[0], req.user.id, observaciones || ''
-  ])
+  await run(
+    'INSERT INTO evaluaciones (id, alumno_id, grupo_id, tipo, calificacion, fecha, registrado_por, observaciones) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [newId, alumno_id, grupo_id, tipo, parseFloat(calificacion),
+     fecha || new Date().toISOString().split('T')[0], req.user.id, observaciones || '']
+  )
   res.status(201).json(await queryOne('SELECT * FROM evaluaciones WHERE id = $1', [newId]))
 })
 
@@ -103,9 +104,10 @@ router.post('/placements', requireAuth, async (req, res) => {
   )
   const newId = 'pl' + (maxNum + 1)
   const fecha = new Date().toISOString().split('T')[0]
-  await run('INSERT INTO placements VALUES ($1,$2,$3,$4,$5,$6,$7)', [
-    newId, alumno_id, nivel_sugerido, parseFloat(calificacion), fecha, req.user.id, notas || ''
-  ])
+  await run(
+    'INSERT INTO placements (id, alumno_id, nivel_sugerido, calificacion, fecha, aplicado_por, notas) VALUES ($1,$2,$3,$4,$5,$6,$7)',
+    [newId, alumno_id, nivel_sugerido, parseFloat(calificacion), fecha, req.user.id, notas || '']
+  )
   res.status(201).json(await queryOne('SELECT * FROM placements WHERE id = $1', [newId]))
 })
 

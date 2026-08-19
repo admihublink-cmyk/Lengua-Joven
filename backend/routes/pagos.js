@@ -65,10 +65,10 @@ router.post('/', requireAuth, async (req, res) => {
     `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 4) AS INTEGER)), 0) AS m FROM pagos WHERE id ~ '^pag[0-9]+'`, []
   )
   const newId = 'pag' + (maxNum + 1)
-  await run('INSERT INTO pagos VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
-    newId, alumno_id || null, inscripcion_id || null, parseFloat(monto),
-    fecha || null, estado || 'pendiente', metodo_pago || null, referencia || ''
-  ])
+  await run(
+    'INSERT INTO pagos (id, alumno_id, inscripcion_id, monto, fecha, estado, metodo_pago, referencia) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+    [newId, alumno_id || null, inscripcion_id || null, montoNum, fecha || null, estado || 'pendiente', metodo_pago || null, referencia || '']
+  )
   res.status(201).json(await queryOne('SELECT * FROM pagos WHERE id = $1', [newId]))
 })
 
@@ -114,7 +114,8 @@ router.get('/txt', requireAuth, async (req, res) => {
 
   if (rows.length === 0) lineas.push('(Sin pagos en el período seleccionado)')
 
-  const nombreArchivo = `pagos_${desde || 'inicio'}_al_${hasta || 'hoy'}.txt`
+  const sanitize = s => (s || '').replace(/[^a-zA-Z0-9_\-]/g, '_')
+  const nombreArchivo = `pagos_${sanitize(desde) || 'inicio'}_al_${sanitize(hasta) || 'hoy'}.txt`
   res.setHeader('Content-Type', 'text/plain; charset=utf-8')
   res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`)
   res.send(lineas.join('\n'))
@@ -148,12 +149,13 @@ router.post('/importar-csv', requireAuth, async (req, res) => {
     )
     const newId = 'pag' + (maxNum + 1)
 
-    await run('INSERT INTO pagos VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
-      newId, alumno_id, inscripcion_id,
-      parseFloat(monto) || 0,
-      fecha || new Date().toISOString().slice(0, 10),
-      'pagado', metodo_pago || 'efectivo', referencia || ''
-    ])
+    await run(
+      'INSERT INTO pagos (id, alumno_id, inscripcion_id, monto, fecha, estado, metodo_pago, referencia) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)',
+      [newId, alumno_id, inscripcion_id,
+       Math.max(0, parseFloat(monto) || 0),
+       fecha || new Date().toISOString().slice(0, 10),
+       'pagado', metodo_pago || 'efectivo', referencia || '']
+    )
     resultados.push({ id: newId, email, nombre, ok: true })
   }
 
@@ -186,6 +188,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 
   const { monto, fecha, estado, metodo_pago, referencia } = req.body
+  const ESTADOS_VALIDOS = ['pendiente', 'pagado', 'cancelado']
+  if (estado !== undefined && !ESTADOS_VALIDOS.includes(estado)) {
+    return res.status(400).json({ error: `Estado inválido. Valores permitidos: ${ESTADOS_VALIDOS.join(', ')}` })
+  }
   const sets = []; const vals = []
   if (monto !== undefined) { sets.push(`monto = $${sets.length + 1}`); vals.push(monto) }
   if (fecha !== undefined) { sets.push(`fecha = $${sets.length + 1}`); vals.push(fecha) }
