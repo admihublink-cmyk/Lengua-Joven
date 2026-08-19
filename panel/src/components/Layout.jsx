@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { seccion: 'Alumnos', icon: '🎓' },
   { id: 'placement',     icon: '🎯',  label: 'Placement Test',    permiso: P.PLACEMENT_VER },
   { id: 'inscripciones', icon: '📋',  label: 'Inscripciones',     permiso: P.INSC_VER },
+  { id: 'ligas_pago',   icon: '🏦',  label: 'Ligas de Pago',     permiso: P.PAGO_VER },
   { id: 'pagos',         icon: '💳',  label: 'Pagos',             permiso: P.PAGO_VER },
   // — Seguimiento —
   { seccion: 'Seguimiento', icon: '📊' },

@@ -377,6 +377,26 @@ async function initDB() {
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT`)
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT`)
 
+  // Tabla de referencias emitidas — nunca se reusan (ver comentario en referencia.js)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS referencias_emitidas (
+      referencia    TEXT PRIMARY KEY,
+      inscripcion_id TEXT NOT NULL,
+      lote          TEXT NOT NULL,
+      created_at    TIMESTAMPTZ DEFAULT NOW()
+    )
+  `)
+
+  // Columnas del pipeline Banorte en inscripciones
+  await pool.query(`
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_referencia TEXT;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_monto REAL;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_lote TEXT;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_bajado_en TIMESTAMPTZ;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_pago_cargada_en TIMESTAMPTZ;
+    ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS liga_avisada_en TIMESTAMPTZ;
+  `)
+
   // Chat grupos ad-hoc (independientes de los grupos de clase)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS chat_grupos (

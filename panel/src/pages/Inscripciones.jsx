@@ -239,7 +239,7 @@ export default function Inscripciones() {
     setCargandoLigas(true)
     try {
       const res = await api.cargarLigasBanorte(ligasResumen)
-      alert(`✓ ${res.actualizadas} inscripciones actualizadas con liga de pago.${res.noEncontradas ? ` ${res.noEncontradas} referencias no encontradas.` : ''}`)
+      alert(`✓ ${res.cargadas} inscripciones actualizadas con liga de pago.${res.noEncontradas ? ` ${res.noEncontradas} referencias no encontradas.` : ''}`)
       setModalBanorte(false)
       setLigasTexto('')
       setLigasResumen(null)
@@ -250,8 +250,8 @@ export default function Inscripciones() {
   async function enviarLiga(inscripcionId) {
     setEnviandoLiga(inscripcionId)
     try {
-      const r = await api.enviarLigaPago(inscripcionId)
-      alert(`✓ Liga enviada a ${r.enviado_a}`)
+      const r = await api.avisarLigas([inscripcionId])
+      alert(`✓ Aviso enviado. Enviados: ${r.enviados}, Fallidos: ${r.fallidos}`)
       await cargar()
     } catch (e) { alert('Error: ' + e.message) } finally { setEnviandoLiga(null) }
   }

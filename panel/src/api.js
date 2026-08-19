@@ -358,19 +358,33 @@ export const crearPeriodo = (data) => post('/periodos', data)
 export const actualizarPeriodo = (id, data) => put(`/periodos/${id}`, data)
 export const eliminarPeriodo = (id) => del(`/periodos/${id}`)
 
-// ── Banorte ───────────────────────────────────────────────────────────────────
-export async function descargarCSVBanorte() {
-  const res = await fetch(`${BASE}/banorte/exportar-csv`, {
-    credentials: 'include'
+// ── Banorte pipeline ──────────────────────────────────────────────────────────
+export const getLigasPipeline = () => get('/banorte/ligas')
+
+export async function generarLote() {
+  const res = await fetch(`${BASE}/banorte/lote`, {
+    method: 'POST',
+    credentials: 'include',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({}),
   })
-  if (!res.ok) throw new Error('Error al exportar CSV')
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Error al generar lote')
+  }
+  const cd = res.headers.get('Content-Disposition') || ''
+  const m = cd.match(/filename="([^"]+)"/)
+  const filename = m ? m[1] : 'lote_banorte.csv'
   const blob = await res.blob()
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
-  link.download = 'banorte_referencias.csv'
+  link.download = filename
   link.click()
   URL.revokeObjectURL(link.href)
+  return { filename }
 }
 
-export const cargarLigasBanorte = (ligas) => post('/banorte/cargar-ligas', { ligas })
-export const enviarLigaPago = (inscripcionId) => post(`/banorte/enviar-liga/${inscripcionId}`)
+export const marcarLoteBajado = (lote) => req('POST', '/banorte/lote/bajado', { lote })
+export const cargarLigasBanorte = (ligas) => req('PATCH', '/banorte/ligas', { ligas })
+export const avisarLigas = (ids) => req('PUT', '/banorte/ligas/avisar', { ids: ids || [] })
+export const devolverLote = (lote, rehacer = false) => req('DELETE', '/banorte/lote', { lote, rehacer })
