@@ -117,7 +117,7 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 
   const fields = ['alumno_id','grupo_id','plantel_id','estado','placement_nivel','sugerida_por',
-    'nombre_externo','email_externo','tel_externo','oferta_id','grupo_sugerido_id']
+    'nombre_externo','email_externo','tel_externo','oferta_id','grupo_sugerido_id','liga_pago']
   const sets = []; const vals = []
   for (const f of fields) {
     if (req.body[f] !== undefined) { sets.push(`${f} = $${sets.length + 1}`); vals.push(req.body[f] ?? null) }

@@ -927,6 +927,43 @@ export default function Inscripciones() {
               </div>
             )}
           </div>
+          {puedeGestionar && (
+            <div style={{ marginTop: 16 }}>
+              <h4 style={{ marginBottom: 8 }}>Liga de pago Banorte</h4>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input
+                  type="url"
+                  placeholder="https://... (pegar liga generada en Banorte)"
+                  defaultValue={sel.liga_pago || ''}
+                  id={`liga-input-${sel.id}`}
+                  style={{ flex: 1 }}
+                />
+                <button className="btn-primario" style={{ background: '#1a5276', borderColor: '#1a5276', whiteSpace: 'nowrap' }}
+                  onClick={async () => {
+                    const url = document.getElementById(`liga-input-${sel.id}`)?.value?.trim() || null
+                    try {
+                      await api.actualizarInscripcion(sel.id, { liga_pago: url })
+                      setSel(s => ({ ...s, liga_pago: url }))
+                      await cargar()
+                    } catch (e) { alert('Error: ' + e.message) }
+                  }}>
+                  Guardar
+                </button>
+                {sel.liga_pago && (
+                  <button className="btn-sec" title="Enviar por correo al alumno"
+                    disabled={enviandoLiga === sel.id}
+                    onClick={() => enviarLiga(sel.id)}>
+                    {enviandoLiga === sel.id ? 'Enviando…' : '📧 Enviar'}
+                  </button>
+                )}
+              </div>
+              {sel.liga_pago && (
+                <p className="texto-muted chico" style={{ marginTop: 4 }}>
+                  Liga actual: <a href={sel.liga_pago} target="_blank" rel="noopener noreferrer">{sel.liga_pago}</a>
+                </p>
+              )}
+            </div>
+          )}
           {tienePermiso(P.INSC_CONFIRMAR) && !sel.grupo_sugerido_id && (
             <div>
               <h4>Asignar grupo manualmente</h4>
