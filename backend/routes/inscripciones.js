@@ -53,7 +53,12 @@ router.post('/', requireAuth, async (req, res) => {
   const fecha = new Date().toISOString().split('T')[0]
   let pid
   if (req.user.rol === 'superadmin') pid = plantel_id
-  else if (req.user.rol === 'coordinador') pid = plantel_id  // coordinador especifica el plantel
+  else if (req.user.rol === 'coordinador') {
+    if (plantel_id && !(me.planteles || []).includes(plantel_id)) {
+      return res.status(403).json({ error: 'Plantel no asignado' })
+    }
+    pid = plantel_id
+  }
   else pid = req.user.plantel_id
   await run(`INSERT INTO inscripciones VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
     newId, alumno_id || null, grupo_id || null, pid,

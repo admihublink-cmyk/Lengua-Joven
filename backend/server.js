@@ -1,4 +1,5 @@
 require('dotenv').config()
+require('express-async-errors')
 const express = require('express')
 const cors = require('cors')
 const path = require('path')
@@ -143,7 +144,8 @@ app.use((err, req, res, next) => {
   if (err.message?.startsWith('Tipo de archivo no permitido')) {
     return res.status(400).json({ error: err.message })
   }
-  next(err)
+  console.error(`[ERROR] ${req.method} ${req.path}:`, err.message)
+  res.status(500).json({ error: 'Error interno del servidor' })
 })
 
 // Inicializar DB y arrancar servidor
