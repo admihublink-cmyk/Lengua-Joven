@@ -313,6 +313,13 @@ async function initDB() {
     );
   `)
 
+  // Columnas agregadas después del despliegue inicial
+  await pool.query(`
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT;
+    ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
+  `)
+
   // Seed if empty
   const { n } = await queryOne('SELECT COUNT(*) AS n FROM usuarios') || { n: '0' }
   if (parseInt(n) === 0) {
