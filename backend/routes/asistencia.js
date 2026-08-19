@@ -58,9 +58,13 @@ router.get('/sesiones', requireAuth, async (req, res) => {
 })
 
 router.post('/sesiones', requireAuth, async (req, res) => {
-  const ids = (await query('SELECT id FROM sesiones', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('s', '')) || 0), 0)
-  const newId = 's' + (max + 1)
+  if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM sesiones WHERE id ~ '^s[0-9]+'`, []
+  )
+  const newId = 's' + (maxNum + 1)
   const { grupo_id, titulo, tipo, fecha, hora_inicio, hora_fin, dia_semana, fecha_inicio, fecha_fin } = req.body
   await run('INSERT INTO sesiones VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)', [
     newId, grupo_id, titulo, tipo, fecha || null, hora_inicio, hora_fin, 1,

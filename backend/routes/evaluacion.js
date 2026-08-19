@@ -28,9 +28,10 @@ router.post('/', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, grupo_id, tipo, calificacion, observaciones, fecha } = req.body
-  const ids = (await query('SELECT id FROM evaluaciones', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('e', '')) || 0), 0)
-  const newId = 'e' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM evaluaciones WHERE id ~ '^e[0-9]+'`, []
+  )
+  const newId = 'e' + (maxNum + 1)
   await run('INSERT INTO evaluaciones VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
     newId, alumno_id, grupo_id, tipo, parseFloat(calificacion),
     fecha || new Date().toISOString().split('T')[0], req.user.id, observaciones || ''
@@ -42,6 +43,14 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
+  if (req.user.rol === 'profesor') {
+    const ev = await queryOne('SELECT grupo_id FROM evaluaciones WHERE id = $1', [req.params.id])
+    if (!ev) return res.status(404).json({ error: 'No encontrado' })
+    const grupo = await queryOne('SELECT profesor_id FROM grupos WHERE id = $1', [ev.grupo_id])
+    if (!grupo || grupo.profesor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo puedes editar evaluaciones de tus grupos' })
+    }
+  }
   const { calificacion, observaciones, tipo } = req.body
   await run('UPDATE evaluaciones SET calificacion = $1, observaciones = $2, tipo = $3 WHERE id = $4',
     [calificacion, observaciones, tipo, req.params.id])
@@ -51,6 +60,14 @@ router.put('/:id', requireAuth, async (req, res) => {
 router.delete('/:id', requireAuth, async (req, res) => {
   if (!['profesor', 'coordinador', 'director', 'superadmin'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
+  }
+  if (req.user.rol === 'profesor') {
+    const ev = await queryOne('SELECT grupo_id FROM evaluaciones WHERE id = $1', [req.params.id])
+    if (!ev) return res.status(404).json({ error: 'No encontrado' })
+    const grupo = await queryOne('SELECT profesor_id FROM grupos WHERE id = $1', [ev.grupo_id])
+    if (!grupo || grupo.profesor_id !== req.user.id) {
+      return res.status(403).json({ error: 'Solo puedes eliminar evaluaciones de tus grupos' })
+    }
   }
   await run('DELETE FROM evaluaciones WHERE id = $1', [req.params.id])
   res.json({ ok: true })
@@ -81,9 +98,10 @@ router.post('/placements', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { alumno_id, nivel_sugerido, calificacion, notas } = req.body
-  const ids = (await query('SELECT id FROM placements', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('pl', '')) || 0), 0)
-  const newId = 'pl' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM placements WHERE id ~ '^pl[0-9]+'`, []
+  )
+  const newId = 'pl' + (maxNum + 1)
   const fecha = new Date().toISOString().split('T')[0]
   await run('INSERT INTO placements VALUES ($1,$2,$3,$4,$5,$6,$7)', [
     newId, alumno_id, nivel_sugerido, parseFloat(calificacion), fecha, req.user.id, notas || ''

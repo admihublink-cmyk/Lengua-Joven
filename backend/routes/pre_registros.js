@@ -16,7 +16,7 @@ function checkPreRegRL(ip) {
 }
 
 // POST público — sin auth
-router.post('/publico', async (req, res) => {
+router.post('/publico', async (req, res) => { try {
   if (!checkPreRegRL(req.ip)) {
     return res.status(429).json({ error: 'Demasiadas solicitudes. Espera unos minutos e intenta de nuevo.' })
   }
@@ -37,10 +37,11 @@ router.post('/publico', async (req, res) => {
     return res.status(400).json({ error: 'Los menores de edad deben registrar los datos de su tutor' })
   }
 
-  const countRow = await queryOne('SELECT COUNT(*) as n FROM pre_registros', [])
-  const count = parseInt(countRow.n)
-  const folio = 'PRE-' + String(count + 1).padStart(4, '0')
-  const newId = 'pr' + (count + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM pre_registros WHERE id ~ '^pr[0-9]+'`, []
+  )
+  const folio = 'PRE-' + String(maxNum + 1).padStart(4, '0')
+  const newId = 'pr' + (maxNum + 1)
   const fecha = new Date().toISOString()
 
   await run(`INSERT INTO pre_registros
@@ -57,6 +58,10 @@ router.post('/publico', async (req, res) => {
     grupo_interes_id || null,
     genero_nacimiento || null, estado_nacimiento || null])
   res.status(201).json({ folio, id: newId })
+  } catch (e) {
+    console.error('[pre_registros/publico]', e.message)
+    res.status(500).json({ error: 'Error al procesar el pre-registro. Intenta de nuevo.' })
+  }
 })
 
 function calcularEdad(fechaNac) {

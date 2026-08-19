@@ -32,25 +32,39 @@ router.post('/', requireAuth, async (req, res) => {
   }
   const { alumno_id, inscripcion_id, monto, fecha, estado, metodo_pago, referencia } = req.body
 
-  // Director y coordinador solo pueden registrar pagos de inscripciones de sus planteles
-  if (['director', 'coordinador'].includes(me.rol) && inscripcion_id) {
-    const ins = await queryOne('SELECT plantel_id FROM inscripciones WHERE id = $1', [inscripcion_id])
-    if (ins) {
-      if (me.rol === 'director' && ins.plantel_id !== me.plantel_id) {
+  // Validar monto
+  const montoNum = parseFloat(monto)
+  if (monto === undefined || monto === null || monto === '' || isNaN(montoNum) || montoNum <= 0) {
+    return res.status(400).json({ error: 'El monto debe ser un número positivo' })
+  }
+
+  // Director y coordinador solo pueden registrar pagos de inscripciones/alumnos de sus planteles
+  if (['director', 'coordinador'].includes(me.rol)) {
+    let plantelPago = null
+    if (inscripcion_id) {
+      const ins = await queryOne('SELECT plantel_id FROM inscripciones WHERE id = $1', [inscripcion_id])
+      plantelPago = ins?.plantel_id
+    } else if (alumno_id) {
+      const alu = await queryOne('SELECT plantel_id FROM usuarios WHERE id = $1', [alumno_id])
+      plantelPago = alu?.plantel_id
+    }
+    if (plantelPago) {
+      if (me.rol === 'director' && plantelPago !== me.plantel_id) {
         return res.status(403).json({ error: 'Sin permiso para este plantel' })
       }
       if (me.rol === 'coordinador') {
         const asignados = me.planteles || []
-        if (!asignados.includes(ins.plantel_id) && ins.plantel_id !== me.plantel_id) {
+        if (!asignados.includes(plantelPago) && plantelPago !== me.plantel_id) {
           return res.status(403).json({ error: 'Sin permiso para este plantel' })
         }
       }
     }
   }
 
-  const ids = (await query('SELECT id FROM pagos', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('pag', '')) || 0), 0)
-  const newId = 'pag' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 4) AS INTEGER)), 0) AS m FROM pagos WHERE id ~ '^pag[0-9]+'`, []
+  )
+  const newId = 'pag' + (maxNum + 1)
   await run('INSERT INTO pagos VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
     newId, alumno_id || null, inscripcion_id || null, parseFloat(monto),
     fecha || null, estado || 'pendiente', metodo_pago || null, referencia || ''
@@ -129,9 +143,10 @@ router.post('/importar-csv', requireAuth, async (req, res) => {
       }
     }
 
-    const ids = (await query('SELECT id FROM pagos', [])).map(r => r.id)
-    const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace(/\D/g, '')) || 0), 0)
-    const newId = 'pag' + (max + 1)
+    const { m: maxNum } = await queryOne(
+      `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 4) AS INTEGER)), 0) AS m FROM pagos WHERE id ~ '^pag[0-9]+'`, []
+    )
+    const newId = 'pag' + (maxNum + 1)
 
     await run('INSERT INTO pagos VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
       newId, alumno_id, inscripcion_id,

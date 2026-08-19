@@ -129,7 +129,11 @@ router.post('/reset-password/:token', async (req, res) => {
   const { nueva } = req.body
   if (!nueva || nueva.length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
 
-  const row = await queryOne('SELECT * FROM reset_tokens WHERE token = $1 AND usado = 0', [req.params.token])
+  // Operación atómica: marca como usado solo si aún no lo estaba (previene TOCTOU)
+  const row = await queryOne(
+    'UPDATE reset_tokens SET usado = 1 WHERE token = $1 AND usado = 0 RETURNING *',
+    [req.params.token]
+  )
   if (!row) return res.status(400).json({ error: 'Token inválido o expirado' })
   if (new Date(row.expira_en) < new Date()) {
     return res.status(400).json({ error: 'El enlace ha expirado. Solicita uno nuevo.' })
@@ -137,7 +141,6 @@ router.post('/reset-password/:token', async (req, res) => {
 
   const hash = bcrypt.hashSync(nueva, 10)
   await run('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, row.usuario_id])
-  await run('UPDATE reset_tokens SET usado = 1 WHERE token = $1', [req.params.token])
 
   await logActividad(row.usuario_id, 'RESET_PASSWORD', 'Contraseña restablecida vía enlace de recuperación', req)
   res.json({ ok: true })
