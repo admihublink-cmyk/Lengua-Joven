@@ -33,7 +33,7 @@ export default function Configuracion() {
   const [modalPeriodo, setModalPeriodo] = useState(null) // null | 'crear' | objeto
   const [formPer, setFormPer] = useState({})
   const [precios, setPrecios] = useState([])
-  const [formPrecio, setFormPrecio] = useState({ plantel_id: '', idioma_id: '', monto: '' })
+  const [formPrecio, setFormPrecio] = useState({ plantel_id: '', idioma_id: '', categoria: '', monto: '' })
 
   async function cargar() {
     try {
@@ -356,27 +356,35 @@ export default function Configuracion() {
           </p>
 
           <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap', alignItems: 'flex-end' }}>
-            <label style={{ flex: 1, minWidth: 150 }}>Plantel
+            <label style={{ flex: 1, minWidth: 140 }}>Plantel
               <select value={formPrecio.plantel_id} onChange={e => setFormPrecio({ ...formPrecio, plantel_id: e.target.value })}>
                 <option value="">Seleccionar…</option>
                 {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
               </select>
             </label>
-            <label style={{ flex: 1, minWidth: 150 }}>Idioma
+            <label style={{ flex: 1, minWidth: 130 }}>Idioma
               <select value={formPrecio.idioma_id} onChange={e => setFormPrecio({ ...formPrecio, idioma_id: e.target.value })}>
                 <option value="">Seleccionar…</option>
                 {idiomas.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
               </select>
             </label>
-            <label style={{ width: 130 }}>Monto ($)
+            <label style={{ minWidth: 120 }}>Categoría
+              <select value={formPrecio.categoria} onChange={e => setFormPrecio({ ...formPrecio, categoria: e.target.value })}>
+                <option value="">General (todas)</option>
+                <option value="teens">Teens</option>
+                <option value="jóvenes">Jóvenes</option>
+                <option value="plus">Plus</option>
+              </select>
+            </label>
+            <label style={{ width: 120 }}>Monto ($)
               <input type="number" min="0" value={formPrecio.monto}
                 onChange={e => setFormPrecio({ ...formPrecio, monto: e.target.value })} />
             </label>
             <button className="btn-primario" style={{ marginBottom: 1 }} onClick={async () => {
-              if (!formPrecio.plantel_id || !formPrecio.idioma_id || !formPrecio.monto) return alert('Completa todos los campos.')
+              if (!formPrecio.plantel_id || !formPrecio.idioma_id || !formPrecio.monto) return alert('Selecciona plantel, idioma y monto.')
               try {
                 await api.upsertPrecio(formPrecio)
-                setFormPrecio({ plantel_id: '', idioma_id: '', monto: '' })
+                setFormPrecio({ plantel_id: '', idioma_id: '', categoria: '', monto: '' })
                 await cargar()
               } catch (e) { alert('Error: ' + e.message) }
             }}>Guardar precio</button>
@@ -385,26 +393,27 @@ export default function Configuracion() {
           <div className="tabla-wrap">
             <table className="tabla chica">
               <thead>
-                <tr><th>Plantel</th><th>Idioma</th><th>Monto</th><th></th></tr>
+                <tr><th>Plantel</th><th>Idioma</th><th>Categoría</th><th>Monto</th><th></th></tr>
               </thead>
               <tbody>
                 {precios.map(p => (
-                  <tr key={`${p.plantel_id}|${p.idioma_id}`}>
+                  <tr key={`${p.plantel_id}|${p.idioma_id}|${p.categoria}`}>
                     <td>{planteles.find(pl => pl.id === p.plantel_id)?.nombre || p.plantel_id}</td>
                     <td>{idiomas.find(i => i.id === p.idioma_id)?.nombre || p.idioma_id}</td>
+                    <td>{p.categoria || <span className="texto-muted">General</span>}</td>
                     <td>${(p.monto || 0).toLocaleString()}</td>
                     <td>
                       <button className="btn-mini" style={{ color: '#e74c3c' }}
                         onClick={async () => {
                           if (!confirm('¿Eliminar este precio?')) return
-                          await api.eliminarPrecio(p.plantel_id, p.idioma_id)
+                          await api.eliminarPrecio(p.plantel_id, p.idioma_id, p.categoria)
                           await cargar()
                         }}>✕</button>
                     </td>
                   </tr>
                 ))}
                 {precios.length === 0 && (
-                  <tr><td colSpan={4} className="tabla-vacio">Sin precios configurados — se usa el costo global.</td></tr>
+                  <tr><td colSpan={5} className="tabla-vacio">Sin precios configurados — se usa el costo global.</td></tr>
                 )}
               </tbody>
             </table>

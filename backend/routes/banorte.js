@@ -12,7 +12,7 @@ router.get('/exportar-csv', requireAuth, async (req, res) => {
 
   const me = req.user
   let sql = `
-    SELECT i.folio, i.id as inscripcion_id, i.plantel_id, i.grupo_id,
+    SELECT i.folio, i.id as inscripcion_id, i.plantel_id, i.grupo_id, i.oferta_id,
            COALESCE(u.nombre, i.nombre_externo) as nombre,
            COALESCE(u.email, i.email_externo) as email,
            p.monto as pago_monto, p.estado as pago_estado
@@ -40,12 +40,12 @@ router.get('/exportar-csv', requireAuth, async (req, res) => {
   const cfg = await queryOne("SELECT value FROM config WHERE key = 'costo_inscripcion'")
   const costoDefault = cfg ? parseFloat(cfg.value) || 1500 : 1500
 
-  // Precios configurados por plantel + idioma
+  // Precios configurados por plantel + idioma + categoría
   const preciosRows = await query('SELECT * FROM precios')
   const precioMap = {}
-  for (const p of preciosRows) precioMap[`${p.plantel_id}|${p.idioma_id}`] = p.monto
+  for (const p of preciosRows) precioMap[`${p.plantel_id}|${p.idioma_id}|${p.categoria}`] = p.monto
 
-  // Idioma de cada grupo (para buscar en precioMap)
+  // Idioma y categoría de cada inscripción (via grupo y oferta)
   const grupoIds = [...new Set(filas.map(f => f.grupo_id).filter(Boolean))]
   const grupoIdiomas = grupoIds.length
     ? await query(`SELECT g.id, g.idioma_id FROM grupos g WHERE g.id = ANY($1)`, [grupoIds])
@@ -53,13 +53,25 @@ router.get('/exportar-csv', requireAuth, async (req, res) => {
   const grupoIdiomaMap = {}
   for (const g of grupoIdiomas) grupoIdiomaMap[g.id] = g.idioma_id
 
+  const ofertaIds = [...new Set(filas.map(f => f.oferta_id).filter(Boolean))]
+  const ofertaCats = ofertaIds.length
+    ? await query(`SELECT id, categoria FROM ofertas WHERE id = ANY($1)`, [ofertaIds])
+    : []
+  const ofertaCatMap = {}
+  for (const o of ofertaCats) ofertaCatMap[o.id] = (o.categoria || '').toLowerCase()
+
   // Generar CSV
   const lineas = ['REFERENCIA,MONTO,NOMBRE,EMAIL']
   for (const f of filas) {
     let monto = f.pago_monto  // monto ya registrado en tabla pagos
     if (!monto) {
       const idiomaId = grupoIdiomaMap[f.grupo_id]
-      if (f.plantel_id && idiomaId) monto = precioMap[`${f.plantel_id}|${idiomaId}`]
+      const cat = ofertaCatMap[f.oferta_id] || ''
+      if (f.plantel_id && idiomaId) {
+        // Buscar precio exacto (plantel+idioma+categoria), luego sin categoría (general)
+        monto = precioMap[`${f.plantel_id}|${idiomaId}|${cat}`]
+              ?? precioMap[`${f.plantel_id}|${idiomaId}|`]
+      }
     }
     if (!monto) monto = costoDefault
     const nombre = (f.nombre || 'Alumno').replace(/,/g, ' ')

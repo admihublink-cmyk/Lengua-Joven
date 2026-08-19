@@ -263,7 +263,7 @@ export const actualizarConfig = (data) => put('/config', data)
 export const getLigaPago = () => fetch(`${BASE}/config/liga-pago`, { credentials: 'include' }).then(r => r.json())
 export const getPrecios = () => get('/config/precios')
 export const upsertPrecio = (data) => put('/config/precios', data)
-export const eliminarPrecio = (plantelId, idiomaId) => del(`/config/precios/${plantelId}/${idiomaId}`)
+export const eliminarPrecio = (plantelId, idiomaId, categoria = '') => del(`/config/precios/${plantelId}/${idiomaId}/${encodeURIComponent(categoria)}`)
 
 // ── Pagos ─────────────────────────────────────────────────────────────────────
 export const getPagos = (params = {}) => {
