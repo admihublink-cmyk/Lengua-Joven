@@ -21,7 +21,7 @@ const NEXT_ESTADO = {
   pagada: 'asignada',
 }
 
-const ESTADOS = ['nueva', 'bienvenida_enviada', 'alumno_respondio', 'boucher_enviado', 'pagada', 'asignada', 'baja']
+const ESTADOS = ['nueva', 'bienvenida_enviada', 'alumno_respondio', 'boucher_enviado', 'pagada', 'asignada', 'espera', 'baja']
 const ESTADOS_LABEL = {
   nueva: 'Formulario recibido',
   bienvenida_enviada: 'Bienvenida enviada',
@@ -29,6 +29,7 @@ const ESTADOS_LABEL = {
   boucher_enviado: 'Bóucher enviado',
   asignada: 'Asignada',
   pagada: 'Pagada',
+  espera: 'Lista de espera',
   baja: 'Baja',
 }
 
@@ -91,12 +92,7 @@ export default function Inscripciones() {
   const [grupoAsignar, setGrupoAsignar] = useState('')
   const [filtroEstadoPre, setFiltroEstadoPre] = useState('todos')
   const [enviandoLiga, setEnviandoLiga] = useState(null) // inscripcion_id
-  const [modalBanorte, setModalBanorte] = useState(false)
-  const [ligasTexto, setLigasTexto] = useState('')
-  const [ligasErr, setLigasErr] = useState('')
-  const [ligasResumen, setLigasResumen] = useState(null)
-  const [exportandoCSV, setExportandoCSV] = useState(false)
-  const [cargandoLigas, setCargandoLigas] = useState(false)
+  const [grupoLleno, setGrupoLleno] = useState(null) // { insId, grupoId, cupo, actuales }
 
   async function cargar() {
     try {
@@ -152,11 +148,28 @@ export default function Inscripciones() {
     catch (e) { alert('Error al avanzar etapa: ' + (e.message || 'intenta de nuevo')) }
   }
 
-  async function confirmarSugerencia(ins) {
+  async function asignarGrupo(insId, grupoId) {
     try {
-      await api.actualizarInscripcion(ins.id, { grupo_id: ins.grupo_sugerido_id, estado: 'asignada' })
+      await api.actualizarInscripcion(insId, { grupo_id: grupoId, estado: 'asignada' })
       setSel(null); await cargar()
-    } catch (e) { alert('Error al confirmar: ' + (e.message || 'intenta de nuevo')) }
+    } catch (e) {
+      if (e.status === 409 && e.data?.razon === 'grupo_lleno') {
+        setGrupoLleno({ insId, grupoId, cupo: e.data.cupo, actuales: e.data.actuales })
+      } else {
+        alert('Error al asignar grupo: ' + (e.message || 'intenta de nuevo'))
+      }
+    }
+  }
+
+  async function ponerEnEspera(insId, grupoId) {
+    try {
+      await api.actualizarInscripcion(insId, { grupo_id: grupoId, estado: 'espera' })
+      setGrupoLleno(null); setSel(null); await cargar()
+    } catch (e) { alert('Error: ' + e.message) }
+  }
+
+  async function confirmarSugerencia(ins) {
+    await asignarGrupo(ins.id, ins.grupo_sugerido_id)
   }
 
   async function rechazarSugerencia(ins) {
@@ -210,41 +223,6 @@ export default function Inscripciones() {
     setCsvTexto('')
     setCsvFilas([])
     setCsvErr('')
-  }
-
-  // Parsear CSV de ligas de Banorte (Excel exportado como CSV: REFERENCIA,LIGA_PAGO)
-  function parsearLigasBanorte(texto) {
-    setLigasErr('')
-    setLigasResumen(null)
-    const lineas = texto.trim().split('\n').filter(l => l.trim())
-    if (lineas.length < 2) { setLigasErr('Se necesitan al menos 2 líneas (encabezado + datos)'); return }
-    const sep = lineas[0].includes('\t') ? '\t' : ','
-    const heads = lineas[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
-    const iRef = heads.findIndex(h => h.includes('ref') || h.includes('folio') || h.includes('referencia'))
-    const iLiga = heads.findIndex(h => h.includes('liga') || h.includes('url') || h.includes('pago') || h.includes('link'))
-    if (iRef < 0 || iLiga < 0) {
-      setLigasErr('No se encontraron columnas REFERENCIA y LIGA_PAGO. Asegúrate de incluir los encabezados.')
-      return
-    }
-    const ligas = lineas.slice(1).map(l => {
-      const c = l.split(sep).map(x => x.trim().replace(/^"|"$/g, ''))
-      return { referencia: c[iRef] || '', liga_pago: c[iLiga] || '' }
-    }).filter(x => x.referencia && x.liga_pago)
-    if (ligas.length === 0) { setLigasErr('No se encontraron ligas válidas en el archivo.'); return }
-    setLigasResumen(ligas)
-  }
-
-  async function cargarLigasBanorte() {
-    if (!ligasResumen) return
-    setCargandoLigas(true)
-    try {
-      const res = await api.cargarLigasBanorte(ligasResumen)
-      alert(`✓ ${res.cargadas} inscripciones actualizadas con liga de pago.${res.noEncontradas ? ` ${res.noEncontradas} referencias no encontradas.` : ''}`)
-      setModalBanorte(false)
-      setLigasTexto('')
-      setLigasResumen(null)
-      await cargar()
-    } catch (e) { alert('Error: ' + e.message) } finally { setCargandoLigas(false) }
   }
 
   async function enviarLiga(inscripcionId) {
@@ -307,8 +285,8 @@ export default function Inscripciones() {
           )}
           {puedeGestionar && (
             <button className="btn-sec" style={{ background: '#1a5276', color: '#fff', borderColor: '#1a5276' }}
-              onClick={() => { setModalBanorte(true); setLigasTexto(''); setLigasResumen(null); setLigasErr('') }}>
-              🏦 Banorte
+              onClick={() => navegar('ligas_pago')}>
+              🏦 Ligas de Pago
             </button>
           )}
           {tienePermiso(P.INSC_CREAR) && (
@@ -909,7 +887,12 @@ export default function Inscripciones() {
             <div><label>Alumno</label><p>{nombre(sel)}</p></div>
             <div><label>Correo</label><p>{sel.email_externo || '—'}</p></div>
             <div><label>Teléfono</label><p>{sel.tel_externo || '—'}</p></div>
-            <div><label>Estado</label><p><span className={'badge ' + sel.estado}>{ESTADOS_LABEL[sel.estado] || sel.estado}</span></p></div>
+            <div><label>Estado</label><p>
+              <span className={'badge ' + sel.estado}>{ESTADOS_LABEL[sel.estado] || sel.estado}</span>
+              {sel.estado === 'espera' && sel.posicion_espera && (
+                <span style={{ marginLeft: 8, fontSize: 13, color: '#b45309' }}>Posición #{sel.posicion_espera}</span>
+              )}
+            </p></div>
             <div><label>Grupo asignado</label><p>{nomGrupo(sel.grupo_id)}</p></div>
             <div><label>Nivel placement</label><p>{nomNivel(sel.placement_nivel)}</p></div>
             {sel.grupo_sugerido_id && (
@@ -971,10 +954,7 @@ export default function Inscripciones() {
                 const grupoId = e.target.value
                 if (!grupoId) return
                 if (!window.confirm('¿Asignar este grupo a la inscripción?')) return
-                try {
-                  await api.actualizarInscripcion(sel.id, { grupo_id: grupoId, estado: 'asignada' })
-                  setSel(null); await cargar()
-                } catch (err) { alert('Error al asignar grupo: ' + (err.message || 'intenta de nuevo')) }
+                await asignarGrupo(sel.id, grupoId)
               }}>
                 <option value="">Seleccionar grupo…</option>
                 {grupos.map(g => <option key={g.id} value={g.id}>{g.codigo}</option>)}
@@ -986,90 +966,20 @@ export default function Inscripciones() {
       </div>
       )}
 
-      {/* ── Modal Banorte ── */}
-      {modalBanorte && (
-        <Modal titulo="🏦 Integración Banorte" onClose={() => setModalBanorte(false)} ancho={600}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* Paso 1: Exportar CSV */}
-            <div className="card" style={{ padding: 16 }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Paso 1 — Exportar CSV para subir a Banorte</h4>
-              <p className="texto-muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
-                Descarga el archivo CSV con los folios e importes de las inscripciones pendientes de pago.
-                Sube ese CSV en el portal de Banorte para que genere las ligas de pago.
-              </p>
-              <button className="btn-primario" style={{ background: '#1a5276', borderColor: '#1a5276' }}
-                disabled={exportandoCSV}
-                onClick={async () => {
-                  setExportandoCSV(true)
-                  try { await api.descargarCSVBanorte() }
-                  catch (e) { alert('Error: ' + e.message) }
-                  finally { setExportandoCSV(false) }
-                }}>
-                {exportandoCSV ? 'Generando…' : '⬇ Descargar CSV para Banorte'}
-              </button>
-            </div>
-
-            {/* Paso 2: Cargar ligas */}
-            <div className="card" style={{ padding: 16 }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Paso 2 — Cargar ligas de pago desde Banorte</h4>
-              <p className="texto-muted" style={{ fontSize: 13, margin: '0 0 12px' }}>
-                Banorte te regresa un Excel con las ligas generadas. Expórtalo como CSV y pega el contenido aquí,
-                o copia y pega directamente desde el Excel (incluye encabezados).
-                Columnas requeridas: <strong>REFERENCIA</strong> (folio) y <strong>LIGA_PAGO</strong> (URL).
-              </p>
-              <textarea
-                rows={5}
-                placeholder={'REFERENCIA,LIGA_PAGO\nINJ-0001,https://pago.banorte.com/...\nINJ-0002,https://pago.banorte.com/...'}
-                value={ligasTexto}
-                onChange={e => { setLigasTexto(e.target.value); setLigasResumen(null); setLigasErr('') }}
-                style={{ width: '100%', fontFamily: 'monospace', fontSize: 12, resize: 'vertical', boxSizing: 'border-box' }}
-              />
-              {ligasErr && <p style={{ color: 'var(--rojo)', fontSize: 13, margin: '8px 0 0' }}>{ligasErr}</p>}
-              <div style={{ display: 'flex', gap: 8, marginTop: 10 }}>
-                <button className="btn-sec" onClick={() => parsearLigasBanorte(ligasTexto)}>
-                  Analizar
-                </button>
-                {ligasResumen && (
-                  <button className="btn-primario" style={{ background: '#27ae60', borderColor: '#27ae60' }}
-                    disabled={cargandoLigas} onClick={cargarLigasBanorte}>
-                    {cargandoLigas ? 'Cargando…' : `✓ Guardar ${ligasResumen.length} liga${ligasResumen.length !== 1 ? 's' : ''}`}
-                  </button>
-                )}
-              </div>
-              {ligasResumen && (
-                <div style={{ marginTop: 10, background: 'var(--bg-3)', borderRadius: 8, overflow: 'auto', maxHeight: 150 }}>
-                  <table className="tabla" style={{ margin: 0, fontSize: 11 }}>
-                    <thead><tr><th>Folio</th><th>Liga de pago</th></tr></thead>
-                    <tbody>
-                      {ligasResumen.slice(0, 10).map((l, i) => (
-                        <tr key={i}>
-                          <td><code>{l.referencia}</code></td>
-                          <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                            <a href={l.liga_pago} target="_blank" rel="noopener noreferrer" style={{ color: '#1a5276', fontSize: 11 }}>{l.liga_pago}</a>
-                          </td>
-                        </tr>
-                      ))}
-                      {ligasResumen.length > 10 && <tr><td colSpan={2} className="texto-muted" style={{ textAlign: 'center' }}>… y {ligasResumen.length - 10} más</td></tr>}
-                    </tbody>
-                  </table>
-                </div>
-              )}
-            </div>
-
-            {/* Paso 3: Enviar ligas */}
-            <div className="card" style={{ padding: 16 }}>
-              <h4 style={{ margin: '0 0 8px', fontSize: 14 }}>Paso 3 — Enviar liga al alumno</h4>
-              <p className="texto-muted" style={{ fontSize: 13, margin: 0 }}>
-                Una vez cargadas las ligas, usa el botón <strong>🏦 Liga</strong> que aparece en cada inscripción de la tabla
-                para enviarle la liga de pago al alumno por correo electrónico.
-                Banorte notificará cuando el pago sea aprobado.
-              </p>
-            </div>
-
-          </div>
+      {/* ── Modal grupo lleno: ¿poner en espera? ── */}
+      {grupoLleno && (
+        <Modal titulo="Grupo lleno" onClose={() => setGrupoLleno(null)} ancho={420}>
+          <p style={{ margin: '0 0 8px' }}>
+            Este grupo ya alcanzó su cupo máximo ({grupoLleno.actuales}/{grupoLleno.cupo} lugares).
+          </p>
+          <p style={{ margin: '0 0 20px', color: '#6b7280', fontSize: 14 }}>
+            ¿Deseas poner al alumno en la lista de espera? Se le asignará automáticamente si alguien se da de baja.
+          </p>
           <div className="modal-acciones">
-            <button className="btn-sec" onClick={() => setModalBanorte(false)}>Cerrar</button>
+            <button className="btn-sec" onClick={() => setGrupoLleno(null)}>Cancelar</button>
+            <button className="btn-primario" onClick={() => ponerEnEspera(grupoLleno.insId, grupoLleno.grupoId)}>
+              Poner en lista de espera
+            </button>
           </div>
         </Modal>
       )}
