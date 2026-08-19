@@ -28,8 +28,30 @@ router.get('/', requireAuth, async (req, res) => {
 })
 
 router.get('/:id', requireAuth, async (req, res) => {
+  const me = req.user
   const g = await queryOne('SELECT * FROM grupos WHERE id = $1', [req.params.id])
   if (!g) return res.status(404).json({ error: 'No encontrado' })
+  if (me.rol === 'superadmin') return res.json(g)
+  if (me.rol === 'alumno') {
+    const ins = await queryOne('SELECT id FROM inscripciones WHERE alumno_id = $1 AND grupo_id = $2', [me.id, g.id])
+    if (!ins) return res.status(403).json({ error: 'Sin permiso' })
+    return res.json(g)
+  }
+  if (me.rol === 'tutor') {
+    const tiene = await queryOne(
+      `SELECT 1 FROM inscripciones i JOIN tutor_alumnos ta ON ta.alumno_id = i.alumno_id
+       WHERE ta.tutor_id = $1 AND i.grupo_id = $2`, [me.id, g.id]
+    )
+    if (!tiene) return res.status(403).json({ error: 'Sin permiso' })
+    return res.json(g)
+  }
+  if (me.rol === 'profesor' && g.profesor_id !== me.id) return res.status(403).json({ error: 'Sin permiso' })
+  if (me.rol === 'coordinador') {
+    const asignados = (await query('SELECT plantel_id FROM coordinador_planteles WHERE coordinador_id = $1', [me.id])).map(r => r.plantel_id)
+    if (!asignados.includes(g.plantel_id) && g.plantel_id !== me.plantel_id) return res.status(403).json({ error: 'Sin permiso' })
+    return res.json(g)
+  }
+  if (me.plantel_id && g.plantel_id !== me.plantel_id) return res.status(403).json({ error: 'Sin permiso' })
   res.json(g)
 })
 
@@ -37,9 +59,10 @@ router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const { idioma_id, nivel_id, plantel_id, profesor_id, codigo, horario, cupo, activo,
     fecha_inicio_inscripciones, fecha_fin_inscripciones, fecha_inicio_clases, fecha_fin_clases } = req.body
-  const ids = (await query('SELECT id FROM grupos', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('g', '')) || 0), 0)
-  const newId = 'g' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM grupos WHERE id ~ '^g[0-9]+'`, []
+  )
+  const newId = 'g' + (maxNum + 1)
   // Superadmin elige libremente; coordinador y director usan el plantel del form
   // (validado contra su plantel asignado para evitar escalada de privilegios)
   const pid = req.user.rol === 'superadmin'
@@ -53,7 +76,7 @@ router.post('/', requireAuth, async (req, res) => {
     const plantelValido = asignados.includes(pid) || req.user.plantel_id === pid
     if (!plantelValido) return res.status(403).json({ error: 'Sin permiso para ese plantel' })
   }
-  await run(`INSERT INTO grupos VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
+  await run(`INSERT INTO grupos (id, idioma_id, nivel_id, plantel_id, profesor_id, codigo, horario, cupo, activo, fecha_inicio_inscripciones, fecha_fin_inscripciones, fecha_inicio_clases, fecha_fin_clases) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`, [
     newId, idioma_id, nivel_id, pid, profesor_id || null, codigo, horario,
     cupo || 20, activo !== false ? 1 : 0,
     fecha_inicio_inscripciones || '', fecha_fin_inscripciones || '',
@@ -118,12 +141,28 @@ router.put('/:id', requireAuth, async (req, res) => {
 
 router.delete('/:id', requireAuth, async (req, res) => {
   if (!['superadmin', 'director'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  if (req.user.rol === 'director') {
+    const g = await queryOne('SELECT plantel_id FROM grupos WHERE id = $1', [req.params.id])
+    if (!g) return res.status(404).json({ error: 'No encontrado' })
+    if (g.plantel_id !== req.user.plantel_id) return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
   await run('UPDATE grupos SET activo = 0 WHERE id = $1', [req.params.id])
   res.json({ ok: true })
 })
 
 // Alumnos del grupo
 router.get('/:id/alumnos', requireAuth, async (req, res) => {
+  const me = req.user
+  if (me.rol === 'alumno' || me.rol === 'tutor') return res.status(403).json({ error: 'Sin permiso' })
+  if (me.rol === 'profesor') {
+    const g = await queryOne('SELECT profesor_id FROM grupos WHERE id = $1', [req.params.id])
+    if (!g || g.profesor_id !== me.id) return res.status(403).json({ error: 'Sin permiso' })
+  }
+  if (me.rol === 'director') {
+    const g = await queryOne('SELECT plantel_id FROM grupos WHERE id = $1', [req.params.id])
+    if (!g) return res.status(404).json({ error: 'No encontrado' })
+    if (g.plantel_id !== me.plantel_id) return res.status(403).json({ error: 'Sin permiso para este plantel' })
+  }
   const alumnos = await query(`
     SELECT u.id, u.nombre, u.email, u.matricula, i.estado, i.id as inscripcion_id, i.folio
     FROM inscripciones i
