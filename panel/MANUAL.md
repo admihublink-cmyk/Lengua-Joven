@@ -44,18 +44,9 @@ La plataforma funciona en cualquier navegador moderno (Chrome, Firefox, Edge, Sa
 2. Ingresa tu **correo electrónico** y **contraseña** asignados.
 3. Haz clic en **Iniciar sesión**.
 
-### Credenciales de demostración
+### Credenciales
 
-| Rol            | Correo                    | Contraseña  |
-|----------------|---------------------------|-------------|
-| Super Admin    | superadmin@injuve.mx      | admin123    |
-| Director       | director@injuve.mx        | dir123      |
-| Coordinador    | coord@injuve.mx           | coord123    |
-| Profesor       | prof@injuve.mx            | prof123     |
-| Alumno         | alumno@injuve.mx          | alumno123   |
-| Admin / Ventas | ventas@injuve.mx          | ventas123   |
-
-> **Nota:** En modo demo los datos se guardan en el navegador. Para restablecer a los datos iniciales ve a **Configuración → Restablecer datos de demo**.
+Solicita tu correo y contraseña al administrador del sistema. No compartas tus credenciales con nadie.
 
 ### Cerrar sesión
 

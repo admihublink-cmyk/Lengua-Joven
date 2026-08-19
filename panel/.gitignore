@@ -1,0 +1,13 @@
+node_modules/
+dist/
+dist-ssr/
+*.local
+.env
+.env.local
+.env.production
+.env.*.local
+ngrok.exe
+ngrok.zip
+*.exe
+*.zip
+.DS_Store
