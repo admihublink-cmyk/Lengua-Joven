@@ -1,6 +1,7 @@
 const router = require('express').Router()
 const { query, queryOne, run } = require('../db/pool')
 const { requireAuth, puedeVerPlantel } = require('../middleware/auth')
+const { enviarGrupoAsignado } = require('../services/email')
 
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
@@ -116,14 +117,108 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
   }
 
+  const nuevoGrupo = req.body.grupo_id
+  const nuevoEstado = req.body.estado
+
+  // Verificar cupo si se asigna un grupo nuevo y el estado no es 'espera'
+  if (nuevoGrupo && nuevoGrupo !== ins.grupo_id && nuevoEstado !== 'espera') {
+    const grupo = await queryOne('SELECT cupo FROM grupos WHERE id = $1', [nuevoGrupo])
+    if (grupo) {
+      const { n } = await queryOne(
+        "SELECT COUNT(*) AS n FROM inscripciones WHERE grupo_id = $1 AND estado NOT IN ('baja','espera','cancelada','rechazada')",
+        [nuevoGrupo]
+      ) || { n: 0 }
+      if (parseInt(n) >= (grupo.cupo || 20)) {
+        return res.status(409).json({
+          razon: 'grupo_lleno',
+          cupo: grupo.cupo || 20,
+          actuales: parseInt(n),
+          error: 'El grupo ya alcanzó su cupo máximo'
+        })
+      }
+    }
+  }
+
+  // Si se pone en espera, asignar posición al final de la cola
+  if (nuevoEstado === 'espera' && ins.estado !== 'espera') {
+    const grupoTarget = nuevoGrupo || ins.grupo_id
+    if (grupoTarget) {
+      const { pos } = await queryOne(
+        "SELECT COALESCE(MAX(posicion_espera), 0) AS pos FROM inscripciones WHERE grupo_id = $1 AND estado = 'espera'",
+        [grupoTarget]
+      ) || { pos: 0 }
+      req.body.posicion_espera = parseInt(pos) + 1
+    }
+  }
+
+  // Si sale de espera (promovida o cancelada), limpiar posición y re-numerar
+  if (ins.estado === 'espera' && nuevoEstado && nuevoEstado !== 'espera') {
+    req.body.posicion_espera = null
+    if (ins.grupo_id && ins.posicion_espera) {
+      await run(
+        "UPDATE inscripciones SET posicion_espera = posicion_espera - 1 WHERE grupo_id = $1 AND estado = 'espera' AND posicion_espera > $2",
+        [ins.grupo_id, ins.posicion_espera]
+      )
+    }
+  }
+
+  // Si pasa a 'baja', auto-promover al primero en espera del mismo grupo
+  if (nuevoEstado === 'baja' && ins.grupo_id && ins.estado !== 'baja') {
+    const siguiente = await queryOne(
+      "SELECT id, posicion_espera FROM inscripciones WHERE grupo_id = $1 AND estado = 'espera' ORDER BY posicion_espera ASC LIMIT 1",
+      [ins.grupo_id]
+    )
+    if (siguiente) {
+      await run(
+        "UPDATE inscripciones SET estado = 'asignada', posicion_espera = NULL WHERE id = $1",
+        [siguiente.id]
+      )
+      await run(
+        "UPDATE inscripciones SET posicion_espera = posicion_espera - 1 WHERE grupo_id = $1 AND estado = 'espera' AND posicion_espera > $2",
+        [ins.grupo_id, siguiente.posicion_espera]
+      )
+    }
+  }
+
   const fields = ['alumno_id','grupo_id','plantel_id','estado','placement_nivel','sugerida_por',
-    'nombre_externo','email_externo','tel_externo','oferta_id','grupo_sugerido_id','liga_pago']
+    'nombre_externo','email_externo','tel_externo','oferta_id','grupo_sugerido_id','liga_pago','posicion_espera']
   const sets = []; const vals = []
   for (const f of fields) {
     if (req.body[f] !== undefined) { sets.push(`${f} = $${sets.length + 1}`); vals.push(req.body[f] ?? null) }
   }
   if (sets.length) await run(`UPDATE inscripciones SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
-  res.json(await queryOne('SELECT * FROM inscripciones WHERE id = $1', [req.params.id]))
+
+  const actualizada = await queryOne('SELECT * FROM inscripciones WHERE id = $1', [req.params.id])
+
+  // Notificación automática cuando se asigna grupo por primera vez
+  if (nuevoEstado === 'asignada' && ins.estado !== 'asignada') {
+    const email = actualizada.email_externo
+      || (actualizada.alumno_id && (await queryOne('SELECT email FROM usuarios WHERE id = $1', [actualizada.alumno_id]))?.email)
+    const nombreAlumno = actualizada.nombre_externo
+      || (actualizada.alumno_id && (await queryOne('SELECT nombre FROM usuarios WHERE id = $1', [actualizada.alumno_id]))?.nombre)
+      || 'Alumno'
+    const grupoId = actualizada.grupo_id
+
+    if (email && grupoId) {
+      const grupo = await queryOne('SELECT * FROM grupos WHERE id = $1', [grupoId])
+      const nivel = grupo?.nivel_id ? (await queryOne('SELECT nombre FROM niveles WHERE id = $1', [grupo.nivel_id]))?.nombre : null
+      const idioma = grupo?.idioma_id ? (await queryOne('SELECT nombre FROM idiomas WHERE id = $1', [grupo.idioma_id]))?.nombre : null
+      const plantel = actualizada.plantel_id ? (await queryOne('SELECT nombre FROM planteles WHERE id = $1', [actualizada.plantel_id]))?.nombre : null
+
+      // Fire-and-forget: un error de correo nunca debe romper la respuesta
+      enviarGrupoAsignado({
+        destinatario: email,
+        nombre: nombreAlumno,
+        folio: actualizada.folio,
+        grupo: grupo || {},
+        nivel,
+        idioma,
+        plantel,
+      }).catch(err => console.error('enviarGrupoAsignado error:', err.message))
+    }
+  }
+
+  res.json(actualizada)
 })
 
 router.delete('/:id', requireAuth, async (req, res) => {
