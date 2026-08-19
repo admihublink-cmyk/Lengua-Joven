@@ -22,10 +22,11 @@ const { requireAuth } = require('../middleware/auth')
 router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const o = req.body
-  const ids = (await query('SELECT id FROM ofertas', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('of', '')) || 0), 0)
-  const newId = 'of' + (max + 1)
-  await run('INSERT INTO ofertas VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM ofertas WHERE id ~ '^of[0-9]+'`, []
+  )
+  const newId = 'of' + (maxNum + 1)
+  await run('INSERT INTO ofertas (id, proveedor, sede, idioma, costo, costo_tipo, categoria, edades, modalidad, sistema, no_niveles, material_nivel, horario, examen_ubicacion, nivel) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)', [
     newId, o.proveedor, o.sede, o.idioma, o.costo, o.costo_tipo, o.categoria, o.edades,
     o.modalidad, o.sistema, String(o.no_niveles ?? ''), String(o.material_nivel ?? ''),
     o.horario, o.examen_ubicacion, String(o.nivel ?? '')

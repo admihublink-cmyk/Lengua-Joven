@@ -48,12 +48,13 @@ router.post('/', requireAuth, async (req, res) => {
   if (!plantel_id) return res.status(400).json({ error: 'plantel_id requerido' })
   if (!puedeGestionar(req, plantel_id)) return res.status(403).json({ error: 'Sin permiso' })
 
-  const ids = (await query('SELECT id FROM periodos_inscripcion', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('per', '')) || 0), 0)
-  const newId = 'per' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 4) AS INTEGER)), 0) AS m FROM periodos_inscripcion WHERE id ~ '^per[0-9]+'`, []
+  )
+  const newId = 'per' + (maxNum + 1)
 
   try {
-    await run(`INSERT INTO periodos_inscripcion VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
+    await run(`INSERT INTO periodos_inscripcion (id, plantel_id, idioma_id, ciclo, inicio_prereg, fin_prereg, fecha_examen, fecha_asignacion, fecha_inicio_clases) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)`,
       [newId, plantel_id, idioma_id || null, ciclo || null,
         inicio_prereg || null, fin_prereg || null, fecha_examen || null,
         fecha_asignacion || null, fecha_inicio_clases || null])

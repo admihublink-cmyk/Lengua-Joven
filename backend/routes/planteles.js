@@ -24,9 +24,10 @@ router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const { nombre, ciudad, convenio_vencimiento } = req.body
   if (!nombre?.trim()) return res.status(400).json({ error: 'El nombre es requerido' })
-  const ids = (await query('SELECT id FROM planteles', [])).map(r => r.id)
-  const max = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('p', '')) || 0), 0)
-  const newId = 'p' + (max + 1)
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 2) AS INTEGER)), 0) AS m FROM planteles WHERE id ~ '^p[0-9]+'`, []
+  )
+  const newId = 'p' + (maxNum + 1)
   await run('INSERT INTO planteles (id, nombre, ciudad, convenio_vencimiento, convenio_notificado) VALUES ($1,$2,$3,$4,$5)', [newId, nombre.trim(), ciudad || '', convenio_vencimiento || '', 0])
   // Si es coordinador, asignarlo automáticamente al nuevo plantel
   if (req.user.rol === 'coordinador') {

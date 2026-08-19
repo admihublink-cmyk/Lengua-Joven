@@ -3,6 +3,7 @@ const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
 router.get('/', requireAuth, async (req, res) => {
+  if (['alumno', 'tutor'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
   const rows = await query('SELECT * FROM config', [])
   const config = {}
   for (const r of rows) config[r.key] = r.value
