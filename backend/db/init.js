@@ -320,13 +320,15 @@ async function initDB() {
     ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ DEFAULT NOW();
   `)
 
-  // Tabla de precios por plantel + idioma
+  // Tabla de precios por plantel + idioma + categoría
   await pool.query(`
-    CREATE TABLE IF NOT EXISTS precios (
+    DROP TABLE IF EXISTS precios;
+    CREATE TABLE precios (
       plantel_id TEXT NOT NULL,
       idioma_id  TEXT NOT NULL,
+      categoria  TEXT NOT NULL DEFAULT '',
       monto      REAL NOT NULL,
-      PRIMARY KEY (plantel_id, idioma_id)
+      PRIMARY KEY (plantel_id, idioma_id, categoria)
     );
   `)
 
