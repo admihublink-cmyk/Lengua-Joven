@@ -195,6 +195,9 @@ export default function Configuracion() {
             <label>Días de gracia para pago
               <input type="number" value={config.dias_gracia_pago || 0} onChange={e => setConfig({ ...config, dias_gracia_pago: Number(e.target.value) })} />
             </label>
+            <label>Tarifa hora — profesores ($)
+              <input type="number" value={config.tarifa_hora_profesor || 150} onChange={e => setConfig({ ...config, tarifa_hora_profesor: Number(e.target.value) })} />
+            </label>
             <label>Liga de pago Banorte (URL)
               <input type="url" value={config.liga_pago_url || ''} onChange={e => setConfig({ ...config, liga_pago_url: e.target.value })} placeholder="https://..." />
             </label>
@@ -366,7 +369,7 @@ export default function Configuracion() {
               <select value={formPrecio.idioma_id} onChange={e => setFormPrecio({ ...formPrecio, idioma_id: e.target.value })}
                 disabled={!formPrecio.plantel_id}>
                 <option value="">Seleccionar…</option>
-                {idiomas.filter(i => i.plantel_id === formPrecio.plantel_id).map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
+                {idiomas.map(i => <option key={i.id} value={i.id}>{i.nombre}</option>)}
               </select>
             </label>
             <label style={{ minWidth: 120 }}>Categoría
