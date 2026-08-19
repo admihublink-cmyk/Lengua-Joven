@@ -2,7 +2,7 @@ const router = require('express').Router()
 const path = require('path')
 const fs = require('fs')
 const multer = require('multer')
-const { v4: uuidv4 } = require('uuid')
+const { randomUUID } = require('crypto')
 const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
@@ -16,7 +16,7 @@ const storage = multer.diskStorage({
   },
   filename: (req, file, cb) => {
     const ext = path.extname(file.originalname)
-    cb(null, uuidv4() + ext)
+    cb(null, randomUUID() + ext)
   }
 })
 const MIME_PERMITIDOS = new Set([

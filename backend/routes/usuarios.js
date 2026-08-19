@@ -120,7 +120,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (plantel_id !== undefined && me.rol === 'superadmin') updates.plantel_id = plantel_id || null
   if (plantel_id !== undefined && me.rol === 'director' && me.plantel_id) updates.plantel_id = me.plantel_id
   if (plantel_id !== undefined && me.rol === 'coordinador' && (me.planteles || []).includes(plantel_id)) updates.plantel_id = plantel_id || null
-  if (activo !== undefined && me.id !== req.params.id) updates.activo = activo ? 1 : 0
+  if (activo !== undefined && me.id !== req.params.id) {
+    updates.activo = activo ? 1 : 0
+    if (!activo) updates.token_invalid_before = new Date().toISOString()
+  }
   if (matricula !== undefined) updates.matricula = matricula || null
   if (fecha_nacimiento !== undefined) updates.fecha_nacimiento = fecha_nacimiento || null
   if (estado_entidad !== undefined) updates.estado_entidad = estado_entidad || null
@@ -144,7 +147,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
   if (req.user.rol === 'director' && target.plantel_id !== req.user.plantel_id) {
     return res.status(403).json({ error: 'Sin permiso para este plantel' })
   }
-  await run('UPDATE usuarios SET activo = 0 WHERE id = $1', [req.params.id])
+  await run('UPDATE usuarios SET activo = 0, token_invalid_before = $1 WHERE id = $2', [new Date().toISOString(), req.params.id])
   res.json({ ok: true })
 })
 
