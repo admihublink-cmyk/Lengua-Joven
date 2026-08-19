@@ -64,7 +64,14 @@ router.post('/login', async (req, res) => {
   await clearFails(ip)
   const token = signToken(user)
   const { password_hash, ...safeUser } = user
-  res.json({ token, user: { ...safeUser, activo: user.activo === 1 } })
+  const isProd = process.env.NODE_ENV === 'production'
+  res.cookie('lj_token', token, {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    maxAge: 8 * 60 * 60 * 1000, // 8 horas, igual que la expiración del JWT
+  })
+  res.json({ user: { ...safeUser, activo: user.activo === 1 } })
 })
 
 // ── Cambiar contraseña (usuario autenticado) ──────────────────────────────────
@@ -150,6 +157,8 @@ router.post('/reset-password/:token', async (req, res) => {
 // ── Logout (invalida el token actual) ────────────────────────────────────────
 router.post('/logout', requireAuth, async (req, res) => {
   await run('UPDATE usuarios SET token_invalid_before = $1 WHERE id = $2', [new Date().toISOString(), req.user.id])
+  const isProd = process.env.NODE_ENV === 'production'
+  res.clearCookie('lj_token', { httpOnly: true, secure: isProd, sameSite: isProd ? 'none' : 'lax' })
   res.json({ ok: true })
 })
 

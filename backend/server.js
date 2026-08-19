@@ -3,6 +3,7 @@ require('express-async-errors')
 const express = require('express')
 const cors = require('cors')
 const helmet = require('helmet')
+const cookieParser = require('cookie-parser')
 const path = require('path')
 
 const app = express()
@@ -56,6 +57,7 @@ function rateLimit(max, windowMs) {
   }
 }
 app.set('rateLimit', rateLimit)
+app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({ extended: true }))
 
