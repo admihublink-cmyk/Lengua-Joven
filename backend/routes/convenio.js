@@ -258,8 +258,66 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
         p('Enteradas las partes del alcance y contenido del presente convenio, manifiestan que no existe impedimento legal o vicio alguno de voluntad que invalide el presente acto jurídico, firmando de conformidad en la ciudad de Monterrey, Nuevo León, a los ' + fechaHoy + '.'),
         p(''),
         p(''),
-        p('T E S T I G O S', { center: true, bold: true }),
+        // Tabla de firmantes principales
+        new Table({
+          width: { size: 100, type: WidthType.PERCENTAGE },
+          rows: [
+            // Fila 1: nombre de la organización
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'INSTITUTO ESTATAL DE LA JUVENTUD', bold: true, size: 22, font: 'Arial' })] })],
+                  margins: { top: 200, bottom: 0, left: 200, right: 200 },
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+                new TableCell({
+                  children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: razonSocial.toUpperCase(), bold: true, size: 22, font: 'Arial' })] })],
+                  margins: { top: 200, bottom: 0, left: 200, right: 200 },
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+              ]
+            }),
+            // Fila 2: espacio en blanco para firma
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [new Paragraph({ spacing: { after: 1800 }, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] })],
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+                new TableCell({
+                  children: [new Paragraph({ spacing: { after: 1800 }, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] })],
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+              ]
+            }),
+            // Fila 3: nombre y cargo
+            new TableRow({
+              children: [
+                new TableCell({
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'MTRO. EDELMIRO CAVAZOS VALDÉS', bold: true, size: 22, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'DIRECTOR GENERAL', bold: true, size: 22, font: 'Arial' })] }),
+                  ],
+                  margins: { top: 0, bottom: 200, left: 200, right: 200 },
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+                new TableCell({
+                  children: [
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: `C.  ${representante.toUpperCase()}`, bold: true, size: 22, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'REPRESENTANTE LEGAL', bold: true, size: 22, font: 'Arial' })] }),
+                  ],
+                  margins: { top: 0, bottom: 200, left: 200, right: 200 },
+                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                }),
+              ]
+            }),
+          ]
+        }),
         p(''),
+        p('Testigos', { center: true, bold: true }),
+        p(''),
+        p(''),
+        // Tabla de testigos
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           rows: [
@@ -267,26 +325,22 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
               children: [
                 new TableCell({
                   children: [
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'INSTITUTO ESTATAL DE LA JUVENTUD', bold: true, size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'MTRO. EDELMI SÁNCHEZ GARZA', bold: true, size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'DIRECTOR GENERAL', size: 20, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'LIC. LUIS FERNANDO QUIROZ GONZÁLEZ', bold: true, size: 22, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'DIRECTOR DE BIENESTAR Y CALIDAD DE VIDA', bold: true, size: 22, font: 'Arial' })] }),
                   ],
-                  margins: { top: 300, bottom: 300, left: 200, right: 200 },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
                   borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
                 }),
                 new TableCell({
                   children: [
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: razonSocial.toUpperCase(), bold: true, size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: representante.toUpperCase(), bold: true, size: 22, font: 'Arial' })] }),
-                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'REPRESENTANTE LEGAL', size: 20, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'C. ALEXIS GUADALUPE ACEVEDO SANDOVAL', bold: true, size: 22, font: 'Arial' })] }),
+                    new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'JEFATURA DE BIENESTAR', bold: true, size: 22, font: 'Arial' })] }),
                   ],
-                  margins: { top: 300, bottom: 300, left: 200, right: 200 },
+                  margins: { top: 200, bottom: 200, left: 200, right: 200 },
                   borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
                 }),
               ]
-            })
+            }),
           ]
         }),
       ]
