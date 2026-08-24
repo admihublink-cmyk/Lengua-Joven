@@ -14,26 +14,23 @@ export default function Grupos({ params = {} }) {
   const [niveles, setNiveles] = useState([])
   const [planteles, setPlanteles] = useState([])
   const [ofertas, setOfertas] = useState([])
-  const [profesores, setProfesores] = useState([])
   const [inscripciones, setInscripciones] = useState([])
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
 
   async function cargar() {
     try {
-      const [g, i, o, p, u, ins] = await Promise.all([
+      const [g, i, o, p, ins] = await Promise.all([
         api.getGrupos(),
         api.getIdiomas(),
         api.getOfertas(),
         api.getPlanteles(),
-        api.getUsuarios(),
         api.getInscripciones(),
       ])
       setGrupos(g)
       setIdiomas(i)
       setOfertas(o)
       setPlanteles(p)
-      setProfesores(u.filter(x => x.rol === 'profesor'))
       setInscripciones(ins)
       // Niveles: cargar usando los IDs del catálogo público
       if (i.length > 0) {
@@ -52,7 +49,6 @@ export default function Grupos({ params = {} }) {
           idioma_id: params.idioma_id || '',
           nivel_id: '',
           plantel_id: params.plantel_id || usuario.plantel_id || '',
-          profesor_id: '',
           codigo: '',
           horario: '',
           cupo: 20,
@@ -72,7 +68,6 @@ export default function Grupos({ params = {} }) {
   function nombreIdioma(id) { return idiomas.find(x => x.id === id)?.nombre || '—' }
   function nombreNivel(id)  { return niveles.find(x => x.id === id)?.nombre || '—' }
   function nombrePlantel(id) { return planteles.find(x => x.id === id)?.nombre || '—' }
-  function nombreProfesor(id) { return profesores.find(x => x.id === id)?.nombre || 'Sin asignar' }
 
   // Filtra idiomas por los que el plantel realmente ofrece (vía ofertas)
   const idiomasDelPlantel = form.plantel_id

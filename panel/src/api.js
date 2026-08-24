@@ -40,17 +40,21 @@ async function req(method, path, body, options = {}) {
 
   if (!res.ok) {
     let errMessage = res.statusText || 'Error de servidor'
+    let errData = null
     try {
       const contentType = res.headers.get('content-type') || ''
       if (contentType.includes('application/json')) {
-        const err = await res.json()
-        errMessage = err.error || err.message || errMessage
+        errData = await res.json()
+        errMessage = errData.error || errData.message || errMessage
       } else {
         const text = await res.text()
         if (text) errMessage = text
       }
     } catch {}
-    throw new Error(errMessage)
+    const err = new Error(errMessage)
+    err.status = res.status
+    err.data = errData
+    throw err
   }
   return res.json()
 }
@@ -388,3 +392,18 @@ export const marcarLoteBajado = (lote) => req('POST', '/banorte/lote/bajado', { 
 export const cargarLigasBanorte = (ligas) => req('PATCH', '/banorte/ligas', { ligas })
 export const avisarLigas = (ids) => req('PUT', '/banorte/ligas/avisar', { ids: ids || [] })
 export const devolverLote = (lote, rehacer = false) => req('DELETE', '/banorte/lote', { lote, rehacer })
+
+// ── Pagos maestros ────────────────────────────────────────────────────────────
+export const getPagosMaestro = (periodo) => get(`/pagos-maestro${periodo ? '?periodo=' + periodo : ''}`)
+export const actualizarPagoMaestro = (data) => req('PATCH', '/pagos-maestro', data)
+export const recalcularHorasMaestro = (maestroId, periodo) => get(`/pagos-maestro/recalcular?maestro_id=${maestroId}&periodo=${periodo}`)
+export async function exportarPagosMaestroCSV(periodo) {
+  const res = await fetch(`${BASE}/pagos-maestro/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Error al exportar')
+  const blob = await res.blob()
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `pagos_maestros_${periodo}.csv`
+  link.click()
+  URL.revokeObjectURL(link.href)
+}

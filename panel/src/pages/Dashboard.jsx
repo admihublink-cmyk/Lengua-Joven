@@ -181,6 +181,12 @@ export default function Dashboard() {
                 <div>
                   <h3 style={{ margin: 0 }}>Mi inscripción — <span className={'badge ' + ins.estado}>{ins.estado}</span></h3>
                   <p style={{ margin: '4px 0 0' }}>Folio: <strong>{ins.folio}</strong> · Grupo: <strong>{ins.grupo_id || 'Por asignar'}</strong></p>
+                  {ins.estado === 'espera' && ins.posicion_espera && (
+                    <p style={{ margin: '4px 0 0', color: '#b45309', fontSize: 13 }}>
+                      Estás en la lista de espera — posición <strong>#{ins.posicion_espera}</strong>.
+                      Se te asignará automáticamente si se libera un lugar.
+                    </p>
+                  )}
                 </div>
                 {ins.liga_pago && (
                   <a href={ins.liga_pago} target="_blank" rel="noopener noreferrer"
