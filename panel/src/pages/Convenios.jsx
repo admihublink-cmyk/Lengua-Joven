@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../App.jsx'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
+import { renderAsync } from 'docx-preview'
 
 function estadoConvenio(dias, tieneVencimiento, deBaja) {
   if (deBaja) return { label: 'Dado de baja', clase: 'baja' }
@@ -43,6 +44,9 @@ export default function Convenios() {
   const [preview, setPreview] = useState(null) // { url, mimetype, nombre }
   const [thumbs, setThumbs] = useState({}) // { tipo: blobUrl }
   const [modalBaja, setModalBaja] = useState(null) // plantel object
+  const [previewDocx, setPreviewDocx] = useState(null) // plantel object
+  const [previewCargando, setPreviewCargando] = useState(false)
+  const previewContainerRef = useRef(null)
 
   async function cargar() {
     try { setPlanteles(await api.getPlanteles()) } catch (e) { console.error(e) }
@@ -187,6 +191,11 @@ export default function Convenios() {
       setFormNuevo({ nombre: '', ciudad: '' })
       await cargar()
     } catch (e) { alert('Error: ' + e.message) } finally { setGuardando(false) }
+  }
+
+  async function abrirPreviewDocx(p) {
+    setPreviewDocx(p)
+    setPreviewCargando(true)
   }
 
   async function darDeBaja(p) {
@@ -352,6 +361,11 @@ export default function Convenios() {
             <button className="btn-sec" onClick={() => setModal(null)}>Cancelar</button>
             <button className="btn-sec" onClick={guardarDatos} disabled={guardando}>
               {guardando ? 'Guardando…' : '💾 Guardar datos'}
+            </button>
+            <button className="btn-sec" style={{ background: '#2c3e50', color: '#fff', borderColor: '#2c3e50' }}
+              onClick={async () => { await guardarDatos(); setModal(null); abrirPreviewDocx(plantelSel) }}
+              disabled={guardando || generando}>
+              👁 Vista previa
             </button>
             <button className="btn-primario" onClick={async () => { await guardarDatos(); if (!guardando) await generarDOCX() }}
               disabled={guardando || generando}>
@@ -533,6 +547,49 @@ export default function Convenios() {
             <button className="btn-primario" onClick={() => setPreview(null)}>Cerrar</button>
           </div>
         </Modal>
+      )}
+
+      {/* Modal: previsualización del convenio DOCX */}
+      {previewDocx && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.6)', zIndex: 1100, display: 'flex', flexDirection: 'column' }}>
+          {/* Barra superior */}
+          <div style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--borde)', padding: '10px 20px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
+            <div>
+              <strong style={{ fontSize: 15 }}>👁 Vista previa — {previewDocx.nombre}</strong>
+              {previewCargando && <span style={{ marginLeft: 12, fontSize: 13, color: 'var(--texto-muted)' }}>Generando…</span>}
+            </div>
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn-sec" onClick={() => api.descargarConvenioDOCX(previewDocx.id)}>
+                ⬇ Descargar DOCX
+              </button>
+              <button className="btn-primario" onClick={() => { setPreviewDocx(null); setPreviewCargando(false) }}>
+                Cerrar
+              </button>
+            </div>
+          </div>
+          {/* Contenedor del render */}
+          <div style={{ flex: 1, overflow: 'auto', background: '#e0e0e0', padding: '20px 0' }}>
+            <div
+              ref={el => {
+                if (el && previewCargando) {
+                  api.fetchConvenioDOCXBlob(previewDocx.id)
+                    .then(blob => renderAsync(blob, el, undefined, {
+                      className: 'docx-preview',
+                      inWrapper: true,
+                      ignoreWidth: false,
+                      ignoreHeight: false,
+                      ignoreFonts: false,
+                      breakPages: true,
+                      useBase64URL: true,
+                    }))
+                    .catch(e => { el.innerHTML = `<p style="color:red;padding:32px">Error al generar: ${e.message}</p>` })
+                    .finally(() => setPreviewCargando(false))
+                }
+              }}
+              style={{ maxWidth: 900, margin: '0 auto' }}
+            />
+          </div>
+        </div>
       )}
 
       {/* Modal: confirmar baja de convenio */}
