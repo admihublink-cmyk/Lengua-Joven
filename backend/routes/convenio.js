@@ -7,10 +7,43 @@ const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, VerticalAlign, HeadingLevel,
   PageOrientation, convertInchesToTwip, ShadingType, UnderlineType,
-  ImageRun, Header
+  ImageRun, Header, Footer
 } = require('docx')
 
 const APORTACION_INJUVE = 200
+
+async function generarFolio(plantelId) {
+  const anio = new Date().getFullYear()
+  const pid = String(plantelId).replace(/\D/g, '').padStart(3, '0')
+  const { n } = await queryOne(
+    `SELECT COUNT(*) AS n FROM convenios_auditoria WHERE folio LIKE $1`,
+    [`CVN-${anio}-P${pid}-%`]
+  )
+  const seq = String(Number(n) + 1).padStart(4, '0')
+  return `CVN-${anio}-P${pid}-${seq}`
+}
+
+async function registrarAuditoria({ folio, plantelId, plantelNombre, usuario, accion, detalle, ip }) {
+  try {
+    await run(
+      `INSERT INTO convenios_auditoria
+         (folio, plantel_id, plantel_nombre, usuario_id, usuario_nombre, accion, detalle, ip)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+      [
+        folio || null,
+        plantelId,
+        plantelNombre,
+        usuario.id,
+        usuario.nombre || usuario.email || usuario.id,
+        accion,
+        JSON.stringify(detalle || {}),
+        ip || null,
+      ]
+    )
+  } catch (e) {
+    console.error('[auditoria]', e.message)
+  }
+}
 
 function celda(text, opts = {}) {
   return new TableCell({
@@ -112,6 +145,8 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   const logoPath = path.join(__dirname, '../assets/injuve_logo.png')
   const logoBuffer = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null
 
+  const folio = await generarFolio(plantel.id)
+
   // Obtener idiomas del plantel
   const idiomas = await query('SELECT DISTINCT nombre FROM idiomas WHERE plantel_id = $1 ORDER BY nombre', [plantel.id])
 
@@ -176,6 +211,25 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
           ],
         }),
       } : undefined,
+      footers: {
+        default: new Footer({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.CENTER,
+              border: { top: { style: BorderStyle.SINGLE, size: 4, color: 'CCCCCC' } },
+              spacing: { before: 100 },
+              children: [
+                new TextRun({
+                  text: `Folio: ${folio}  |  Generado el ${new Date().toLocaleString('es-MX', { dateStyle: 'long', timeStyle: 'short' })}  |  Lengua Joven — INJUVE NL`,
+                  size: 16,
+                  color: '888888',
+                  font: 'Arial',
+                }),
+              ],
+            }),
+          ],
+        }),
+      },
       children: [
         p(`CONVENIO /DG/INJUVE/${String(anio).slice(-4)}/2026`, { center: true, bold: true, size: 24 }),
         p(''),
@@ -385,10 +439,34 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   })
 
   const buffer = await Packer.toBuffer(doc)
+
+  await registrarAuditoria({
+    folio,
+    plantelId: plantel.id,
+    plantelNombre: plantel.nombre,
+    usuario: req.user,
+    accion: 'generar_docx',
+    detalle: { razon_social: plantel.razon_social, representante_legal: plantel.representante_legal, rfc: plantel.rfc },
+    ip: req.ip,
+  })
+
   const nombreArchivo = `Convenio_${razonSocial.replace(/[^a-zA-Z0-9]/g, '_')}_${anio}.docx`
   res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
   res.setHeader('Content-Disposition', `attachment; filename="${nombreArchivo}"`)
   res.send(buffer)
+})
+
+// GET /planteles/auditoria?plantel_id=&limit=
+router.get('/auditoria', requireAuth, async (req, res) => {
+  if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const { plantel_id, limit = 100 } = req.query
+  const cond = plantel_id ? 'WHERE plantel_id = $1' : ''
+  const params = plantel_id ? [plantel_id] : []
+  const rows = await query(
+    `SELECT * FROM convenios_auditoria ${cond} ORDER BY created_at DESC LIMIT ${Number(limit)}`,
+    params
+  )
+  res.json(rows)
 })
 
 module.exports = router

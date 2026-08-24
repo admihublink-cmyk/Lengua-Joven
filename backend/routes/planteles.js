@@ -2,6 +2,18 @@ const router = require('express').Router()
 const { query, queryOne, run } = require('../db/pool')
 const { requireAuth, puedeVerPlantel } = require('../middleware/auth')
 
+async function logAuditoria({ plantelId, plantelNombre, usuario, accion, detalle, ip }) {
+  try {
+    await run(
+      `INSERT INTO convenios_auditoria
+         (plantel_id, plantel_nombre, usuario_id, usuario_nombre, accion, detalle, ip)
+       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
+      [plantelId, plantelNombre, usuario.id, usuario.nombre || usuario.email || usuario.id,
+       accion, JSON.stringify(detalle || {}), ip || null]
+    )
+  } catch (e) { console.error('[auditoria planteles]', e.message) }
+}
+
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   if (['superadmin', 'coordinador'].includes(me.rol)) {
@@ -63,7 +75,26 @@ router.put('/:id', requireAuth, async (req, res) => {
       vals.push(c === 'convenio_notificado' ? (req.body[c] ? 1 : 0) : req.body[c])
     }
   }
-  if (sets.length) await run(`UPDATE planteles SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
+  if (sets.length) {
+    await run(`UPDATE planteles SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
+
+    // Determinar acción semántica para auditoría
+    const b = req.body
+    let accion = 'actualizar_datos'
+    if (b.convenio_baja === true)  accion = 'dar_de_baja'
+    if (b.convenio_baja === false) accion = 'reactivar'
+    if (b.convenio_vencimiento && Object.keys(b).length <= 2) accion = 'renovar_fecha'
+
+    const plantel = await queryOne('SELECT nombre FROM planteles WHERE id = $1', [req.params.id])
+    await logAuditoria({
+      plantelId: req.params.id,
+      plantelNombre: plantel?.nombre || req.params.id,
+      usuario: req.user,
+      accion,
+      detalle: b,
+      ip: req.ip,
+    })
+  }
   res.json(await queryOne('SELECT * FROM planteles WHERE id = $1', [req.params.id]))
 })
 

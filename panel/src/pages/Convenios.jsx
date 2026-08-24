@@ -47,6 +47,8 @@ export default function Convenios() {
   const [previewDocx, setPreviewDocx] = useState(null) // plantel object
   const [previewCargando, setPreviewCargando] = useState(false)
   const previewContainerRef = useRef(null)
+  const [historialPlantel, setHistorialPlantel] = useState(null) // { plantel, rows }
+  const [historialCargando, setHistorialCargando] = useState(false)
 
   async function cargar() {
     try { setPlanteles(await api.getPlanteles()) } catch (e) { console.error(e) }
@@ -198,6 +200,16 @@ export default function Convenios() {
     setPreviewCargando(true)
   }
 
+  async function abrirHistorial(p) {
+    setHistorialPlantel({ plantel: p, rows: [] })
+    setHistorialCargando(true)
+    try {
+      const rows = await api.getConveniosAuditoria(p.id)
+      setHistorialPlantel({ plantel: p, rows })
+    } catch (e) { alert('Error: ' + e.message) }
+    finally { setHistorialCargando(false) }
+  }
+
   async function darDeBaja(p) {
     setGuardando(true)
     try {
@@ -250,6 +262,7 @@ export default function Convenios() {
               <th style={{ textAlign: 'center' }}>Datos</th>
               <th style={{ textAlign: 'center' }}>Docs</th>
               <th style={{ textAlign: 'center' }}>Baja</th>
+              <th style={{ textAlign: 'center' }}>Historial</th>
             </tr>
           </thead>
           <tbody>
@@ -299,10 +312,16 @@ export default function Convenios() {
                     </button>
                   )}
                 </td>
+                <td style={{ textAlign: 'center' }}>
+                  <button className="btn-mini" style={{ color: '#555', borderColor: '#aaa' }}
+                    onClick={() => abrirHistorial(p)}>
+                    📋
+                  </button>
+                </td>
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td colSpan={9} className="tabla-vacio">Sin planteles registrados.</td></tr>
+              <tr><td colSpan={10} className="tabla-vacio">Sin planteles registrados.</td></tr>
             )}
           </tbody>
         </table>
@@ -590,6 +609,65 @@ export default function Convenios() {
             />
           </div>
         </div>
+      )}
+
+      {/* Modal: historial de auditoría */}
+      {historialPlantel && (
+        <Modal titulo={`📋 Historial — ${historialPlantel.plantel.nombre}`} onClose={() => setHistorialPlantel(null)} ancho={780}>
+          {historialCargando ? (
+            <p className="texto-muted" style={{ textAlign: 'center', padding: 24 }}>Cargando…</p>
+          ) : historialPlantel.rows.length === 0 ? (
+            <p className="texto-muted" style={{ textAlign: 'center', padding: 24 }}>Sin registros aún.</p>
+          ) : (
+            <div className="tabla-wrap" style={{ maxHeight: 420, overflowY: 'auto' }}>
+              <table className="tabla" style={{ fontSize: 13 }}>
+                <thead>
+                  <tr>
+                    <th>Fecha y hora</th>
+                    <th>Usuario</th>
+                    <th>Acción</th>
+                    <th>Folio</th>
+                    <th>Detalle</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {historialPlantel.rows.map(r => (
+                    <tr key={r.id}>
+                      <td style={{ whiteSpace: 'nowrap' }}>
+                        {new Date(r.created_at).toLocaleString('es-MX', { dateStyle: 'short', timeStyle: 'short' })}
+                      </td>
+                      <td>{r.usuario_nombre}</td>
+                      <td>
+                        <span className={`badge ${
+                          r.accion === 'generar_docx'    ? 'asignada' :
+                          r.accion === 'dar_de_baja'     ? 'baja' :
+                          r.accion === 'reactivar'       ? 'nueva' :
+                          'buzon-en_revision'
+                        }`}>
+                          {{ generar_docx: '📄 Generar DOCX', dar_de_baja: '🔴 Dar de baja',
+                             reactivar: '🟢 Reactivar', actualizar_datos: '✏️ Datos',
+                             renovar_fecha: '📅 Renovar fecha' }[r.accion] || r.accion}
+                        </span>
+                      </td>
+                      <td style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--texto-muted)' }}>
+                        {r.folio || '—'}
+                      </td>
+                      <td style={{ maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--texto-muted)' }}
+                          title={typeof r.detalle === 'object' ? JSON.stringify(r.detalle) : r.detalle}>
+                        {typeof r.detalle === 'object'
+                          ? Object.entries(r.detalle).filter(([,v]) => v != null && v !== false).map(([k,v]) => `${k}: ${v}`).join(' · ')
+                          : r.detalle}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+          <div className="modal-acciones">
+            <button className="btn-primario" onClick={() => setHistorialPlantel(null)}>Cerrar</button>
+          </div>
+        </Modal>
       )}
 
       {/* Modal: confirmar baja de convenio */}
