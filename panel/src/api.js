@@ -331,6 +331,15 @@ export async function subirDocumentoConvenio(plantelId, tipo, archivo) {
 }
 
 // ── Convenios ─────────────────────────────────────────────────────────────────
+export async function fetchConvenioDOCXBlob(plantelId) {
+  const res = await fetch(`${BASE}/planteles/${plantelId}/generar-convenio`, { credentials: 'include' })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.error || 'Error al generar convenio')
+  }
+  return res.blob()
+}
+
 export async function descargarConvenioDOCX(plantelId) {
   const res = await fetch(`${BASE}/planteles/${plantelId}/generar-convenio`, {
     credentials: 'include'

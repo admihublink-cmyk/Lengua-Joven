@@ -283,12 +283,12 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           borders: {
-            top:     { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            bottom:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            left:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            right:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            top:     { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            bottom:  { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            left:    { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            right:   { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            insideH: { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            insideV: { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
           },
           rows: [
             // Fila 1: nombre de la organización
@@ -297,12 +297,12 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
                 new TableCell({
                   children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: 'INSTITUTO ESTATAL DE LA JUVENTUD', bold: true, size: 22, font: 'Arial' })] })],
                   margins: { top: 200, bottom: 0, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
                 new TableCell({
                   children: [new Paragraph({ alignment: AlignmentType.CENTER, children: [new TextRun({ text: razonSocial.toUpperCase(), bold: true, size: 22, font: 'Arial' })] })],
                   margins: { top: 200, bottom: 0, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
               ]
             }),
@@ -311,11 +311,11 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
               children: [
                 new TableCell({
                   children: [new Paragraph({ spacing: { after: 1800 }, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] })],
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
                 new TableCell({
                   children: [new Paragraph({ spacing: { after: 1800 }, children: [new TextRun({ text: '', size: 22, font: 'Arial' })] })],
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
               ]
             }),
@@ -328,7 +328,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'DIRECTOR GENERAL', bold: true, size: 22, font: 'Arial' })] }),
                   ],
                   margins: { top: 0, bottom: 200, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
                 new TableCell({
                   children: [
@@ -336,7 +336,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'REPRESENTANTE LEGAL', bold: true, size: 22, font: 'Arial' })] }),
                   ],
                   margins: { top: 0, bottom: 200, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
               ]
             }),
@@ -350,12 +350,12 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
           borders: {
-            top:     { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            bottom:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            left:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            right:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
-            insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            top:     { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            bottom:  { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            left:    { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            right:   { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            insideH: { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
+            insideV: { style: BorderStyle.NIL, size: 0, color: 'FFFFFF' },
           },
           rows: [
             new TableRow({
@@ -366,7 +366,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'DIRECTOR DE BIENESTAR Y CALIDAD DE VIDA', bold: true, size: 22, font: 'Arial' })] }),
                   ],
                   margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
                 new TableCell({
                   children: [
@@ -374,7 +374,7 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
                     new Paragraph({ alignment: AlignmentType.CENTER, spacing: { after: 200 }, children: [new TextRun({ text: 'JEFATURA DE BIENESTAR', bold: true, size: 22, font: 'Arial' })] }),
                   ],
                   margins: { top: 200, bottom: 200, left: 200, right: 200 },
-                  borders: { top: { style: BorderStyle.NONE }, bottom: { style: BorderStyle.NONE }, left: { style: BorderStyle.NONE }, right: { style: BorderStyle.NONE } },
+                  borders: { top: { style: BorderStyle.NIL }, bottom: { style: BorderStyle.NIL }, left: { style: BorderStyle.NIL }, right: { style: BorderStyle.NIL } },
                 }),
               ]
             }),
