@@ -1,12 +1,9 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import * as api from '../api'
-import { useAuth } from '../App'
 
 const pesos = (n) => '$' + Number(n || 0).toLocaleString('es-MX', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
 
-function periodoActual() {
-  return new Date().toISOString().slice(0, 7)
-}
+function periodoActual() { return new Date().toISOString().slice(0, 7) }
 
 function periodoLabel(p) {
   if (!p) return ''
@@ -15,7 +12,6 @@ function periodoLabel(p) {
   return `${nombres[parseInt(m) - 1]} ${y}`
 }
 
-// Lista de períodos recientes (últimos 12 meses)
 function periodosRecientes() {
   const lista = []
   const now = new Date()
@@ -26,259 +22,208 @@ function periodosRecientes() {
   return lista
 }
 
-export default function PagosMaestros() {
-  const { usuario } = useAuth()
-  const [periodo, setPeriodo] = useState(periodoActual)
-  const [data, setData] = useState(null)
-  const [loading, setLoading] = useState(false)
-  const [editando, setEditando] = useState(null) // { maestro_id, horas, notas }
-  const [detalle, setDetalle] = useState(null)   // { maestro, sesiones, horas, monto }
-  const [msg, setMsg] = useState(null)
+const BADGE = {
+  liquidado: { background: '#E7F5EC', color: '#1B7A3D' },
+  pendiente:  { background: '#FFF1DE', color: '#B86500' },
+}
 
-  async function cargar() {
-    setLoading(true)
-    try {
-      setData(await api.getPagosMaestro(periodo))
-    } catch (e) {
-      notif('error', e.message)
-    } finally { setLoading(false) }
-  }
-
-  useEffect(() => { cargar() }, [periodo])
+export default function Liquidaciones() {
+  const [periodo, setPeriodo]   = useState(periodoActual)
+  const [data, setData]         = useState(null)
+  const [loading, setLoading]   = useState(false)
+  const [msg, setMsg]           = useState(null)
+  const [notasModal, setNotasModal] = useState(null) // { plantel_id, notas }
 
   function notif(tipo, texto) {
     setMsg({ tipo, texto })
     setTimeout(() => setMsg(null), 5000)
   }
 
-  async function guardar(maestroId, campos) {
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try { setData(await api.getLiquidaciones(periodo)) }
+    catch (e) { notif('error', e.message) }
+    finally { setLoading(false) }
+  }, [periodo])
+
+  useEffect(() => { cargar() }, [cargar])
+
+  async function marcar(plantelId, estadoActual) {
+    const nuevoEstado = estadoActual === 'liquidado' ? 'pendiente' : 'liquidado'
     try {
-      await api.actualizarPagoMaestro({ maestro_id: maestroId, periodo, ...campos })
-      setEditando(null)
+      await api.actualizarLiquidacion({ plantel_id: plantelId, periodo, estado: nuevoEstado })
       await cargar()
     } catch (e) { notif('error', e.message) }
   }
 
-  async function verDetalle(maestroId, maestroNombre) {
+  async function guardarNotas(plantelId, notas) {
     try {
-      const r = await api.recalcularHorasMaestro(maestroId, periodo)
-      setDetalle({ maestro: maestroNombre, ...r })
+      await api.actualizarLiquidacion({ plantel_id: plantelId, periodo, notas })
+      setNotasModal(null)
+      await cargar()
     } catch (e) { notif('error', e.message) }
   }
 
   async function exportar() {
-    try { await api.exportarPagosMaestroCSV(periodo) }
+    try { await api.exportarLiquidacionesCSV(periodo) }
     catch (e) { notif('error', e.message) }
   }
 
   const rows = data?.rows || []
-  const pendientes = rows.filter(r => r.estado === 'pendiente' && r.horas > 0)
-  const pagados = rows.filter(r => r.estado === 'pagado')
 
   return (
-    <div style={{ maxWidth: 1000, margin: '0 auto', padding: '0 16px' }}>
-
+    <div>
       {/* Encabezado */}
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-        <h2 style={{ margin: 0 }}>Pagos a Maestros</h2>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <select
-            value={periodo}
-            onChange={e => setPeriodo(e.target.value)}
-            style={{ padding: '8px 12px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 14 }}
-          >
-            {periodosRecientes().map(p => (
-              <option key={p} value={p}>{periodoLabel(p)}</option>
-            ))}
+      <div className="page-header">
+        <div>
+          <h2>Liquidaciones por Plantel</h2>
+          <p style={{ margin: '2px 0 0', fontSize: 13, color: 'var(--texto-muted)' }}>
+            Cuota Lengua Joven por inscripción: <b>{data ? pesos(data.cuota_lj) : '$200.00'}</b>
+          </p>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+          <select className="input-base" value={periodo} onChange={e => setPeriodo(e.target.value)}
+            style={{ padding: '8px 12px', fontSize: 14 }}>
+            {periodosRecientes().map(p => <option key={p} value={p}>{periodoLabel(p)}</option>)}
           </select>
-          <button
-            onClick={exportar}
-            style={{ padding: '8px 14px', borderRadius: 6, border: '1px solid #d1d5db', fontSize: 13, cursor: 'pointer', background: '#fff' }}
-          >
-            Exportar CSV
-          </button>
+          <button className="btn-sec" onClick={exportar}>Exportar CSV</button>
         </div>
       </div>
 
-      {msg && (
-        <div style={{
-          padding: '12px 16px', borderRadius: 8, marginBottom: 16,
-          background: msg.tipo === 'ok' ? '#d1fae5' : '#fee2e2',
-          color: msg.tipo === 'ok' ? '#065f46' : '#991b1b',
-        }}>
-          {msg.texto}
-        </div>
-      )}
-
       {/* Resumen */}
       {data && (
-        <div style={{ display: 'flex', gap: 12, marginBottom: 24, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 20 }}>
           {[
-            { label: 'Total del período', valor: pesos(data.total), color: '#1d4ed8' },
-            { label: 'Pendiente de pago', valor: pesos(data.pendiente), color: '#b45309' },
-            { label: 'Pagado', valor: pesos(data.pagado), color: '#065f46' },
-            { label: 'Tarifa hora', valor: pesos(data.tarifa), color: '#6b7280' },
+            { label: 'Planteles con inscritos', valor: rows.filter(r => r.num_inscripciones > 0).length, unit: '' },
+            { label: 'Total inscritos', valor: data.totalInscritos, unit: '' },
+            { label: 'Cuota total LJ', valor: pesos(data.totalCuota), unit: '', color: '#B86500' },
+            { label: 'A transferir a planteles', valor: pesos(data.totalTransferir), unit: '', color: '#1B7A3D' },
+            { label: 'Pendientes de liquidar', valor: data.pendientes, unit: '', color: data.pendientes ? '#B3261E' : undefined },
           ].map(c => (
-            <div key={c.label} style={{ flex: '1 1 160px', background: '#f9fafb', border: '1px solid #e5e7eb', borderRadius: 8, padding: '12px 16px' }}>
-              <div style={{ fontSize: 12, color: '#6b7280', marginBottom: 4 }}>{c.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: c.color }}>{c.valor}</div>
+            <div key={c.label} style={{ flex: '1 1 150px', background: 'var(--bg-2)', border: '1px solid var(--borde)', borderRadius: 10, padding: '12px 16px' }}>
+              <div style={{ fontSize: 12, color: 'var(--texto-muted)', marginBottom: 4 }}>{c.label}</div>
+              <div style={{ fontSize: 20, fontWeight: 800, color: c.color || 'var(--texto)' }}>{c.valor}</div>
             </div>
           ))}
         </div>
       )}
 
+      {msg && (
+        <div style={{
+          padding: '12px 16px', borderRadius: 8, marginBottom: 16,
+          background: msg.tipo === 'ok' ? '#E7F5EC' : '#FDECEC',
+          color: msg.tipo === 'ok' ? '#1B7A3D' : '#B3261E',
+          border: `1px solid ${msg.tipo === 'ok' ? '#6ee7b7' : '#fca5a5'}`,
+          fontWeight: 600, fontSize: 14,
+        }}>
+          {msg.texto}
+        </div>
+      )}
+
       {loading ? (
-        <p style={{ color: '#6b7280' }}>Cargando…</p>
-      ) : rows.length === 0 ? (
-        <p style={{ color: '#6b7280' }}>No hay profesores registrados en este período.</p>
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--texto-muted)' }}>Cargando…</div>
+      ) : !rows.length ? (
+        <div style={{ padding: 32, textAlign: 'center', color: 'var(--texto-muted)', background: 'var(--bg-2)', borderRadius: 12 }}>
+          No hay planteles registrados.
+        </div>
       ) : (
-        <div style={{ overflowX: 'auto' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+        <div className="tabla-wrap">
+          <table className="tabla">
             <thead>
-              <tr style={{ background: '#f9fafb' }}>
-                <th style={th}>Maestro</th>
-                <th style={{ ...th, textAlign: 'right' }}>Horas</th>
-                <th style={{ ...th, textAlign: 'right' }}>Monto</th>
-                <th style={th}>Estado</th>
-                <th style={th}>Notas</th>
-                <th style={th}>Acciones</th>
+              <tr>
+                <th>Plantel</th>
+                <th style={{ textAlign: 'right' }}>Inscritos</th>
+                <th style={{ textAlign: 'right' }}>Cobrado</th>
+                <th style={{ textAlign: 'right' }}>Cuota LJ</th>
+                <th style={{ textAlign: 'right' }}>A transferir</th>
+                <th>Estado</th>
+                <th>Notas</th>
+                <th>Acciones</th>
               </tr>
             </thead>
             <tbody>
               {rows.map(r => (
-                <tr key={r.maestro_id} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                  <td style={td}>
-                    <button
-                      onClick={() => verDetalle(r.maestro_id, r.maestro)}
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#2563eb', textDecoration: 'underline', padding: 0, fontSize: 14 }}
-                    >
-                      {r.maestro}
-                    </button>
+                <tr key={r.plantel_id} style={r.num_inscripciones === 0 ? { opacity: 0.5 } : undefined}>
+                  <td style={{ fontWeight: 600 }}>{r.plantel_nombre}</td>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
+                    {r.num_inscripciones}
                   </td>
-                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    {editando?.maestro_id === r.maestro_id ? (
-                      <input
-                        type="number" min="0" step="0.5"
-                        value={editando.horas}
-                        onChange={e => setEditando(v => ({ ...v, horas: e.target.value }))}
-                        style={{ width: 70, padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: 4, textAlign: 'right' }}
-                      />
-                    ) : (
-                      <span style={{ color: r.horas === 0 ? '#9ca3af' : '#111' }}>{r.horas}h</span>
-                    )}
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'var(--texto-muted)', fontSize: 13 }}>
+                    {r.cobrado > 0 ? pesos(r.cobrado) : '—'}
                   </td>
-                  <td style={{ ...td, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
-                    {pesos(r.monto)}
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#B86500', fontWeight: 700 }}>
+                    {r.num_inscripciones > 0 ? pesos(r.cuota_lj) : '—'}
                   </td>
-                  <td style={td}>
-                    <span style={{
-                      display: 'inline-block', padding: '3px 10px', borderRadius: 12, fontSize: 12, fontWeight: 600,
-                      background: r.estado === 'pagado' ? 'rgba(5,150,105,.12)' : 'rgba(217,119,6,.12)',
-                      color: r.estado === 'pagado' ? '#065f46' : '#b45309',
-                    }}>
-                      {r.estado === 'pagado' ? 'Pagado' : 'Pendiente'}
-                    </span>
+                  <td style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: '#1B7A3D', fontWeight: 700 }}>
+                    {r.num_inscripciones > 0 ? pesos(r.transferir) : '—'}
                   </td>
-                  <td style={td}>
-                    {editando?.maestro_id === r.maestro_id ? (
-                      <input
-                        type="text" placeholder="Notas opcionales"
-                        value={editando.notas}
-                        onChange={e => setEditando(v => ({ ...v, notas: e.target.value }))}
-                        style={{ width: '100%', padding: '4px 6px', border: '1px solid #d1d5db', borderRadius: 4 }}
-                      />
-                    ) : (
-                      <span style={{ color: '#6b7280', fontSize: 13 }}>{r.notas || '—'}</span>
-                    )}
+                  <td>
+                    {r.num_inscripciones > 0 ? (
+                      <span className="badge" style={BADGE[r.estado] || BADGE.pendiente}>
+                        {r.estado === 'liquidado' ? 'Liquidado' : 'Pendiente'}
+                      </span>
+                    ) : <span style={{ color: 'var(--texto-muted)', fontSize: 12 }}>Sin movimientos</span>}
                   </td>
-                  <td style={{ ...td, whiteSpace: 'nowrap' }}>
-                    {editando?.maestro_id === r.maestro_id ? (
-                      <>
-                        <button onClick={() => guardar(r.maestro_id, { horas: parseFloat(editando.horas) || 0, notas: editando.notas })}
-                          style={btnSmall('#2563eb')}>Guardar</button>
-                        <button onClick={() => setEditando(null)} style={{ ...btnSmall('#6b7280'), marginLeft: 4 }}>✕</button>
-                      </>
-                    ) : (
-                      <>
-                        <button onClick={() => setEditando({ maestro_id: r.maestro_id, horas: r.horas, notas: r.notas || '' })}
-                          style={btnSmall('#6b7280')}>Editar</button>
-                        <button
-                          onClick={() => guardar(r.maestro_id, { estado: r.estado === 'pagado' ? 'pendiente' : 'pagado' })}
-                          style={{ ...btnSmall(r.estado === 'pagado' ? '#b45309' : '#065f46'), marginLeft: 4 }}
-                        >
-                          {r.estado === 'pagado' ? 'Desmarcar' : 'Marcar pagado'}
+                  <td style={{ fontSize: 13, color: 'var(--texto-muted)', maxWidth: 180 }}>
+                    {r.notas || '—'}
+                  </td>
+                  <td>
+                    {r.num_inscripciones > 0 && (
+                      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                        <button className="btn-mini"
+                          onClick={() => marcar(r.plantel_id, r.estado)}
+                          style={r.estado === 'liquidado'
+                            ? { color: '#B86500', borderColor: '#B86500' }
+                            : { color: '#1B7A3D', borderColor: '#1B7A3D' }}>
+                          {r.estado === 'liquidado' ? 'Desmarcar' : 'Marcar liquidado'}
                         </button>
-                      </>
+                        <button className="btn-mini"
+                          onClick={() => setNotasModal({ plantel_id: r.plantel_id, nombre: r.plantel_nombre, notas: r.notas || '' })}>
+                          Notas
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
               ))}
             </tbody>
             <tfoot>
-              <tr style={{ borderTop: '2px solid #e5e7eb', background: '#f9fafb' }}>
-                <td style={{ ...td, fontWeight: 600 }}>Total</td>
-                <td style={{ ...td, textAlign: 'right', fontWeight: 600 }}>{rows.reduce((s, r) => s + r.horas, 0)}h</td>
-                <td style={{ ...td, textAlign: 'right', fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{pesos(data?.total)}</td>
-                <td colSpan={3} style={td} />
+              <tr style={{ borderTop: '2px solid var(--borde)', fontWeight: 700 }}>
+                <td>Total</td>
+                <td style={{ textAlign: 'right' }}>{data?.totalInscritos ?? 0}</td>
+                <td />
+                <td style={{ textAlign: 'right', color: '#B86500' }}>{pesos(data?.totalCuota)}</td>
+                <td style={{ textAlign: 'right', color: '#1B7A3D' }}>{pesos(data?.totalTransferir)}</td>
+                <td colSpan={3} />
               </tr>
             </tfoot>
           </table>
         </div>
       )}
 
-      {/* Modal detalle de sesiones */}
-      {detalle && (
-        <div style={{
-          position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000,
-          display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
-        }}>
-          <div style={{ background: 'var(--bg-2)', borderRadius: 12, padding: 24, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', border: '1px solid var(--borde)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-              <h3 style={{ margin: 0 }}>Sesiones — {detalle.maestro}</h3>
-              <button onClick={() => setDetalle(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
+      {/* Modal notas */}
+      {notasModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
+          <div style={{ background: 'var(--bg-2)', borderRadius: 12, padding: 24, width: '100%', maxWidth: 440, border: '1px solid var(--borde)' }}>
+            <h3 style={{ margin: '0 0 4px' }}>Notas — {notasModal.nombre}</h3>
+            <p style={{ margin: '0 0 12px', fontSize: 13, color: 'var(--texto-muted)' }}>{periodoLabel(periodo)}</p>
+            <textarea
+              rows={4}
+              style={{ width: '100%', boxSizing: 'border-box', padding: '8px 10px', borderRadius: 8, border: '1.5px solid var(--borde)', background: 'var(--bg-3)', color: 'var(--texto)', fontSize: 14, resize: 'vertical', fontFamily: 'inherit' }}
+              value={notasModal.notas}
+              onChange={e => setNotasModal(v => ({ ...v, notas: e.target.value }))}
+              placeholder="Observaciones sobre esta liquidación…"
+              autoFocus
+            />
+            <div className="modal-acciones">
+              <button className="btn-sec" onClick={() => setNotasModal(null)}>Cancelar</button>
+              <button className="btn-primario" onClick={() => guardarNotas(notasModal.plantel_id, notasModal.notas)}>
+                Guardar
+              </button>
             </div>
-            <p style={{ margin: '0 0 16px', color: 'var(--texto-muted)', fontSize: 14 }}>
-              {periodoLabel(periodo)} · {detalle.horas}h · {pesos(detalle.monto)}
-            </p>
-            {detalle.detalle.length === 0 ? (
-              <p style={{ color: 'var(--texto-muted)' }}>No hay sesiones únicas registradas en este período. Las sesiones semanales recurrentes no se calculan automáticamente — edita las horas manualmente.</p>
-            ) : (
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ background: '#f9fafb' }}>
-                    <th style={th}>Fecha</th>
-                    <th style={th}>Grupo</th>
-                    <th style={th}>Sesión</th>
-                    <th style={{ ...th, textAlign: 'right' }}>Horas</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {detalle.detalle.map((s, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid #f3f4f6' }}>
-                      <td style={td}>{s.fecha}</td>
-                      <td style={td}>{s.grupo}</td>
-                      <td style={td}>{s.titulo || '—'}</td>
-                      <td style={{ ...td, textAlign: 'right' }}>
-                        {s.hora_inicio && s.hora_fin ? `${s.hora_inicio}–${s.hora_fin}` : '—'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            )}
-            <p style={{ fontSize: 12, color: 'var(--texto-muted)', marginTop: 12 }}>
-              Solo se muestran sesiones de tipo "única" (fecha específica). Para editar las horas totales, usa el botón Editar en la tabla.
-            </p>
           </div>
         </div>
       )}
     </div>
   )
 }
-
-const th = { padding: '10px 12px', textAlign: 'left', fontWeight: 600, color: '#374151', borderBottom: '2px solid #e5e7eb', whiteSpace: 'nowrap' }
-const td = { padding: '10px 12px', color: '#374151', verticalAlign: 'middle' }
-const btnSmall = (color) => ({
-  fontSize: 12, padding: '4px 10px', borderRadius: 4,
-  border: `1px solid ${color}`, color, background: 'transparent', cursor: 'pointer'
-})
