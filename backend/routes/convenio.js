@@ -57,15 +57,19 @@ function tablaOferta(idioma, filas) {
           margins: { top: 60, bottom: 60, left: 100, right: 100 },
         }))
       }),
-      ...filas.map(f => new TableRow({
-        children: [
-          celda(f.categoria, { center: true }),
-          celda(f.edades, { center: true }),
-          celda(`$${Number(f.costo || 0).toLocaleString('es-MX')}`, { center: true }),
-          celda(`$${APORTACION_INJUVE.toLocaleString('es-MX')}`, { center: true }),
-          celda(`$${(Number(f.costo || 0) + APORTACION_INJUVE).toLocaleString('es-MX')}`, { center: true, bold: true }),
-        ]
-      }))
+      ...filas.map(f => {
+        const costoFinal = Number(f.costo || 0)
+        const costoLJ = Math.max(0, costoFinal - APORTACION_INJUVE)
+        return new TableRow({
+          children: [
+            celda(f.categoria, { center: true }),
+            celda(f.edades, { center: true }),
+            celda(`$${costoLJ.toLocaleString('es-MX')}`, { center: true }),
+            celda(`$${APORTACION_INJUVE.toLocaleString('es-MX')}`, { center: true }),
+            celda(`$${costoFinal.toLocaleString('es-MX')}`, { center: true, bold: true }),
+          ]
+        })
+      })
     ]
   })
 }
