@@ -261,6 +261,14 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
         // Tabla de firmantes principales
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top:     { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+          },
           rows: [
             // Fila 1: nombre de la organización
             new TableRow({
@@ -320,6 +328,14 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
         // Tabla de testigos
         new Table({
           width: { size: 100, type: WidthType.PERCENTAGE },
+          borders: {
+            top:     { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            bottom:  { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            left:    { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            right:   { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            insideH: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+            insideV: { style: BorderStyle.NONE, size: 0, color: 'FFFFFF' },
+          },
           rows: [
             new TableRow({
               children: [
