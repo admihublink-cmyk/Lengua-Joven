@@ -78,8 +78,31 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (sets.length) {
     await run(`UPDATE planteles SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
 
-    // Determinar acción semántica para auditoría
+    // Suspender / reactivar usuarios vinculados al plantel cuando cambia convenio_baja
     const b = req.body
+    if (b.convenio_baja === true) {
+      // Suspender usuarios activos del plantel (directores + coordinadores)
+      await run(`
+        UPDATE usuarios SET activo = 0, suspendido_por_convenio = true
+        WHERE activo = 1 AND suspendido_por_convenio = false
+          AND (
+            plantel_id = $1
+            OR id IN (SELECT coordinador_id FROM coordinador_planteles WHERE plantel_id = $1)
+          )
+      `, [req.params.id])
+    } else if (b.convenio_baja === false) {
+      // Reactivar solo los suspendidos por esta baja
+      await run(`
+        UPDATE usuarios SET activo = 1, suspendido_por_convenio = false
+        WHERE suspendido_por_convenio = true
+          AND (
+            plantel_id = $1
+            OR id IN (SELECT coordinador_id FROM coordinador_planteles WHERE plantel_id = $1)
+          )
+      `, [req.params.id])
+    }
+
+    // Determinar acción semántica para auditoría
     let accion = 'actualizar_datos'
     if (b.convenio_baja === true)  accion = 'dar_de_baja'
     if (b.convenio_baja === false) accion = 'reactivar'
