@@ -1,0 +1,115 @@
+USUARIOS DE PRUEBA — INJUVE PANEL
+Contraseña para todos: Injuve2025!
+============================================================
+
+
+PLANTEL MONTERREY CENTRO
+--------------------------------------------------
+Admin Ventas  admin_ventas.mty@lj.test
+Alumno        alumno.mty@lj.test
+Coordinador   coordinador.mty@lj.test
+Director      director.mty@lj.test
+Profesor      profesor.mty@lj.test
+Tutor         tutor.mty@lj.test
+
+ALTISSIA
+--------------------------------------------------
+Admin Ventas  admin_ventas.alt@lj.test
+Alumno        alumno.alt@lj.test
+Alumno        menor1.alt@lj.test
+Alumno        menor2.alt@lj.test
+Coordinador   coord.alt@lj.test
+Coordinador   coordinador.alt@lj.test
+Director      dir.alt@lj.test
+Director      director.alt@lj.test
+Profesor      profesor.alt@lj.test
+
+PLANTEL GUADALUPE
+--------------------------------------------------
+Admin Ventas  admin_ventas.gdlp@lj.test
+Alumno        alumno.gdlp@lj.test
+Coordinador   coordinador.gdlp@lj.test
+Director      director.gdlp@lj.test
+Profesor      profesor.gdlp@lj.test
+Tutor         tutor.gdlp@lj.test
+
+ACADEMIA DE IDIOMAS NORESTE
+--------------------------------------------------
+Admin Ventas  admin_ventas.ain@lj.test
+Alumno        alumno.ain@lj.test
+Coordinador   coordinador.ain@lj.test
+Director      director.ain@lj.test
+Profesor      profesor.ain@lj.test
+Tutor         tutor.ain@lj.test
+
+INSTITUTO MEXICANO NORTEAMERICANO DE RELACIONES CULTURALES
+--------------------------------------------------
+Admin Ventas  admin_ventas.imnar@lj.test
+Alumno        alumno.imnar@lj.test
+Alumno        menor1.imnar@lj.test
+Alumno        menor2.imnar@lj.test
+Coordinador   coord.imnar@lj.test
+Coordinador   coordinador.imnar@lj.test
+Director      dir.imnar@lj.test
+Director      director.imnar@lj.test
+Profesor      profesor.imnar@lj.test
+
+IDIOMAS EN SERIO
+--------------------------------------------------
+Admin Ventas  admin_ventas.ies@lj.test
+Alumno        alumno.ies@lj.test
+Alumno        menor1.ies@lj.test
+Alumno        menor2.ies@lj.test
+Coordinador   coord.ies@lj.test
+Coordinador   coordinador.ies@lj.test
+Director      dir.ies@lj.test
+Director      director.ies@lj.test
+Profesor      profesor.ies@lj.test
+
+LENGLOBAL
+--------------------------------------------------
+Admin Ventas  admin_ventas.len@lj.test
+Alumno        alumno.len@lj.test
+Alumno        menor1.len@lj.test
+Alumno        menor2.len@lj.test
+Coordinador   coord.len@lj.test
+Coordinador   coordinador.len@lj.test
+Director      dir.len@lj.test
+Director      director.len@lj.test
+Profesor      profesor.len@lj.test
+
+U TALK
+--------------------------------------------------
+Admin Ventas  admin_ventas.utk@lj.test
+Alumno        alumno.utk@lj.test
+Alumno        menor1.utk@lj.test
+Alumno        menor2.utk@lj.test
+Coordinador   coord.utk@lj.test
+Coordinador   coordinador.utk@lj.test
+Director      dir.utk@lj.test
+Director      director.utk@lj.test
+Profesor      profesor.utk@lj.test
+
+ITEM IDIOMAS
+--------------------------------------------------
+Admin Ventas  admin_ventas.item@lj.test
+Alumno        alumno.item@lj.test
+Alumno        menor1.item@lj.test
+Alumno        menor2.item@lj.test
+Coordinador   coord.item@lj.test
+Coordinador   coordinador.item@lj.test
+Director      dir.item@lj.test
+Director      director.item@lj.test
+Profesor      profesor.item@lj.test
+
+CENTRO CULTURAL ALEMÁN
+--------------------------------------------------
+Admin Ventas  admin_ventas.cca@lj.test
+Alumno        alumno.cca@lj.test
+Alumno        menor1.cca@lj.test
+Alumno        menor2.cca@lj.test
+Coordinador   coord.cca@lj.test
+Coordinador   coordinador.cca@lj.test
+Director      dir.cca@lj.test
+Director      director.cca@lj.test
+Profesor      profesor.cca@lj.test

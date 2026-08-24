@@ -150,6 +150,8 @@ app.use('/api/actividad', require('./routes/actividad'))
 app.use('/api/planteles', require('./routes/convenio'))
 app.use('/api/planteles/:id/documentos', require('./routes/documentos_convenio'))
 app.use('/api/banorte', require('./routes/banorte'))
+app.use('/api/pagos-maestro', require('./routes/pagos_maestro'))
+app.use('/api/legal', require('./routes/legal'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 

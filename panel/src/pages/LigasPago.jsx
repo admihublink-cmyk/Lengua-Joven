@@ -36,8 +36,7 @@ export default function LigasPago() {
   const [etapaVista, setEtapaVista] = useState('pendiente')
   const [loading, setLoading] = useState(false)
   const [msg, setMsg] = useState(null)
-  const [loteSeleccionado, setLoteSeleccionado] = useState(null)
-  const [cargandoLigas, setCargandoLigas] = useState(false)
+const [cargandoLigas, setCargandoLigas] = useState(false)
   const fileRef = useRef()
 
   async function cargar() {

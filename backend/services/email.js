@@ -1,5 +1,9 @@
 const nodemailer = require('nodemailer')
 
+function escHtml(str) {
+  return String(str ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 function crearTransporter() {
   return nodemailer.createTransport({
     service: 'gmail',
@@ -217,7 +221,7 @@ async function enviarNotificacionApertura(destinatario, nombre, idioma, plantelN
 
 async function enviarGrupoAsignado({ destinatario, nombre, folio, grupo, nivel, idioma, plantel }) {
   const portalUrl = process.env.FRONTEND_URL || 'http://localhost:5173'
-  const nombreCorto = String(nombre || '').trim().split(/\s+/)[0] || 'Alumno'
+  const nombreCorto = escHtml(String(nombre || '').trim().split(/\s+/)[0] || 'Alumno')
   const transporter = crearTransporter()
   await transporter.sendMail({
     from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
@@ -234,18 +238,18 @@ async function enviarGrupoAsignado({ destinatario, nombre, folio, grupo, nivel, 
         <div style="background:#fff;padding:36px 32px;">
           <h1 style="color:#1a1a1a;font-size:22px;margin:0 0 12px;">¡Hola, ${nombreCorto}! 🎉</h1>
           <p style="color:#444;font-size:15px;line-height:1.7;margin:0 0 20px;">
-            Tu inscripción con folio <strong>${folio}</strong> ya tiene un grupo asignado.
+            Tu inscripción con folio <strong>${escHtml(folio)}</strong> ya tiene un grupo asignado.
             Aquí están los detalles de tu clase:
           </p>
           <div style="background:#fff8f0;border:1.5px solid #f0e0cc;border-radius:10px;padding:20px 24px;margin-bottom:28px;">
             <div style="font-size:13px;color:#888;margin-bottom:10px;text-transform:uppercase;letter-spacing:.05em;font-weight:600;">Tu grupo</div>
             <div style="font-size:15px;color:#222;line-height:2.2;">
-              ${idioma ? `<div>📚 <strong>Idioma:</strong> ${idioma}</div>` : ''}
-              ${plantel ? `<div>🏫 <strong>Plantel:</strong> ${plantel}</div>` : ''}
-              ${nivel ? `<div>🎓 <strong>Nivel:</strong> ${nivel}</div>` : ''}
-              ${grupo.codigo ? `<div>🏷️ <strong>Grupo:</strong> ${grupo.codigo}</div>` : ''}
-              ${grupo.horario ? `<div>🕐 <strong>Horario:</strong> ${grupo.horario}</div>` : ''}
-              ${grupo.fecha_inicio_clases ? `<div>📅 <strong>Inicio de clases:</strong> ${grupo.fecha_inicio_clases}</div>` : ''}
+              ${idioma ? `<div>📚 <strong>Idioma:</strong> ${escHtml(idioma)}</div>` : ''}
+              ${plantel ? `<div>🏫 <strong>Plantel:</strong> ${escHtml(plantel)}</div>` : ''}
+              ${nivel ? `<div>🎓 <strong>Nivel:</strong> ${escHtml(nivel)}</div>` : ''}
+              ${grupo.codigo ? `<div>🏷️ <strong>Grupo:</strong> ${escHtml(grupo.codigo)}</div>` : ''}
+              ${grupo.horario ? `<div>🕐 <strong>Horario:</strong> ${escHtml(grupo.horario)}</div>` : ''}
+              ${grupo.fecha_inicio_clases ? `<div>📅 <strong>Inicio de clases:</strong> ${escHtml(grupo.fecha_inicio_clases)}</div>` : ''}
             </div>
           </div>
           <div style="text-align:center;margin:0 0 28px;">

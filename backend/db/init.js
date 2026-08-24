@@ -377,6 +377,24 @@ async function initDB() {
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT`)
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT`)
 
+  // Lista de espera
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS posicion_espera INTEGER`)
+
+  // Pagos a maestros por período
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS pagos_maestro (
+      id          TEXT PRIMARY KEY,
+      maestro_id  TEXT NOT NULL,
+      periodo     TEXT NOT NULL,
+      horas       REAL NOT NULL DEFAULT 0,
+      monto       REAL NOT NULL DEFAULT 0,
+      estado      TEXT NOT NULL DEFAULT 'pendiente',
+      notas       TEXT,
+      updated_at  TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(maestro_id, periodo)
+    )
+  `)
+
   // Tabla de referencias emitidas — nunca se reusan (ver comentario en referencia.js)
   await pool.query(`
     CREATE TABLE IF NOT EXISTS referencias_emitidas (
@@ -566,6 +584,7 @@ async function seed() {
     ['ciclo_activo','Agosto 2026'],
     ['costo_inscripcion','1500'],
     ['dias_gracia_pago','5'],
+    ['tarifa_hora_profesor','150'],
   ]
   for (const [k, v] of configRows) {
     await run('INSERT INTO config VALUES ($1,$2) ON CONFLICT DO NOTHING', [k, v])

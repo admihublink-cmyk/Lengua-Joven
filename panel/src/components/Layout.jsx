@@ -21,6 +21,7 @@ const NAV_ITEMS = [
   { id: 'inscripciones', icon: '📋',  label: 'Inscripciones',     permiso: P.INSC_VER },
   { id: 'ligas_pago',   icon: '🏦',  label: 'Ligas de Pago',     permiso: P.PAGO_VER },
   { id: 'pagos',         icon: '💳',  label: 'Pagos',             permiso: P.PAGO_VER },
+  { id: 'pagos_maestro', icon: '👩‍🏫', label: 'Pago Maestros',      permiso: P.PAGO_VER },
   // — Seguimiento —
   { seccion: 'Seguimiento', icon: '📊' },
   { id: 'asistencia',    icon: '✓',   label: 'Asistencia',        permiso: P.ASIST_VER },
@@ -30,6 +31,7 @@ const NAV_ITEMS = [
   // — Administración —
   { seccion: 'Administración', icon: '📄' },
   { id: 'convenios',     icon: '📄',  label: 'Convenios',         permiso: P.CONVENIO_GESTIONAR },
+  { id: 'legal',         icon: '⚖️',  label: 'Legal y ARCO',      permiso: P.ARCO_ATENDER },
   { id: 'reportes',      icon: '📈',  label: 'Reportes',          permiso: P.REPORTE_VER_PLANTEL },
   // — Sistema —
   { seccion: 'Sistema', icon: '⚙' },

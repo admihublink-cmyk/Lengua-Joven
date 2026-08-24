@@ -40,6 +40,8 @@ export const P = {
   CONVENIO_GESTIONAR: 'CONVENIO_GESTIONAR', // gestionar convenios y documentos con planteles
   // v2.5
   USUARIOS_ADMIN: 'USUARIOS_ADMIN', // ver y gestionar TODOS los usuarios (superadmin + coordinador)
+  // v2.6
+  ARCO_ATENDER: 'ARCO_ATENDER', // acceder al módulo Legal y ARCO
 }
 
 const TODOS = Object.values(P)
@@ -68,6 +70,7 @@ export const ROL_PERMISOS = {
       P.TAREA_CREAR, P.TAREA_VER,
       P.USUARIOS_GESTIONAR,
       P.BUZON_ENVIAR, P.BUZON_GESTIONAR,
+      P.ARCO_ATENDER,
     ],
     scope: 'plantel',
     label: 'Director',
@@ -86,6 +89,7 @@ export const ROL_PERMISOS = {
       P.CONVENIO_GESTIONAR,
       P.USUARIOS_GESTIONAR,
       P.USUARIOS_ADMIN,
+      P.ARCO_ATENDER,
     ],
     scope: 'multi-plantel',
     label: 'Coordinador LJ',
