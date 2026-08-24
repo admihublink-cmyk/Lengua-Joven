@@ -54,7 +54,8 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
   if (!puedeVerPlantel(req.user, req.params.id)) return res.status(403).json({ error: 'Sin permiso' })
   const campos = ['nombre', 'ciudad', 'convenio_vencimiento', 'convenio_notificado',
-    'razon_social', 'representante_legal', 'rfc', 'domicilio_fiscal', 'tipo_persona', 'proveedor_nombre']
+    'razon_social', 'representante_legal', 'rfc', 'domicilio_fiscal', 'tipo_persona', 'proveedor_nombre',
+    'convenio_baja', 'convenio_baja_fecha']
   const sets = [], vals = []
   for (const c of campos) {
     if (req.body[c] !== undefined) {

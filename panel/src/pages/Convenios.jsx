@@ -3,7 +3,8 @@ import { useAuth } from '../App.jsx'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
 
-function estadoConvenio(dias, tieneVencimiento) {
+function estadoConvenio(dias, tieneVencimiento, deBaja) {
+  if (deBaja) return { label: 'Dado de baja', clase: 'baja' }
   if (!tieneVencimiento) return { label: 'Sin fecha registrada', clase: 'buzon-en_revision' }
   if (dias < 0) return { label: `Vencido hace ${Math.abs(dias)} días`, clase: 'baja' }
   if (dias <= 60) return { label: `Vence en ${dias} días`, clase: 'nueva' }
@@ -41,6 +42,7 @@ export default function Convenios() {
   const [borrando, setBorrando] = useState({})
   const [preview, setPreview] = useState(null) // { url, mimetype, nombre }
   const [thumbs, setThumbs] = useState({}) // { tipo: blobUrl }
+  const [modalBaja, setModalBaja] = useState(null) // plantel object
 
   async function cargar() {
     try { setPlanteles(await api.getPlanteles()) } catch (e) { console.error(e) }
@@ -56,7 +58,7 @@ export default function Convenios() {
       const venc = new Date(p.convenio_vencimiento + 'T12:00:00')
       dias = Math.ceil((venc - hoy) / (1000 * 60 * 60 * 24))
     }
-    return { ...p, dias, estadoInfo: estadoConvenio(dias, tieneVencimiento) }
+    return { ...p, dias, estadoInfo: estadoConvenio(dias, tieneVencimiento, !!p.convenio_baja) }
   }).sort((a, b) => (a.dias ?? Infinity) - (b.dias ?? Infinity))
 
   const porVencer = filas.filter(f => f.dias !== null && f.dias <= 60)
@@ -187,6 +189,27 @@ export default function Convenios() {
     } catch (e) { alert('Error: ' + e.message) } finally { setGuardando(false) }
   }
 
+  async function darDeBaja(p) {
+    setGuardando(true)
+    try {
+      await api.actualizarPlantel(p.id, {
+        convenio_baja: true,
+        convenio_baja_fecha: new Date().toISOString().slice(0, 10),
+      })
+      setModalBaja(null)
+      await cargar()
+    } catch (e) { alert('Error: ' + e.message) } finally { setGuardando(false) }
+  }
+
+  async function reactivar(p) {
+    if (!window.confirm(`¿Reactivar el convenio de "${p.nombre}"?`)) return
+    setGuardando(true)
+    try {
+      await api.actualizarPlantel(p.id, { convenio_baja: false, convenio_baja_fecha: null })
+      await cargar()
+    } catch (e) { alert('Error: ' + e.message) } finally { setGuardando(false) }
+  }
+
   const datosCompletos = (p) => !!(p.razon_social && p.representante_legal && p.rfc && p.domicilio_fiscal)
 
   return (
@@ -217,6 +240,7 @@ export default function Convenios() {
               <th style={{ textAlign: 'center' }}>Fecha</th>
               <th style={{ textAlign: 'center' }}>Datos</th>
               <th style={{ textAlign: 'center' }}>Docs</th>
+              <th style={{ textAlign: 'center' }}>Baja</th>
             </tr>
           </thead>
           <tbody>
@@ -253,10 +277,23 @@ export default function Convenios() {
                     📎 Docs
                   </button>
                 </td>
+                <td style={{ textAlign: 'center' }}>
+                  {p.convenio_baja ? (
+                    <button className="btn-mini" style={{ color: '#1B7A3D', borderColor: '#1B7A3D' }}
+                      onClick={() => reactivar(p)}>
+                      Reactivar
+                    </button>
+                  ) : (
+                    <button className="btn-mini" style={{ color: '#B3261E', borderColor: '#B3261E' }}
+                      onClick={() => setModalBaja(p)}>
+                      Dar de baja
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
             {filas.length === 0 && (
-              <tr><td colSpan={8} className="tabla-vacio">Sin planteles registrados.</td></tr>
+              <tr><td colSpan={9} className="tabla-vacio">Sin planteles registrados.</td></tr>
             )}
           </tbody>
         </table>
@@ -494,6 +531,30 @@ export default function Convenios() {
           <div className="modal-acciones">
             <a href={preview.url} download={preview.nombre} className="btn-sec">⬇ Descargar</a>
             <button className="btn-primario" onClick={() => setPreview(null)}>Cerrar</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal: confirmar baja de convenio */}
+      {modalBaja && (
+        <Modal titulo="Dar de baja convenio" onClose={() => setModalBaja(null)}>
+          <p style={{ marginBottom: 16 }}>
+            ¿Estás seguro de que deseas dar de baja el convenio con{' '}
+            <strong>{modalBaja.nombre}</strong>?
+          </p>
+          <p className="texto-muted" style={{ fontSize: 13, marginBottom: 20 }}>
+            El plantel seguirá registrado en el sistema, pero su convenio quedará marcado como inactivo.
+            Puedes reactivarlo en cualquier momento.
+          </p>
+          <div className="modal-acciones">
+            <button className="btn-sec" onClick={() => setModalBaja(null)}>Cancelar</button>
+            <button
+              style={{ background: '#B3261E', color: '#fff', border: 'none', borderRadius: 8, padding: '8px 18px', fontWeight: 700, cursor: 'pointer', fontSize: 14 }}
+              onClick={() => darDeBaja(modalBaja)}
+              disabled={guardando}
+            >
+              {guardando ? 'Procesando…' : 'Confirmar baja'}
+            </button>
           </div>
         </Modal>
       )}
