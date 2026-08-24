@@ -404,6 +404,19 @@ export async function exportarPagosMaestroCSV(periodo) {
   const link = document.createElement('a')
   link.href = URL.createObjectURL(blob)
   link.download = `pagos_maestros_${periodo}.csv`
-  link.click()
+  document.body.appendChild(link); link.click(); document.body.removeChild(link)
+  URL.revokeObjectURL(link.href)
+}
+
+export const getLiquidaciones = (periodo) => get(`/liquidaciones${periodo ? '?periodo=' + periodo : ''}`)
+export const actualizarLiquidacion = (data) => req('PATCH', '/liquidaciones', data)
+export async function exportarLiquidacionesCSV(periodo) {
+  const res = await fetch(`${BASE}/liquidaciones/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
+  if (!res.ok) throw new Error('Error al exportar')
+  const blob = await res.blob()
+  const link = document.createElement('a')
+  link.href = URL.createObjectURL(blob)
+  link.download = `liquidaciones_${periodo}.csv`
+  document.body.appendChild(link); link.click(); document.body.removeChild(link)
   URL.revokeObjectURL(link.href)
 }
