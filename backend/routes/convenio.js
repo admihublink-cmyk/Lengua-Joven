@@ -2,10 +2,12 @@ const router = require('express').Router()
 const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 const path = require('path')
+const fs = require('fs')
 const {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, BorderStyle, AlignmentType, VerticalAlign, HeadingLevel,
-  PageOrientation, convertInchesToTwip, ShadingType, UnderlineType
+  PageOrientation, convertInchesToTwip, ShadingType, UnderlineType,
+  ImageRun, Header
 } = require('docx')
 
 const APORTACION_INJUVE = 200
@@ -107,6 +109,9 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   const fechaHoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
   const anio = new Date().getFullYear()
 
+  const logoPath = path.join(__dirname, '../assets/injuve_logo.png')
+  const logoBuffer = fs.existsSync(logoPath) ? fs.readFileSync(logoPath) : null
+
   // Obtener idiomas del plantel
   const idiomas = await query('SELECT DISTINCT nombre FROM idiomas WHERE plantel_id = $1 ORDER BY nombre', [plantel.id])
 
@@ -155,6 +160,22 @@ router.get('/:id/generar-convenio', requireAuth, async (req, res) => {
   const doc = new Document({
     sections: [{
       properties: {},
+      headers: logoBuffer ? {
+        default: new Header({
+          children: [
+            new Paragraph({
+              alignment: AlignmentType.LEFT,
+              spacing: { after: 200 },
+              children: [
+                new ImageRun({
+                  data: logoBuffer,
+                  transformation: { width: 160, height: 60 },
+                }),
+              ],
+            }),
+          ],
+        }),
+      } : undefined,
       children: [
         p(`CONVENIO /DG/INJUVE/${String(anio).slice(-4)}/2026`, { center: true, bold: true, size: 24 }),
         p(''),
