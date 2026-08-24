@@ -331,6 +331,9 @@ export async function subirDocumentoConvenio(plantelId, tipo, archivo) {
 }
 
 // ── Convenios ─────────────────────────────────────────────────────────────────
+export const getConveniosAuditoria = (plantelId) =>
+  get(`/convenios/auditoria${plantelId ? `?plantel_id=${plantelId}` : ''}`)
+
 export async function fetchConvenioDOCXBlob(plantelId) {
   const res = await fetch(`${BASE}/planteles/${plantelId}/generar-convenio`, { credentials: 'include' })
   if (!res.ok) {
