@@ -232,16 +232,16 @@ export default function PagosMaestros() {
           position: 'fixed', inset: 0, background: 'rgba(0,0,0,.4)', zIndex: 1000,
           display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16
         }}>
-          <div style={{ background: 'var(--fondo)', borderRadius: 12, padding: 24, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto' }}>
+          <div style={{ background: 'var(--bg-2)', borderRadius: 12, padding: 24, width: '100%', maxWidth: 560, maxHeight: '80vh', overflowY: 'auto', border: '1px solid var(--borde)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <h3 style={{ margin: 0 }}>Sesiones — {detalle.maestro}</h3>
               <button onClick={() => setDetalle(null)} style={{ background: 'none', border: 'none', fontSize: 20, cursor: 'pointer', color: '#6b7280' }}>✕</button>
             </div>
-            <p style={{ margin: '0 0 16px', color: '#6b7280', fontSize: 14 }}>
+            <p style={{ margin: '0 0 16px', color: 'var(--texto-muted)', fontSize: 14 }}>
               {periodoLabel(periodo)} · {detalle.horas}h · {pesos(detalle.monto)}
             </p>
             {detalle.detalle.length === 0 ? (
-              <p style={{ color: '#9ca3af' }}>No hay sesiones únicas registradas en este período. Las sesiones semanales recurrentes no se calculan automáticamente — edita las horas manualmente.</p>
+              <p style={{ color: 'var(--texto-muted)' }}>No hay sesiones únicas registradas en este período. Las sesiones semanales recurrentes no se calculan automáticamente — edita las horas manualmente.</p>
             ) : (
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                 <thead>
@@ -266,7 +266,7 @@ export default function PagosMaestros() {
                 </tbody>
               </table>
             )}
-            <p style={{ fontSize: 12, color: '#9ca3af', marginTop: 12 }}>
+            <p style={{ fontSize: 12, color: 'var(--texto-muted)', marginTop: 12 }}>
               Solo se muestran sesiones de tipo "única" (fecha específica). Para editar las horas totales, usa el botón Editar en la tabla.
             </p>
           </div>
