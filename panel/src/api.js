@@ -334,6 +334,12 @@ export async function subirDocumentoConvenio(plantelId, tipo, archivo) {
 export const getConveniosAuditoria = (plantelId) =>
   get(`/convenios/auditoria${plantelId ? `?plantel_id=${plantelId}` : ''}`)
 
+export const getAvisosAceptaciones = (avisoId) =>
+  get(`/legal/avisos/aceptaciones${avisoId ? `?aviso_id=${avisoId}` : ''}`)
+
+export const getAvisoActivo = () =>
+  fetch(`${BASE}/publico/aviso-privacidad`).then(r => r.ok ? r.json() : null)
+
 export async function fetchConvenioDOCXBlob(plantelId) {
   const res = await fetch(`${BASE}/planteles/${plantelId}/generar-convenio`, { credentials: 'include' })
   if (!res.ok) {

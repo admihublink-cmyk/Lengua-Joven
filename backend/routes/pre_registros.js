@@ -22,8 +22,9 @@ router.post('/publico', async (req, res) => { try {
   }
   const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
     horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
-    genero_nacimiento, estado_nacimiento } = req.body
+    genero_nacimiento, estado_nacimiento, acepto_aviso, aviso_id } = req.body
   if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
+  if (!acepto_aviso) return res.status(400).json({ error: 'Debes aceptar el aviso de privacidad para continuar.' })
   const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/
   if (!curp || !CURP_REGEX.test(curp.trim().toUpperCase())) {
     return res.status(400).json({ error: 'CURP inválido. Verifica que tenga el formato correcto (18 caracteres).' })
@@ -60,6 +61,37 @@ router.post('/publico', async (req, res) => { try {
     tutor_nombre || null, tutor_tel || null, tutor_email || null,
     grupo_interes_id || null,
     genero_nacimiento || null, estado_nacimiento || null])
+  // Registrar aceptación del aviso de privacidad
+  try {
+    let avisoData = null
+    if (aviso_id) {
+      avisoData = await queryOne('SELECT id, nombre, version FROM avisos_privacidad WHERE id = $1', [aviso_id])
+    }
+    if (!avisoData) {
+      avisoData = await queryOne(
+        'SELECT id, nombre, version FROM avisos_privacidad WHERE activo = true ORDER BY creado_en DESC LIMIT 1'
+      )
+    }
+    if (avisoData) {
+      const esMenor = fecha_nacimiento && calcularEdad(fecha_nacimiento) < 18
+      await run(
+        `INSERT INTO avisos_aceptaciones
+           (aviso_id, aviso_nombre, aviso_version, titular_tipo, titular_nombre, titular_email, pre_registro_id, ip)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
+        [
+          avisoData.id, avisoData.nombre, avisoData.version,
+          esMenor ? 'tutor' : 'pre_registro',
+          esMenor ? (tutor_nombre || nombre) : nombre,
+          esMenor ? (tutor_email || email) : email,
+          newId,
+          req.ip,
+        ]
+      )
+    }
+  } catch (e) {
+    console.error('[aviso_aceptacion]', e.message)
+  }
+
   res.status(201).json({ folio, id: newId })
   } catch (e) {
     console.error('[pre_registros/publico]', e.message)

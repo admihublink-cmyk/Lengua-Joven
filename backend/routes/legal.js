@@ -246,4 +246,24 @@ router.post('/avisos', requireAuth, async (req, res) => {
   res.status(201).json({ ok: true })
 })
 
+// GET /legal/avisos/aceptaciones?aviso_id=&limit=200
+router.get('/avisos/aceptaciones', requireAuth, async (req, res) => {
+  if (!ROLES_ARCO.includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const { aviso_id, limit = 200 } = req.query
+  const cond = aviso_id ? 'WHERE a.aviso_id = $1' : ''
+  const params = aviso_id ? [aviso_id] : []
+  const rows = await query(
+    `SELECT a.id, a.aviso_nombre, a.aviso_version, a.titular_tipo,
+            a.titular_nombre, a.titular_email, a.ip, a.aceptado_en,
+            pr.folio AS pre_registro_folio
+     FROM avisos_aceptaciones a
+     LEFT JOIN pre_registros pr ON pr.id = a.pre_registro_id
+     ${cond}
+     ORDER BY a.aceptado_en DESC
+     LIMIT ${Number(limit) || 200}`,
+    params
+  )
+  res.json(rows)
+})
+
 module.exports = router
