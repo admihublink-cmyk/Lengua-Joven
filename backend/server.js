@@ -78,6 +78,20 @@ app.use('/api/periodos', require('./routes/periodos'))
 // Endpoints públicos para landing page
 const { query, queryOne, run } = require('./db/pool')
 
+// Aviso de privacidad activo (para mostrar en landing + pre-registro)
+app.get('/api/publico/aviso-privacidad', async (req, res) => {
+  try {
+    const aviso = await queryOne(
+      `SELECT id, nombre, version, tipo_titular, archivo_url, fecha_vigencia
+       FROM avisos_privacidad
+       WHERE activo = true
+       ORDER BY creado_en DESC LIMIT 1`
+    )
+    if (!aviso) return res.status(404).json({ error: 'Sin aviso activo' })
+    res.json(aviso)
+  } catch (e) { console.error('[publico/aviso]', e.message); res.status(500).json({ error: 'Error interno' }) }
+})
+
 app.get('/api/publico/planteles', async (req, res) => {
   try {
     const rows = await query(`
