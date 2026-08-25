@@ -20,7 +20,7 @@ if (!process.env.JWT_SECRET) {
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(o => o.trim()).filter(Boolean)
 
 function isAllowedOrigin(origin) {
-  if (!origin) return process.env.NODE_ENV !== 'production'
+  if (!origin) return true
   try {
     const requestUrl = new URL(origin)
     const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(requestUrl.hostname)
