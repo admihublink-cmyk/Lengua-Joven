@@ -20,7 +20,7 @@ if (!process.env.JWT_SECRET) {
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(o => o.trim()).filter(Boolean)
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true
+  if (!origin) return process.env.NODE_ENV !== 'production'
   try {
     const requestUrl = new URL(origin)
     const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(requestUrl.hostname)
@@ -78,8 +78,11 @@ app.use('/api/periodos', require('./routes/periodos'))
 // Endpoints públicos para landing page
 const { query, queryOne, run } = require('./db/pool')
 
+// Rate limiting compartido para endpoints públicos (30 req/min por IP)
+const publicRL = (req, res, next) => app.get('rateLimit')(30, 60000)(req, res, next)
+
 // Aviso de privacidad activo (para mostrar en landing + pre-registro)
-app.get('/api/publico/aviso-privacidad', async (req, res) => {
+app.get('/api/publico/aviso-privacidad', publicRL, async (req, res) => {
   try {
     const aviso = await queryOne(
       `SELECT id, nombre, version, tipo_titular, archivo_url, fecha_vigencia
@@ -92,7 +95,7 @@ app.get('/api/publico/aviso-privacidad', async (req, res) => {
   } catch (e) { console.error('[publico/aviso]', e.message); res.status(500).json({ error: 'Error interno' }) }
 })
 
-app.get('/api/publico/planteles', async (req, res) => {
+app.get('/api/publico/planteles', publicRL, async (req, res) => {
   try {
     const rows = await query(`
       SELECT DISTINCT p.id, p.nombre, p.ciudad
@@ -104,14 +107,14 @@ app.get('/api/publico/planteles', async (req, res) => {
   } catch (e) { console.error('[publico/planteles]', e.message); res.status(500).json({ error: 'Error interno' }) }
 })
 
-app.get('/api/publico/idiomas', async (req, res) => {
+app.get('/api/publico/idiomas', publicRL, async (req, res) => {
   try {
     const rows = await query('SELECT id, nombre FROM idiomas ORDER BY nombre')
     res.json(rows)
   } catch (e) { console.error('[publico/idiomas]', e.message); res.status(500).json({ error: 'Error interno' }) }
 })
 
-app.post('/api/publico/suscribir-apertura', async (req, res) => {
+app.post('/api/publico/suscribir-apertura', publicRL, async (req, res) => {
   const { nombre, email, whatsapp, municipio, idioma, plantel_nombre } = req.body
   if (!nombre?.trim() || !email?.trim()) return res.status(400).json({ error: 'Nombre y email son requeridos' })
   try {
@@ -124,7 +127,7 @@ app.post('/api/publico/suscribir-apertura', async (req, res) => {
   } catch (e) { console.error('[publico/suscribir]', e.message); res.status(500).json({ error: 'Error interno' }) }
 })
 
-app.get('/api/publico/grupos', async (req, res) => {
+app.get('/api/publico/grupos', publicRL, async (req, res) => {
   const { plantel_id, idioma } = req.query
   if (!plantel_id || !idioma) return res.json([])
   try {

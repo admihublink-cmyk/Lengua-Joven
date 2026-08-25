@@ -26,12 +26,18 @@ const storage = multer.diskStorage({
   }
 })
 
+const ALLOWED_MIMES = ['image/png', 'application/pdf']
+const ALLOWED_EXTS  = ['.png', '.pdf']
+
 const upload = multer({
   storage,
   limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
   fileFilter(req, file, cb) {
-    const allowed = ['image/png', 'application/pdf']
-    cb(null, allowed.includes(file.mimetype))
+    const ext = path.extname(file.originalname).toLowerCase()
+    if (!ALLOWED_MIMES.includes(file.mimetype) || !ALLOWED_EXTS.includes(ext)) {
+      return cb(new Error('Tipo de archivo no permitido. Solo PNG y PDF.'))
+    }
+    cb(null, true)
   }
 })
 
@@ -44,6 +50,7 @@ function puedeGestionar(req) {
 
 // GET /api/planteles/:id/documentos
 router.get('/', requireAuth, async (req, res) => {
+  if (!puedeGestionar(req)) return res.status(403).json({ error: 'Sin permiso' })
   const docs = await query('SELECT * FROM documentos_convenio WHERE plantel_id = $1 ORDER BY tipo', [req.params.id])
   res.json(docs)
 })
