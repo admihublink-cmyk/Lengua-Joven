@@ -150,7 +150,7 @@ router.post('/:id/crear-cuenta', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
   const { password, plantel_id } = req.body
-  if (!password || password.length < 6) return res.status(400).json({ error: 'Contraseña mínimo 6 caracteres' })
+  if (!password || password.length < 8) return res.status(400).json({ error: 'Contraseña mínimo 8 caracteres' })
 
   const pr = await queryOne('SELECT * FROM pre_registros WHERE id = $1', [req.params.id])
   if (!pr) return res.status(404).json({ error: 'Pre-registro no encontrado' })
@@ -192,7 +192,7 @@ router.post('/:id/crear-cuenta', requireAuth, async (req, res) => {
         await run(`INSERT INTO usuarios (id, nombre, email, password_hash, rol, plantel_id, activo)
           VALUES ($1,$2,$3,$4,$5,$6,$7)`,
           [tutorId, pr.tutor_nombre || 'Tutor', pr.tutor_email, tutorHash, 'tutor', null, 1])
-        tutorResult = { email: pr.tutor_email, password: tutorPassword }
+        tutorResult = { email: pr.tutor_email, enviado: true }
 
         // Enviar correo de bienvenida al tutor
         try {
