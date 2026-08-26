@@ -428,6 +428,40 @@ export async function exportarPagosMaestroCSV(periodo) {
 
 export const getLiquidaciones = (periodo) => get(`/liquidaciones${periodo ? '?periodo=' + periodo : ''}`)
 export const actualizarLiquidacion = (data) => req('PATCH', '/liquidaciones', data)
+
+// ── Atención a Alumnos ────────────────────────────────────────────────────────
+export const getAtencionSolicitudes = (params = {}) => {
+  const qs = new URLSearchParams(Object.entries(params).filter(([, v]) => v != null && v !== '')).toString()
+  return get(`/atencion/solicitudes${qs ? '?' + qs : ''}`)
+}
+export const getAtencionSolicitud = (folio) => get(`/atencion/solicitudes/${folio}`)
+export const crearAtencionSolicitud = (fd) => {
+  return fetch(`${BASE}/atencion/solicitudes`, { method: 'POST', credentials: 'include', body: fd })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Error'); return j })
+}
+export const enviarMensajeAtencion = (folio, fd) => {
+  return fetch(`${BASE}/atencion/solicitudes/${folio}/mensajes`, { method: 'POST', credentials: 'include', body: fd })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Error'); return j })
+}
+export const cambiarEstadoAtencion = (folio, estado, nota) =>
+  req('PATCH', `/atencion/solicitudes/${folio}/estado`, { estado, nota })
+export const asignarAtencion = (folio, asignado_a) =>
+  req('PATCH', `/atencion/solicitudes/${folio}/asignar`, { asignado_a })
+export const cambiarPrioridadAtencion = (folio, prioridad) =>
+  req('PATCH', `/atencion/solicitudes/${folio}/prioridad`, { prioridad })
+export const valorarAtencion = (folio, satisfaccion) =>
+  req('PATCH', `/atencion/solicitudes/${folio}/satisfaccion`, { satisfaccion })
+export const solicitarDocsAtencion = (folio, documentos, nota) =>
+  req('POST', `/atencion/solicitudes/${folio}/docs-solicitados`, { documentos, nota })
+export const subirDocAtencion = (docId, fd) => {
+  return fetch(`${BASE}/atencion/docs/${docId}/subir`, { method: 'POST', credentials: 'include', body: fd })
+    .then(async r => { const j = await r.json(); if (!r.ok) throw new Error(j.error || 'Error'); return j })
+}
+export const revisarDocAtencion = (docId, estado, motivo_rechazo) =>
+  req('PATCH', `/atencion/docs/${docId}/estado`, { estado, motivo_rechazo })
+export const getAtencionDashboard = () => get('/atencion/dashboard')
+export const getCategoriasAtencion = () => get('/atencion/categorias')
+
 export async function exportarLiquidacionesCSV(periodo) {
   const res = await fetch(`${BASE}/liquidaciones/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al exportar')

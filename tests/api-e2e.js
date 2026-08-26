@@ -62,13 +62,15 @@ async function run() {
 
   // ── 3. AUTENTICACIÓN ──────────────────────────────────────────────────────
   console.log('\n[ Autenticación ]')
-  const badLogin = await post('/api/auth/login', { email: 'noexiste@test.com', password: 'wrong' })
-  log(badLogin.status === 401, 'POST /api/auth/login (credenciales incorrectas)', `status ${badLogin.status}`)
-
+  // Login correcto PRIMERO para no consumir intentos del IP antes de autenticarse
   const goodLogin = await post('/api/auth/login', { email: ADMIN_EMAIL, password: ADMIN_PASS })
   const loginOk = goodLogin.status === 200 && goodLogin.body?.user?.rol === 'superadmin'
   log(loginOk, 'POST /api/auth/login (superadmin)', `status ${goodLogin.status} | rol: ${goodLogin.body?.user?.rol ?? goodLogin.body?.error ?? 'sin respuesta'}`)
   if (!cookie) console.log('  ⚠️  Sin cookie — verifica credenciales con ADMIN_PASS=tuPass node tests/api-e2e.js\n')
+
+  // Bad login AL FINAL para no bloquear el IP antes del login correcto
+  const badLogin = await post('/api/auth/login', { email: 'noexiste_test@e2e.com', password: 'wrong' })
+  log(badLogin.status === 401 || badLogin.status === 429, 'POST /api/auth/login (credenciales incorrectas)', `status ${badLogin.status}`)
 
   // ── 4. ENDPOINTS AUTENTICADOS ─────────────────────────────────────────────
   console.log('\n[ Endpoints autenticados ]')

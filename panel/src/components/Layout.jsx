@@ -28,6 +28,9 @@ const NAV_ITEMS = [
   { id: 'evaluacion',    icon: '📊',  label: 'Evaluación',        permiso: P.EVAL_VER },
   { id: 'avisos',        icon: '📢',  label: 'Avisos',            permiso: P.AVISO_VER },
   { id: 'buzon',         icon: '📮',  label: 'Buzón',             permiso: P.BUZON_ENVIAR },
+  // — Atención —
+  { seccion: 'Atención', icon: '🎧' },
+  { id: 'atencion',      icon: '🎧',  label: 'Atención a Alumnos', permiso: P.ATENCION_CREAR },
   // — Administración —
   { seccion: 'Administración', icon: '📄' },
   { id: 'convenios',     icon: '📄',  label: 'Convenios',         permiso: P.CONVENIO_GESTIONAR },

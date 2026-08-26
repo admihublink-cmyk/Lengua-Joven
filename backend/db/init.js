@@ -435,6 +435,72 @@ async function initDB() {
   await pool.query(`ALTER TABLE mensajes ALTER COLUMN para DROP NOT NULL`)
   await pool.query(`ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS chat_grupo_id TEXT`)
 
+  // ── Atención a Alumnos ───────────────────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS atencion_solicitudes (
+      id TEXT PRIMARY KEY,
+      alumno_id TEXT NOT NULL,
+      categoria TEXT NOT NULL,
+      titulo TEXT NOT NULL,
+      descripcion TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'nueva',
+      prioridad TEXT NOT NULL DEFAULT 'media',
+      confidencial INTEGER DEFAULT 0,
+      asignado_a TEXT,
+      plantel_id TEXT,
+      satisfaccion INTEGER,
+      creado_en TEXT NOT NULL,
+      actualizado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS atencion_mensajes (
+      id TEXT PRIMARY KEY,
+      solicitud_id TEXT NOT NULL,
+      autor_id TEXT NOT NULL,
+      contenido TEXT NOT NULL,
+      interno INTEGER DEFAULT 0,
+      tipo TEXT DEFAULT 'mensaje',
+      meta TEXT,
+      creado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS atencion_adjuntos (
+      id TEXT PRIMARY KEY,
+      solicitud_id TEXT NOT NULL,
+      mensaje_id TEXT,
+      nombre_original TEXT NOT NULL,
+      ruta TEXT NOT NULL,
+      mimetype TEXT,
+      subido_por TEXT NOT NULL,
+      creado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS atencion_docs_solicitados (
+      id TEXT PRIMARY KEY,
+      solicitud_id TEXT NOT NULL,
+      mensaje_id TEXT NOT NULL,
+      nombre TEXT NOT NULL,
+      descripcion TEXT,
+      estado TEXT DEFAULT 'pendiente',
+      motivo_rechazo TEXT,
+      adjunto_id TEXT,
+      creado_en TEXT NOT NULL,
+      actualizado_en TEXT NOT NULL
+    )
+  `)
+  // Índices para búsquedas frecuentes
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_atencion_sol_alumno ON atencion_solicitudes (alumno_id)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_atencion_sol_estado ON atencion_solicitudes (estado)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_atencion_msg_sol ON atencion_mensajes (solicitud_id)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_atencion_adj_sol ON atencion_adjuntos (solicitud_id)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_atencion_adj_msg ON atencion_adjuntos (mensaje_id)`)
+
+  // Columna meta en notificaciones (para guardar solicitud_id, etc.)
+  await pool.query(`ALTER TABLE notificaciones ADD COLUMN IF NOT EXISTS meta TEXT`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 

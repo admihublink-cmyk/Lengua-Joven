@@ -168,6 +168,7 @@ app.use('/api/banorte', require('./routes/banorte'))
 app.use('/api/pagos-maestro', require('./routes/pagos_maestro'))
 app.use('/api/liquidaciones', require('./routes/liquidaciones'))
 app.use('/api/legal', require('./routes/legal'))
+app.use('/api/atencion', require('./routes/atencion'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 
