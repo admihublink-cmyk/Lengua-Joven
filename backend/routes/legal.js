@@ -235,10 +235,26 @@ router.post('/avisos', requireAuth, async (req, res) => {
   }
 
   try {
-    await run(
-      'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,$6,true)',
-      [nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia || null]
-    )
+    if (contenido) {
+      try {
+        await run(
+          'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,$6,true)',
+          [nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia || null]
+        )
+      } catch (e2) {
+        if (e2.code === '23505') throw e2
+        // columna contenido no existe — insertar sin ella
+        await run(
+          'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,true)',
+          [nombre, version, tipo_titular, archivo_url, fecha_vigencia || null]
+        )
+      }
+    } else {
+      await run(
+        'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,true)',
+        [nombre, version, tipo_titular, archivo_url, fecha_vigencia || null]
+      )
+    }
   } catch (e) {
     const msg = e.code === '23505' ? 'Ya existe un aviso con ese nombre y versión.' : 'No se pudo guardar el aviso.'
     return res.status(400).json({ error: msg })
