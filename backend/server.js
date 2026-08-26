@@ -85,10 +85,7 @@ const publicRL = (req, res, next) => app.get('rateLimit')(30, 60000)(req, res, n
 app.get('/api/publico/aviso-privacidad', publicRL, async (req, res) => {
   try {
     const aviso = await queryOne(
-      `SELECT id, nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia
-       FROM avisos_privacidad
-       WHERE activo = true
-       ORDER BY creado_en DESC LIMIT 1`
+      `SELECT * FROM avisos_privacidad WHERE activo = true ORDER BY creado_en DESC LIMIT 1`
     )
     if (!aviso) return res.status(404).json({ error: 'Sin aviso activo' })
     res.json(aviso)

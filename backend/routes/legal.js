@@ -210,7 +210,7 @@ router.patch('/', requireAuth, async (req, res) => {
 // ── GET /avisos ───────────────────────────────────────────────────────────────
 router.get('/avisos', requireAuth, async (req, res) => {
   if (!ROLES_ARCO.includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
-  const rows = await query('SELECT id, nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia, activo, creado_en FROM avisos_privacidad ORDER BY creado_en DESC', [])
+  const rows = await query('SELECT * FROM avisos_privacidad ORDER BY creado_en DESC', [])
   res.json({ rows })
 })
 
