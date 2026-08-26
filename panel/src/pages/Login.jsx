@@ -1141,8 +1141,8 @@ export default function Login({ onLogin }) {
                 <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 14, padding: '24px 16px', textAlign: 'center', boxShadow: glass.shadow, transition: 'transform .15s', cursor: 'pointer' }}
                   onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
                   onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
-                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', color: '#1a3a5c', marginBottom: 8 }}>{label}</div>
-                  <div style={{ fontSize: 36, fontWeight: 900, color: '#1a3a5c', lineHeight: 1 }}>{numero}</div>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', color: '#c96e00', marginBottom: 8 }}>{label}</div>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: '#f18b11', lineHeight: 1 }}>{numero}</div>
                 </div>
               </a>
             ))}
