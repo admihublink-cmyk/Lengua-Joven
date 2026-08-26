@@ -28,6 +28,7 @@ import Usuarios from './pages/Usuarios.jsx'
 import LigasPago from './pages/LigasPago.jsx'
 import PagosMaestros from './pages/PagosMaestros.jsx'
 import Legal from './pages/Legal.jsx'
+import Atencion from './pages/Atencion.jsx'
 
 export const AuthCtx = createContext(null)
 export const NavCtx  = createContext(null)
@@ -63,6 +64,7 @@ const RUTAS = {
   ligas_pago: LigasPago,
   pagos_maestro: PagosMaestros,
   legal: Legal,
+  atencion: Atencion,
 }
 
 export default function App() {

@@ -42,6 +42,9 @@ export const P = {
   USUARIOS_ADMIN: 'USUARIOS_ADMIN', // ver y gestionar TODOS los usuarios (superadmin + coordinador)
   // v2.6
   ARCO_ATENDER: 'ARCO_ATENDER', // acceder al módulo Legal y ARCO
+  // v2.7 — Atención a Alumnos
+  ATENCION_CREAR: 'ATENCION_CREAR',       // crear solicitudes de atención (todos los roles)
+  ATENCION_GESTIONAR: 'ATENCION_GESTIONAR', // ver bandeja, cambiar estado, notas internas
 }
 
 const TODOS = Object.values(P)
@@ -71,6 +74,7 @@ export const ROL_PERMISOS = {
       P.USUARIOS_GESTIONAR,
       P.BUZON_ENVIAR, P.BUZON_GESTIONAR,
       P.ARCO_ATENDER,
+      P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
     ],
     scope: 'plantel',
     label: 'Director',
@@ -90,6 +94,7 @@ export const ROL_PERMISOS = {
       P.USUARIOS_GESTIONAR,
       P.USUARIOS_ADMIN,
       P.ARCO_ATENDER,
+      P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
     ],
     scope: 'multi-plantel',
     label: 'Coordinador LJ',
@@ -108,6 +113,7 @@ export const ROL_PERMISOS = {
       P.TAREA_CREAR, P.TAREA_VER,
       P.USUARIOS_GESTIONAR,
       P.BUZON_ENVIAR,
+      P.ATENCION_CREAR,
     ],
     scope: 'propio',
     label: 'Profesor',
@@ -125,6 +131,7 @@ export const ROL_PERMISOS = {
       P.MENSAJE_ENVIAR,
       P.TAREA_VER,
       P.BUZON_ENVIAR,
+      P.ATENCION_CREAR,
     ],
     scope: 'propio',
     label: 'Alumno',
@@ -141,6 +148,7 @@ export const ROL_PERMISOS = {
       P.MENSAJE_ENVIAR,
       P.TAREA_VER,
       P.BUZON_ENVIAR,
+      P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
     ],
     scope: 'plantel',
     label: 'Admin / Ventas',
