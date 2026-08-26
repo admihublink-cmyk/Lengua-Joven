@@ -357,6 +357,11 @@ function ModalNuevoAviso({ onClose, onGuardar, ocupado, error }) {
       <label style={LABEL}>URL del PDF</label>
       <input style={INP} placeholder="https://drive.google.com/… (opcional)" value={v.archivo_url} onChange={set('archivo_url')} />
 
+      <label style={LABEL}>Texto del aviso</label>
+      <textarea style={{ ...INP, resize: 'vertical', minHeight: 120 }} rows={5}
+        placeholder="Pega aquí el texto completo del aviso (opcional si subes PDF)"
+        value={v.contenido || ''} onChange={set('contenido')} />
+
       <label style={{ display: 'flex', gap: 8, alignItems: 'center', marginTop: 14, fontSize: 13.5, cursor: 'pointer' }}>
         <input type="checkbox" checked={v.desactivar_anteriores} onChange={set('desactivar_anteriores')}
           style={{ width: 16, height: 16, accentColor: '#F18B11' }} />
@@ -381,6 +386,7 @@ function TabAvisos() {
   const [modal, setModal] = useState(false)
   const [ocupado, setOcupado] = useState(false)
   const [errModal, setErrModal] = useState('')
+  const [verTexto, setVerTexto] = useState(null)
 
   const cargar = useCallback(async () => {
     setCargando(true); setError('')
@@ -449,11 +455,16 @@ function TabAvisos() {
                         {av.fecha_vigencia ? `Vigente desde ${fmtFecha(av.fecha_vigencia)}` : 'Sin fecha de vigencia'}
                       </div>
                     </div>
-                    {av.archivo_url && (
-                      <a href={av.archivo_url} target="_blank" rel="noopener noreferrer" className="btn-mini">
-                        Ver PDF ↗
-                      </a>
-                    )}
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      {av.contenido && (
+                        <button className="btn-mini" onClick={() => setVerTexto(av)}>Ver texto</button>
+                      )}
+                      {av.archivo_url && (
+                        <a href={av.archivo_url} target="_blank" rel="noopener noreferrer" className="btn-mini">
+                          Ver PDF ↗
+                        </a>
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
@@ -463,6 +474,22 @@ function TabAvisos() {
       )}
 
       {modal && <ModalNuevoAviso onClose={() => setModal(false)} onGuardar={guardar} ocupado={ocupado} error={errModal} />}
+
+      {verTexto && (
+        <Modal titulo={`${verTexto.nombre} — v${verTexto.version}`} onClose={() => setVerTexto(null)} ancho={700}>
+          <pre style={{
+            whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontFamily: 'inherit',
+            fontSize: 13.5, lineHeight: 1.7, color: 'var(--texto)',
+            background: 'var(--bg-3)', borderRadius: 10, padding: '16px 20px',
+            maxHeight: '60vh', overflowY: 'auto', margin: 0,
+          }}>
+            {verTexto.contenido}
+          </pre>
+          <div className="modal-acciones">
+            <button className="btn-sec" onClick={() => setVerTexto(null)}>Cerrar</button>
+          </div>
+        </Modal>
+      )}
     </>
   )
 }

@@ -210,7 +210,7 @@ router.patch('/', requireAuth, async (req, res) => {
 // ── GET /avisos ───────────────────────────────────────────────────────────────
 router.get('/avisos', requireAuth, async (req, res) => {
   if (!ROLES_ARCO.includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
-  const rows = await query('SELECT * FROM avisos_privacidad ORDER BY creado_en DESC', [])
+  const rows = await query('SELECT id, nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia, activo, creado_en FROM avisos_privacidad ORDER BY creado_en DESC', [])
   res.json({ rows })
 })
 
@@ -223,6 +223,7 @@ router.post('/avisos', requireAuth, async (req, res) => {
   const version = String(b.version || '').trim().slice(0, 40)
   const tipo_titular = String(b.tipo_titular || '').trim().slice(0, 80)
   const archivo_url = b.archivo_url ? String(b.archivo_url).trim().slice(0, 500) : null
+  const contenido = b.contenido ? String(b.contenido).trim() : null
   const fecha_vigencia = b.fecha_vigencia || null
 
   if (!nombre) return res.status(400).json({ error: 'El nombre del aviso es requerido.' })
@@ -235,8 +236,8 @@ router.post('/avisos', requireAuth, async (req, res) => {
 
   try {
     await run(
-      'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,true)',
-      [nombre, version, tipo_titular, archivo_url, fecha_vigencia || null]
+      'INSERT INTO avisos_privacidad (nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia, activo) VALUES ($1,$2,$3,$4,$5,$6,true)',
+      [nombre, version, tipo_titular, archivo_url, contenido, fecha_vigencia || null]
     )
   } catch (e) {
     const msg = e.code === '23505' ? 'Ya existe un aviso con ese nombre y versión.' : 'No se pudo guardar el aviso.'
