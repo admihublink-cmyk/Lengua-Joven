@@ -1124,6 +1124,32 @@ export default function Login({ onLogin }) {
         </div>
       </section>
 
+      {/* ── NÚMEROS DE EMERGENCIA ── */}
+      <section style={{ padding: '56px 32px', borderTop: `1px solid ${glass.border}`, background: 'rgba(240,242,248,0.6)' }}>
+        <div style={{ maxWidth: 900, margin: '0 auto' }}>
+          <h2 style={{ fontSize: 20, fontWeight: 800, marginBottom: 24, color: txt }}>
+            Números de emergencia <span style={{ fontWeight: 400, fontSize: 15, color: txtMid }}>| ¿Necesitas ayuda? Estamos para servirte.</span>
+          </h2>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16 }}>
+            {[
+              { label: 'EMERGENCIAS',        numero: '911' },
+              { label: 'DENUNCIA ANÓNIMA',   numero: '089' },
+              { label: 'ATENCIÓN CIUDADANA', numero: '070' },
+              { label: 'AGUA Y DRENAJE',     numero: '073' },
+            ].map(({ label, numero }) => (
+              <a key={numero} href={`tel:${numero}`} style={{ textDecoration: 'none' }}>
+                <div style={{ background: glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 14, padding: '24px 16px', textAlign: 'center', boxShadow: glass.shadow, transition: 'transform .15s', cursor: 'pointer' }}
+                  onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-2px)'}
+                  onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}>
+                  <div style={{ fontSize: 11, fontWeight: 800, letterSpacing: '.08em', color: '#1a3a5c', marginBottom: 8 }}>{label}</div>
+                  <div style={{ fontSize: 36, fontWeight: 900, color: '#1a3a5c', lineHeight: 1 }}>{numero}</div>
+                </div>
+              </a>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* ── FOOTER ── */}
       <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, padding: '40px 32px', textAlign: 'center', fontSize: 13 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 20, marginBottom: 16, flexWrap: 'wrap' }}>
