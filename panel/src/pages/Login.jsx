@@ -1162,7 +1162,7 @@ export default function Login({ onLogin }) {
               <div style={{ width: 1, height: 100, background: 'rgba(0,0,0,0.12)' }} />
               <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 125, objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap', justifyContent: 'center' }}>
               <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', color: txtMid }}>GOBIERNO DE NUEVO LEÓN</span>
               <div style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.18)' }} />
               <div style={{ width: 36, height: 36, borderRadius: 6, background: 'rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: txtMid, letterSpacing: '.02em' }}>NL</div>
