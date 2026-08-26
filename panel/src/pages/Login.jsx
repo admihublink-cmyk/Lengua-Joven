@@ -1158,9 +1158,9 @@ export default function Login({ onLogin }) {
           {/* Left: logos + gobierno */}
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28 }}>
-              <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 68, objectFit: 'contain', mixBlendMode: 'multiply' }} />
-              <div style={{ width: 1, height: 48, background: 'rgba(0,0,0,0.12)' }} />
-              <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 62, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+              <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 100, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+              <div style={{ width: 1, height: 68, background: 'rgba(0,0,0,0.12)' }} />
+              <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 90, objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
               <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', color: txtMid }}>GOBIERNO DE NUEVO LEÓN</span>

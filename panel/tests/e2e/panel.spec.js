@@ -23,19 +23,22 @@ test.describe('Panel — navegación post-login', () => {
 
   test('sección Usuarios accesible', async ({ page }) => {
     await loginAdmin(page)
-    await page.locator('.nav-item', { hasText: /Usuarios/ }).click()
+    await page.locator('.nav-item', { hasText: /Sistema/ }).click()  // expand section
+    await page.locator('.nav-item', { hasText: /^🧑.💼\s*Usuarios$/ }).or(page.locator('.nav-item').filter({ hasText: 'Usuarios' })).first().click()
     await expect(page.getByText(/usuarios|correo|rol/i).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('sección Planteles accesible', async ({ page }) => {
     await loginAdmin(page)
-    await page.locator('.nav-item', { hasText: /Planteles/ }).click()
+    await page.locator('.nav-item', { hasText: /Académico/ }).click()  // expand section
+    await page.locator('.nav-item').filter({ hasText: 'Planteles' }).click()
     await expect(page.getByText(/convenio|plantel/i).first()).toBeVisible({ timeout: 10000 })
   })
 
   test('sección Legal y ARCO carga sin error', async ({ page }) => {
     await loginAdmin(page)
-    await page.locator('.nav-item', { hasText: /Legal/ }).click()
+    await page.locator('.nav-item', { hasText: /Administración/ }).click()  // expand section
+    await page.locator('.nav-item').filter({ hasText: 'Legal y ARCO' }).click()
     await expect(page.getByText(/ARCO|solicitud/i).first()).toBeVisible({ timeout: 10000 })
     // No debe mostrar "error interno"
     await expect(page.getByText(/error interno/i)).not.toBeVisible()
@@ -43,7 +46,8 @@ test.describe('Panel — navegación post-login', () => {
 
   test('tab Avisos de privacidad carga el aviso', async ({ page }) => {
     await loginAdmin(page)
-    await page.locator('.nav-item', { hasText: /Legal/ }).click()
+    await page.locator('.nav-item', { hasText: /Administración/ }).click()  // expand section
+    await page.locator('.nav-item').filter({ hasText: 'Legal y ARCO' }).click()
     await page.getByText(/Avisos de privacidad/i).click()
     await expect(page.getByText(/Aviso de Privacidad|Vigente|Inactivo/i).first()).toBeVisible({ timeout: 10000 })
     await expect(page.getByText(/error interno/i)).not.toBeVisible()
