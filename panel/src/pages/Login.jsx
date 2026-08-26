@@ -1158,7 +1158,18 @@ export default function Login({ onLogin }) {
           <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 48, objectFit: 'contain', mixBlendMode: 'multiply' }} />
         </div>
         <p style={{ margin: '4px 0' }}>Programa de idiomas para personas de 12 años en adelante</p>
+        <p style={{ margin: '6px 0 2px', fontSize: 12, fontWeight: 700, letterSpacing: '.04em', color: txtMid }}>
+          GOBIERNO DE NUEVO LEÓN | UN NUEVO NUEVO LEÓN
+        </p>
         <p style={{ margin: '4px 0', fontSize: 12 }}>© 2026 · soporte@injuve.mx</p>
+        <p style={{ margin: '10px 0 0' }}>
+          <a href="/tratamiento-datos.html" target="_blank" rel="noopener noreferrer"
+            style={{ color: '#f18b11', fontSize: 12, fontWeight: 600, textDecoration: 'none' }}
+            onMouseEnter={e => e.target.style.textDecoration = 'underline'}
+            onMouseLeave={e => e.target.style.textDecoration = 'none'}>
+            Sobre el tratamiento de los datos personales
+          </a>
+        </p>
       </footer>
     </div>
   )
