@@ -10,7 +10,8 @@ async function loginAdmin(page) {
   await page.getByPlaceholder('usuario@injuve.mx').fill(ADMIN_EMAIL)
   await page.getByPlaceholder('••••••••').fill(ADMIN_PASS)
   await page.getByRole('button', { name: 'Iniciar sesión' }).last().click()
-  await page.waitForTimeout(3000) // esperar carga del panel
+  // Esperar a que el sidebar esté visible antes de continuar
+  await page.locator('.nav-item').first().waitFor({ state: 'visible', timeout: 20000 })
 }
 
 test.describe('Panel — navegación post-login', () => {

@@ -1152,29 +1152,29 @@ export default function Login({ onLogin }) {
 
       {/* ── FOOTER ── */}
       <footer style={{ background: 'rgba(240,242,248,0.85)', backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, borderTop: `1px solid ${glass.border}`, color: txtDim, fontSize: 13 }}>
-        {/* Main row */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', maxWidth: 1100, margin: '0 auto', padding: '32px 32px 24px', gap: 32, flexWrap: 'wrap' }}>
+        {/* Main row — 1fr 1fr so each half fills evenly */}
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 48, maxWidth: 1200, margin: '0 auto', padding: '40px 48px 32px', alignItems: 'start' }}>
 
           {/* Left: logos + gobierno */}
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 20 }}>
-              <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 52, objectFit: 'contain', mixBlendMode: 'multiply' }} />
-              <div style={{ width: 1, height: 36, background: 'rgba(0,0,0,0.12)' }} />
-              <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 48, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+            <div style={{ display: 'flex', alignItems: 'center', gap: 28, marginBottom: 28 }}>
+              <img src="/logo-injuve.jpeg" alt="INJUVE NL" style={{ height: 68, objectFit: 'contain', mixBlendMode: 'multiply' }} />
+              <div style={{ width: 1, height: 48, background: 'rgba(0,0,0,0.12)' }} />
+              <img src="/logo-lengua-joven.jpeg" alt="Lengua Joven" style={{ height: 62, objectFit: 'contain', mixBlendMode: 'multiply' }} />
             </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', color: txtMid }}>GOBIERNO DE NUEVO LEÓN</span>
-              <div style={{ width: 1, height: 18, background: 'rgba(0,0,0,0.15)' }} />
-              <div style={{ width: 30, height: 30, borderRadius: 4, background: 'rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 800, color: txtMid, letterSpacing: '.02em' }}>NL</div>
-              <div style={{ width: 1, height: 18, background: 'rgba(0,0,0,0.15)' }} />
-              <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '.04em', color: txtMid }}>UN NUEVO NUEVO LEÓN</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', color: txtMid }}>GOBIERNO DE NUEVO LEÓN</span>
+              <div style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.18)' }} />
+              <div style={{ width: 36, height: 36, borderRadius: 6, background: 'rgba(0,0,0,0.07)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, fontWeight: 800, color: txtMid, letterSpacing: '.02em' }}>NL</div>
+              <div style={{ width: 1, height: 22, background: 'rgba(0,0,0,0.18)' }} />
+              <span style={{ fontSize: 12, fontWeight: 700, letterSpacing: '.05em', color: txtMid }}>UN NUEVO NUEVO LEÓN</span>
             </div>
           </div>
 
           {/* Right: social media */}
           <div>
-            <p style={{ margin: '0 0 10px', fontSize: 12, fontWeight: 600, color: txtMid }}>Mantente informado:</p>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+            <p style={{ margin: '0 0 14px', fontSize: 13, fontWeight: 600, color: txtMid }}>Mantente informado:</p>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               {[
                 { name: 'Instagram', href: '#', svg: 'M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z' },
                 { name: 'Telegram', href: '#', svg: 'M11.944 0A12 12 0 0 0 0 12a12 12 0 0 0 12 12 12 12 0 0 0 12-12A12 12 0 0 0 12 0a12 12 0 0 0-.056 0zm4.962 7.224c.1-.002.321.023.465.14a.506.506 0 0 1 .171.325c.016.093.036.306.02.472-.18 1.898-.962 6.502-1.36 8.627-.168.9-.499 1.201-.82 1.23-.696.065-1.225-.46-1.9-.902-1.056-.693-1.653-1.124-2.678-1.8-1.185-.78-.417-1.21.258-1.91.177-.184 3.247-2.977 3.307-3.23.007-.032.014-.15-.056-.212s-.174-.041-.249-.024c-.106.024-1.793 1.14-5.061 3.345-.48.33-.913.49-1.302.48-.428-.008-1.252-.241-1.865-.44-.752-.245-1.349-.374-1.297-.789.027-.216.325-.437.893-.663 3.498-1.524 5.83-2.529 6.998-3.014 3.332-1.386 4.025-1.627 4.476-1.635z' },
@@ -1184,10 +1184,10 @@ export default function Login({ onLogin }) {
                 { name: 'YouTube', href: '#', svg: 'M23.498 6.186a3.016 3.016 0 0 0-2.122-2.136C19.505 3.545 12 3.545 12 3.545s-7.505 0-9.377.505A3.017 3.017 0 0 0 .502 6.186C0 8.07 0 12 0 12s0 3.93.502 5.814a3.016 3.016 0 0 0 2.122 2.136c1.871.505 9.376.505 9.376.505s7.505 0 9.377-.505a3.015 3.015 0 0 0 2.122-2.136C24 15.93 24 12 24 12s0-3.93-.502-5.814zM9.545 15.568V8.432L15.818 12l-6.273 3.568z' },
               ].map(({ name, href, svg }) => (
                 <a key={name} href={href} target="_blank" rel="noopener noreferrer"
-                  style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '6px 10px', borderRadius: 8, background: 'rgba(0,0,0,0.04)', color: txtMid, textDecoration: 'none', fontSize: 12, fontWeight: 500, transition: 'background .15s' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: 9, padding: '10px 14px', borderRadius: 10, background: 'rgba(0,0,0,0.04)', color: txtMid, textDecoration: 'none', fontSize: 13, fontWeight: 500, transition: 'background .15s' }}
                   onMouseEnter={e => { e.currentTarget.style.background = 'rgba(241,139,17,0.1)'; e.currentTarget.style.color = '#f18b11' }}
                   onMouseLeave={e => { e.currentTarget.style.background = 'rgba(0,0,0,0.04)'; e.currentTarget.style.color = txtMid }}>
-                  <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
+                  <svg width="17" height="17" viewBox="0 0 24 24" fill="currentColor" style={{ flexShrink: 0 }}>
                     <path d={svg} />
                   </svg>
                   {name}
