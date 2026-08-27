@@ -21,7 +21,7 @@ const NEXT_ESTADO = {
   pagada: 'asignada',
 }
 
-const ESTADOS = ['nueva', 'bienvenida_enviada', 'alumno_respondio', 'boucher_enviado', 'pagada', 'asignada', 'espera', 'baja']
+const ESTADOS = ['nueva', 'bienvenida_enviada', 'alumno_respondio', 'boucher_enviado', 'pagada', 'asignada', 'espera', 'baja', 'pendiente_autorizacion']
 const ESTADOS_LABEL = {
   nueva: 'Formulario recibido',
   bienvenida_enviada: 'Bienvenida enviada',
@@ -31,6 +31,7 @@ const ESTADOS_LABEL = {
   pagada: 'Pagada',
   espera: 'Lista de espera',
   baja: 'Baja',
+  pendiente_autorizacion: '⏳ Pend. autorización',
 }
 
 // Parsea TSV (Google Sheets copy-paste) o CSV
@@ -74,6 +75,10 @@ export default function Inscripciones() {
   const [formErr, setFormErr] = useState('')
   const [nivelSugerido, setNivelSugerido] = useState(null) // { inscId, nombre, nivelId }
 
+  // Extemporáneas pendientes de autorización
+  const [extemporaneasPendientes, setExtemporaneasPendientes] = useState([])
+  const [autorizandoExt, setAutorizandoExt] = useState(null) // id de inscripción
+
   // Estado para importación CSV
   const [csvTexto, setCsvTexto] = useState('')
   const [csvFilas, setCsvFilas] = useState([])
@@ -97,19 +102,22 @@ export default function Inscripciones() {
   async function cargar() {
     try {
       const puedeVerPre = tienePermiso(P.INSC_CONFIRMAR) || tienePermiso(P.INSC_CREAR)
-      const [ins, g, p, u, idiomas, pre] = await Promise.all([
+      const puedeAutorizar = ['superadmin', 'coordinador', 'director'].includes(usuario?.rol)
+      const [ins, g, p, u, idiomas, pre, extPend] = await Promise.all([
         api.getInscripciones(),
         api.getGrupos(),
         api.getPlanteles(),
         api.getUsuarios(),
         api.getIdiomas(),
         puedeVerPre ? api.getPreRegistros() : Promise.resolve([]),
+        puedeAutorizar ? api.getExtemporaneasPendientes() : Promise.resolve([]),
       ])
       setInscripciones(ins)
       setGrupos(g)
       setPlanteles(p)
       setUsuarios(u)
       if (puedeVerPre) setPreRegistros(pre)
+      if (puedeAutorizar) setExtemporaneasPendientes(extPend)
       const nivelesArr = await Promise.all(idiomas.map(i => api.getNiveles(i.id)))
       setNiveles(nivelesArr.flat())
     } catch (e) {
@@ -159,6 +167,19 @@ export default function Inscripciones() {
         alert('Error al asignar grupo: ' + (e.message || 'intenta de nuevo'))
       }
     }
+  }
+
+  async function handleAutorizarExtemporanea(id, accion) {
+    let motivo = ''
+    if (accion === 'rechazar') {
+      motivo = window.prompt('Motivo del rechazo (opcional):') || ''
+    }
+    setAutorizandoExt(id)
+    try {
+      await api.autorizarExtemporanea(id, accion, motivo)
+      await cargar()
+    } catch (e) { alert('Error: ' + e.message) }
+    finally { setAutorizandoExt(null) }
   }
 
   async function ponerEnEspera(insId, grupoId) {
@@ -672,6 +693,43 @@ export default function Inscripciones() {
         </div>
       )}
 
+      {/* Banner: extemporáneas pendientes de autorización */}
+      {extemporaneasPendientes.length > 0 && (
+        <div style={{ background: 'rgba(230,126,34,.08)', border: '1.5px solid rgba(230,126,34,.35)', borderRadius: 10, padding: '14px 16px', marginBottom: 16 }}>
+          <div style={{ fontWeight: 700, color: '#e67e22', marginBottom: 10, fontSize: 14 }}>
+            ⏳ {extemporaneasPendientes.length} inscripción{extemporaneasPendientes.length > 1 ? 'es' : ''} extemporánea{extemporaneasPendientes.length > 1 ? 's' : ''} pendiente{extemporaneasPendientes.length > 1 ? 's' : ''} de autorización
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {extemporaneasPendientes.map(e => (
+              <div key={e.id} style={{ background: '#fff', borderRadius: 8, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 8, border: '1px solid rgba(230,126,34,.2)' }}>
+                <div>
+                  <code style={{ fontSize: 12, color: '#888' }}>{e.folio}</code>
+                  <span style={{ fontWeight: 600, marginLeft: 10 }}>{e.alumno_nombre || e.nombre_externo || '—'}</span>
+                  <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>· {e.grupo_codigo || e.grupo_id} · {e.plantel_nombre}</span>
+                  {e.fecha_inicio_clases && (
+                    <div style={{ fontSize: 11, color: '#c0392b', marginTop: 2 }}>
+                      Clases iniciaron: {e.fecha_inicio_clases} · {e.motivo_extemporanea || 'Sin motivo indicado'}
+                    </div>
+                  )}
+                </div>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <button disabled={autorizandoExt === e.id}
+                    onClick={() => handleAutorizarExtemporanea(e.id, 'autorizar')}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: 'none', background: '#27ae60', color: '#fff', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    ✓ Autorizar
+                  </button>
+                  <button disabled={autorizandoExt === e.id}
+                    onClick={() => handleAutorizarExtemporanea(e.id, 'rechazar')}
+                    style={{ padding: '5px 12px', borderRadius: 6, border: '1.5px solid #c0392b', background: '#fff', color: '#c0392b', fontWeight: 700, fontSize: 12, cursor: 'pointer' }}>
+                    ✗ Rechazar
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
       <div className="tabla-wrap">
         <table className="tabla">
           <thead>
@@ -683,7 +741,15 @@ export default function Inscripciones() {
           <tbody>
             {filtradas.map(i => (
               <tr key={i.id}>
-                <td><code>{i.folio}</code></td>
+                <td>
+                  <code>{i.folio}</code>
+                  {i.es_extemporanea === 1 && (
+                    <span title={`Inscripción extemporánea${i.autorizado_por ? ' · Autorizada' : ' · Pendiente autorización'}`}
+                      style={{ marginLeft: 6, fontSize: 11, background: i.autorizado_por ? 'rgba(39,174,96,.15)' : 'rgba(230,126,34,.15)', color: i.autorizado_por ? '#27ae60' : '#e67e22', borderRadius: 10, padding: '1px 6px', fontWeight: 700, whiteSpace: 'nowrap' }}>
+                      {i.autorizado_por ? '⏰ Ext. ✓' : '⏰ Ext. ⏳'}
+                    </span>
+                  )}
+                </td>
                 <td>
                   <div>{nombre(i)}</div>
                   <div className="texto-muted chico">{i.email_externo || ''}</div>
@@ -693,7 +759,7 @@ export default function Inscripciones() {
                   {puedeGestionar
                     ? <select className={'select-estado e-' + i.estado} value={i.estado}
                         onChange={e => cambiarEstado(i.id, e.target.value)}>
-                        {ESTADOS.map(e => <option key={e} value={e}>{ESTADOS_LABEL[e]}</option>)}
+                        {[...ESTADOS, 'pendiente_autorizacion'].map(e => <option key={e} value={e}>{ESTADOS_LABEL[e] || e}</option>)}
                       </select>
                     : <span className={'badge ' + i.estado}>{ESTADOS_LABEL[i.estado] || i.estado}</span>
                   }
@@ -708,6 +774,16 @@ export default function Inscripciones() {
                       style={{ background: 'var(--primario-suave, rgba(241,139,17,.12))', borderColor: 'var(--naranja)', color: 'var(--naranja)' }}>
                       →
                     </button>
+                  )}
+                  {puedeGestionar && i.es_extemporanea === 1 && i.estado === 'pendiente_autorizacion' && (
+                    <>
+                      <button className="btn-mini" title="Autorizar inscripción extemporánea" disabled={autorizandoExt === i.id}
+                        style={{ background: '#27ae60', color: '#fff', borderColor: '#27ae60' }}
+                        onClick={() => handleAutorizarExtemporanea(i.id, 'autorizar')}>✓</button>
+                      <button className="btn-mini" title="Rechazar" disabled={autorizandoExt === i.id}
+                        style={{ borderColor: '#c0392b', color: '#c0392b' }}
+                        onClick={() => handleAutorizarExtemporanea(i.id, 'rechazar')}>✗</button>
+                    </>
                   )}
                   {puedeGestionar && i.liga_pago && (
                     <button className="btn-mini" title="Enviar liga de pago Banorte al alumno"
