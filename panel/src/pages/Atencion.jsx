@@ -598,7 +598,9 @@ export default function Atencion() {
           <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(0,0,0,.08)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 18, color: '#222' }}>Atención a Alumnos</h2>
-              <button onClick={() => setShowNueva(true)} style={btnPri}>+ Nueva</button>
+              {user?.rol !== 'superadmin' && (
+                <button onClick={() => setShowNueva(true)} style={btnPri}>+ Nueva</button>
+              )}
             </div>
 
             {esGestor && <DashboardStats />}
@@ -630,7 +632,9 @@ export default function Atencion() {
               <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
                 <div style={{ fontSize: 32, marginBottom: 8 }}>🎧</div>
                 <p style={{ margin: 0, fontSize: 14 }}>No hay solicitudes</p>
-                {!esGestor && <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>}
+                {!esGestor && user?.rol !== 'superadmin' && (
+                  <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>
+                )}
               </div>
             )}
             {solicitudes.map(s => (

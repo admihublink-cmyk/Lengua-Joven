@@ -3,6 +3,31 @@ const { query, queryOne, run, withTransaction } = require('../db/pool')
 const { requireAuth, puedeVerPlantel } = require('../middleware/auth')
 const { enviarGrupoAsignado } = require('../services/email')
 
+const SEMANAS_LIMITE_EXTEMPORANEA = 2
+
+// Devuelve true si hoy está dentro de las primeras N semanas de clases del grupo
+async function esExtemporanea(grupo_id) {
+  if (!grupo_id) return false
+  const g = await queryOne('SELECT fecha_inicio_clases FROM grupos WHERE id = $1', [grupo_id])
+  if (!g?.fecha_inicio_clases) return false
+  const inicio = new Date(g.fecha_inicio_clases)
+  const hoy = new Date()
+  if (hoy < inicio) return false // clases no han empezado = inscripción normal
+  const diasTranscurridos = Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24))
+  return diasTranscurridos <= SEMANAS_LIMITE_EXTEMPORANEA * 7
+}
+
+// Devuelve true si ya pasó el plazo (más de 2 semanas después del inicio)
+async function fueraDePlazo(grupo_id) {
+  if (!grupo_id) return false
+  const g = await queryOne('SELECT fecha_inicio_clases FROM grupos WHERE id = $1', [grupo_id])
+  if (!g?.fecha_inicio_clases) return false
+  const inicio = new Date(g.fecha_inicio_clases)
+  const hoy = new Date()
+  const diasTranscurridos = Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24))
+  return diasTranscurridos > SEMANAS_LIMITE_EXTEMPORANEA * 7
+}
+
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   if (me.rol === 'superadmin') {
@@ -46,7 +71,7 @@ router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'coordinador', 'director', 'admin_ventas'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  const { alumno_id, grupo_id, plantel_id, estado, nombre_externo, email_externo, tel_externo, oferta_id, placement_nivel, sugerida_por } = req.body
+  const { alumno_id, grupo_id, plantel_id, estado, nombre_externo, email_externo, tel_externo, oferta_id, placement_nivel, sugerida_por, motivo_extemporanea } = req.body
   if (alumno_id && grupo_id) {
     const dup = await queryOne(
       `SELECT id FROM inscripciones WHERE alumno_id = $1 AND grupo_id = $2 AND estado NOT IN ('cancelada','rechazada','baja')`,
@@ -54,6 +79,21 @@ router.post('/', requireAuth, async (req, res) => {
     )
     if (dup) return res.status(400).json({ error: 'El alumno ya tiene una inscripción activa en este grupo' })
   }
+
+  // Verificar si ya pasó el plazo límite (más de 2 semanas después del inicio de clases)
+  if (grupo_id && await fueraDePlazo(grupo_id)) {
+    return res.status(400).json({
+      error: 'Ya no se aceptan inscripciones para este grupo. Han transcurrido más de 2 semanas desde el inicio de clases.',
+      codigo: 'fuera_de_plazo',
+    })
+  }
+
+  // Detectar si es extemporánea (clases ya iniciaron pero dentro del plazo)
+  const esExt = grupo_id ? await esExtemporanea(grupo_id) : false
+
+  // Solo coordinador/director/superadmin pueden crear extemporáneas directamente con autorización implícita
+  // admin_ventas puede crearla pero queda pendiente de autorización
+  const puedeAutorizar = ['superadmin', 'coordinador', 'director'].includes(req.user.rol)
 
   const ids = (await query('SELECT id FROM inscripciones', [])).map(r => r.id)
   const maxN = ids.reduce((m, id) => Math.max(m, parseInt(id.replace('ins', '')) || 0), 0)
@@ -69,10 +109,26 @@ router.post('/', requireAuth, async (req, res) => {
     pid = plantel_id
   }
   else pid = req.user.plantel_id
+
+  // Estado inicial: si es extemporánea y quien la crea puede autorizar → 'nueva' (autorización implícita)
+  // Si la crea admin_ventas → 'pendiente_autorizacion'
+  let estadoFinal = estado || 'nueva'
+  let autorizadoPor = null
+  let fechaAutorizacion = null
+  if (esExt && !puedeAutorizar) {
+    estadoFinal = 'pendiente_autorizacion'
+  } else if (esExt && puedeAutorizar) {
+    // Auto-autorización: coordinador/director/superadmin que la crea queda como autorizador
+    autorizadoPor = req.user.id
+    fechaAutorizacion = fecha
+  }
+
   await run(
-    `INSERT INTO inscripciones (id, alumno_id, grupo_id, plantel_id, estado, folio, fecha_registro, placement_nivel, sugerida_por, nombre_externo, email_externo, tel_externo, oferta_id) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13)`,
-    [newId, alumno_id || null, grupo_id || null, pid, estado || 'nueva', folio, fecha,
-     placement_nivel || null, sugerida_por || null, nombre_externo || null, email_externo || null, tel_externo || null, oferta_id || null]
+    `INSERT INTO inscripciones (id, alumno_id, grupo_id, plantel_id, estado, folio, fecha_registro, placement_nivel, sugerida_por, nombre_externo, email_externo, tel_externo, oferta_id, es_extemporanea, autorizado_por, fecha_autorizacion, motivo_extemporanea)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+    [newId, alumno_id || null, grupo_id || null, pid, estadoFinal, folio, fecha,
+     placement_nivel || null, sugerida_por || null, nombre_externo || null, email_externo || null, tel_externo || null, oferta_id || null,
+     esExt ? 1 : 0, autorizadoPor, fechaAutorizacion, motivo_extemporanea || null]
   )
   let nivel_sugerido = null
   if (alumno_id && !placement_nivel) {
@@ -254,6 +310,110 @@ router.put('/:id', requireAuth, async (req, res) => {
   }
 
   res.json(actualizada)
+})
+
+// GET /inscripciones/extemporaneas — lista de inscripciones pendientes de autorización
+router.get('/extemporaneas/pendientes', requireAuth, async (req, res) => {
+  const me = req.user
+  if (!['superadmin', 'coordinador', 'director'].includes(me.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  let where = `WHERE i.es_extemporanea = 1 AND i.estado = 'pendiente_autorizacion'`
+  const params = []
+  if (me.rol === 'director' && me.plantel_id) {
+    where += ` AND i.plantel_id = $1`; params.push(me.plantel_id)
+  } else if (me.rol === 'coordinador') {
+    const ids = me.planteles || []
+    if (ids.length) {
+      where += ` AND i.plantel_id IN (${ids.map((_, i) => `$${i + 1}`).join(',')})`
+      params.push(...ids)
+    }
+  }
+  const rows = await query(
+    `SELECT i.*, u.nombre AS alumno_nombre, u.email AS alumno_email,
+            g.codigo AS grupo_codigo, g.fecha_inicio_clases,
+            p.nombre AS plantel_nombre
+     FROM inscripciones i
+     LEFT JOIN usuarios u ON u.id = i.alumno_id
+     LEFT JOIN grupos g ON g.id = i.grupo_id
+     LEFT JOIN planteles p ON p.id = i.plantel_id
+     ${where}
+     ORDER BY i.fecha_registro DESC`,
+    params
+  )
+  res.json(rows)
+})
+
+// PATCH /inscripciones/:id/autorizar — autorizar o rechazar inscripción extemporánea
+router.patch('/:id/autorizar', requireAuth, async (req, res) => {
+  const me = req.user
+  if (!['superadmin', 'coordinador', 'director'].includes(me.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const ins = await queryOne('SELECT * FROM inscripciones WHERE id = $1', [req.params.id])
+  if (!ins) return res.status(404).json({ error: 'No encontrada' })
+  if (!ins.es_extemporanea) return res.status(400).json({ error: 'Esta inscripción no es extemporánea' })
+  if (ins.estado !== 'pendiente_autorizacion') return res.status(400).json({ error: 'Solo se pueden autorizar inscripciones en estado pendiente_autorizacion' })
+
+  const { accion, motivo } = req.body // accion: 'autorizar' | 'rechazar'
+  if (!['autorizar', 'rechazar'].includes(accion)) return res.status(400).json({ error: 'Acción inválida' })
+
+  const nuevoEstado = accion === 'autorizar' ? 'nueva' : 'rechazada'
+  const fecha = new Date().toISOString().split('T')[0]
+
+  await run(
+    `UPDATE inscripciones SET estado = $1, autorizado_por = $2, fecha_autorizacion = $3, motivo_extemporanea = COALESCE($4, motivo_extemporanea)
+     WHERE id = $5`,
+    [nuevoEstado, me.id, fecha, motivo || null, ins.id]
+  )
+
+  // Notificar a quien creó la inscripción (si hay alumno registrado)
+  if (ins.alumno_id) {
+    try {
+      const notifId = 'not' + Date.now() + Math.random().toString(36).slice(2, 4)
+      const msg = accion === 'autorizar'
+        ? `Tu inscripción extemporánea (${ins.folio}) fue autorizada.`
+        : `Tu inscripción extemporánea (${ins.folio}) fue rechazada.${motivo ? ' Motivo: ' + motivo : ''}`
+      await run(
+        `INSERT INTO notificaciones (id, usuario_id, tipo, mensaje, fecha, leida) VALUES ($1,$2,$3,$4,$5,0)`,
+        [notifId, ins.alumno_id, 'inscripcion_extemporanea', msg, fecha]
+      )
+    } catch (_) {}
+  }
+
+  res.json({ ok: true, estado: nuevoEstado })
+})
+
+// GET /inscripciones/extemporaneas/verificar-grupo/:grupo_id — info sobre si un grupo acepta extemporáneas
+router.get('/extemporaneas/verificar-grupo/:grupo_id', requireAuth, async (req, res) => {
+  const g = await queryOne('SELECT id, codigo, fecha_inicio_clases, fecha_fin_clases FROM grupos WHERE id = $1', [req.params.grupo_id])
+  if (!g) return res.status(404).json({ error: 'Grupo no encontrado' })
+  if (!g.fecha_inicio_clases) return res.json({ tipo: 'normal', mensaje: 'El grupo no tiene fecha de inicio de clases configurada.' })
+
+  const inicio = new Date(g.fecha_inicio_clases)
+  const hoy = new Date()
+  if (hoy < inicio) return res.json({ tipo: 'normal', mensaje: 'Las clases aún no han iniciado. Inscripción normal.' })
+
+  const dias = Math.floor((hoy - inicio) / (1000 * 60 * 60 * 24))
+  const limite = SEMANAS_LIMITE_EXTEMPORANEA * 7
+
+  if (dias > limite) {
+    return res.json({
+      tipo: 'fuera_de_plazo',
+      dias_transcurridos: dias,
+      plazo_dias: limite,
+      mensaje: `Ya no se aceptan inscripciones. Han transcurrido ${dias} días desde el inicio de clases (límite: ${limite} días).`,
+    })
+  }
+
+  return res.json({
+    tipo: 'extemporanea',
+    dias_transcurridos: dias,
+    plazo_dias: limite,
+    dias_restantes: limite - dias,
+    mensaje: `Inscripción extemporánea. Han transcurrido ${dias} de ${limite} días permitidos desde el inicio de clases. Requiere autorización del coordinador.`,
+    requiere_autorizacion: true,
+  })
 })
 
 router.delete('/:id', requireAuth, async (req, res) => {

@@ -435,6 +435,14 @@ async function initDB() {
   await pool.query(`ALTER TABLE mensajes ALTER COLUMN para DROP NOT NULL`)
   await pool.query(`ALTER TABLE mensajes ADD COLUMN IF NOT EXISTS chat_grupo_id TEXT`)
 
+  // ── Inscripción extemporánea ─────────────────────────────────────────────────
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS es_extemporanea INTEGER DEFAULT 0`)
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS autorizado_por TEXT`)
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS fecha_autorizacion TEXT`)
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS motivo_extemporanea TEXT`)
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS posicion_espera INTEGER`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_ins_extemporanea ON inscripciones (es_extemporanea, estado)`)
+
   // ── Atención a Alumnos ───────────────────────────────────────────────────────
   await pool.query(`
     CREATE TABLE IF NOT EXISTS atencion_solicitudes (

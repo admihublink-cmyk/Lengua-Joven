@@ -133,6 +133,9 @@ export const getInscripciones = () => get('/inscripciones')
 export const getInscripcion = (id) => get(`/inscripciones/${id}`)
 export const crearInscripcion = (data) => post('/inscripciones', data)
 export const actualizarInscripcion = (id, data) => put(`/inscripciones/${id}`, data)
+export const getExtemporaneasPendientes = () => get('/inscripciones/extemporaneas/pendientes')
+export const autorizarExtemporanea = (id, accion, motivo) => req('PATCH', `/inscripciones/${id}/autorizar`, { accion, motivo })
+export const verificarGrupoExtemporanea = (grupo_id) => get(`/inscripciones/extemporaneas/verificar-grupo/${grupo_id}`)
 export const eliminarInscripcion = (id) => del(`/inscripciones/${id}`)
 
 // ── Tareas ────────────────────────────────────────────────────────────────────
