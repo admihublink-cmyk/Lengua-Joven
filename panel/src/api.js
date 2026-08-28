@@ -465,6 +465,12 @@ export const revisarDocAtencion = (docId, estado, motivo_rechazo) =>
 export const getAtencionDashboard = () => get('/atencion/dashboard')
 export const getCategoriasAtencion = () => get('/atencion/categorias')
 
+// ── Calendario institucional ──────────────────────────────────────────────────
+export const getEventosCalendario = () => get('/eventos-calendario')
+export const crearEventoCalendario = (data) => post('/eventos-calendario', data)
+export const actualizarEventoCalendario = (id, data) => put(`/eventos-calendario/${id}`, data)
+export const eliminarEventoCalendario = (id) => del(`/eventos-calendario/${id}`)
+
 export async function exportarLiquidacionesCSV(periodo) {
   const res = await fetch(`${BASE}/liquidaciones/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al exportar')

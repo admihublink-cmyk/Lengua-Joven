@@ -45,6 +45,8 @@ export const P = {
   // v2.7 — Atención a Alumnos
   ATENCION_CREAR: 'ATENCION_CREAR',       // crear solicitudes de atención (todos los roles)
   ATENCION_GESTIONAR: 'ATENCION_GESTIONAR', // ver bandeja, cambiar estado, notas internas
+  // v2.8 — Calendario institucional
+  CALENDARIO_ADMIN: 'CALENDARIO_ADMIN',   // crear/editar/eliminar eventos institucionales
 }
 
 const TODOS = Object.values(P)
@@ -75,6 +77,7 @@ export const ROL_PERMISOS = {
       P.BUZON_ENVIAR, P.BUZON_GESTIONAR,
       P.ARCO_ATENDER,
       P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
+      P.CALENDARIO_ADMIN,
     ],
     scope: 'plantel',
     label: 'Director',
@@ -95,6 +98,7 @@ export const ROL_PERMISOS = {
       P.USUARIOS_ADMIN,
       P.ARCO_ATENDER,
       P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
+      P.CALENDARIO_ADMIN,
     ],
     scope: 'multi-plantel',
     label: 'Coordinador LJ',

@@ -10,6 +10,22 @@ const DIAS_LARGO = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viern
 const MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio',
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre']
 
+const TIPO_EVENTO = {
+  general:       { label: 'General',               color: '#7f8c8d' },
+  inscripciones: { label: 'Inscripciones',          color: '#2980b9' },
+  inicio_ciclo:  { label: 'Inicio de ciclo',        color: '#27ae60' },
+  cambio_grupo:  { label: 'Cambio de grupo',        color: '#e67e22' },
+  examen:        { label: 'Exámenes',               color: '#8e44ad' },
+}
+
+function formatRango(fi, ff) {
+  const fmt = (iso) => {
+    const [y, m, d] = iso.split('-')
+    return `${parseInt(d)} ${MESES[parseInt(m) - 1].slice(0, 3)} ${y}`
+  }
+  return ff && ff !== fi ? `Del ${fmt(fi)} al ${fmt(ff)}` : fmt(fi)
+}
+
 function fs(y, m, d) {
   return `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
 }
@@ -29,17 +45,26 @@ export default function Calendario() {
   const [sesiones, setSesiones] = useState([])
   const [idiomas, setIdiomas] = useState([])
   const [niveles, setNiveles] = useState([])
+  const [eventos, setEventos] = useState([])
 
   // Modal de reprogramación
-  const [modalRepro, setModalRepro] = useState(null) // sesion object | null
+  const [modalRepro, setModalRepro] = useState(null)
   const [reprForm, setReprForm] = useState({})
+
+  // Modal de evento institucional
+  const [modalEvento, setModalEvento] = useState(null) // null | 'nuevo' | evento-obj
+  const [eventoForm, setEvenForm] = useState({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: hoyFecha, fecha_fin: '' })
+  const [guardandoEvento, setGuardandoEvento] = useState(false)
+
+  const puedeAdminCalendario = tienePermiso(P.CALENDARIO_ADMIN)
 
   async function cargar() {
     try {
-      const [todosGrupos, ins, idiomas] = await Promise.all([
+      const [todosGrupos, ins, idiomas, evArr] = await Promise.all([
         api.getGrupos(),
         api.getInscripciones(),
         api.getIdiomas(),
+        api.getEventosCalendario(),
       ])
       let g = []
       if (usuario.rol === 'alumno') {
@@ -52,6 +77,7 @@ export default function Calendario() {
       }
       setGrupos(g)
       setIdiomas(idiomas)
+      setEventos(evArr)
       const gids2 = g.map(x => x.id)
       const [sesArr, nivelesArr] = await Promise.all([
         gids2.length > 0
@@ -104,6 +130,55 @@ export default function Calendario() {
     d.setDate(d.getDate() + (vista === 'semana' ? 7 : 1))
     const nueva = d.toISOString().slice(0, 10)
     setDiaSeleccionado(nueva); setAnio(d.getFullYear()); setMes(d.getMonth())
+  }
+
+  function eventosEnFecha(fecha) {
+    return eventos.filter(e => fecha >= e.fecha_inicio && fecha <= (e.fecha_fin || e.fecha_inicio))
+  }
+
+  async function guardarEvento() {
+    if (!eventoForm.titulo.trim() || !eventoForm.fecha_inicio) return
+    setGuardandoEvento(true)
+    try {
+      const data = {
+        titulo: eventoForm.titulo.trim(),
+        descripcion: eventoForm.descripcion.trim() || undefined,
+        tipo: eventoForm.tipo,
+        fecha_inicio: eventoForm.fecha_inicio,
+        fecha_fin: eventoForm.fecha_fin || undefined,
+      }
+      if (modalEvento === 'nuevo') {
+        await api.crearEventoCalendario(data)
+      } else {
+        await api.actualizarEventoCalendario(modalEvento.id, data)
+      }
+      setModalEvento(null)
+      await cargar()
+    } catch (e) {
+      alert('Error al guardar: ' + e.message)
+    } finally {
+      setGuardandoEvento(false)
+    }
+  }
+
+  async function eliminarEvento(id) {
+    if (!confirm('¿Eliminar este evento?')) return
+    try {
+      await api.eliminarEventoCalendario(id)
+      await cargar()
+    } catch (e) {
+      alert('Error: ' + e.message)
+    }
+  }
+
+  function abrirNuevoEvento() {
+    setEvenForm({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: diaSeleccionado, fecha_fin: '' })
+    setModalEvento('nuevo')
+  }
+
+  function abrirEditarEvento(ev) {
+    setEvenForm({ titulo: ev.titulo, descripcion: ev.descripcion || '', tipo: ev.tipo, fecha_inicio: ev.fecha_inicio, fecha_fin: ev.fecha_fin || '' })
+    setModalEvento(ev)
   }
 
   // ── Generar celdas del grid (42 = 6 semanas) ──
@@ -214,6 +289,12 @@ export default function Calendario() {
         <h2>{headerTitle}</h2>
         <button className="cal-nav-btn" onClick={nextPeriodo}>›</button>
         <button className="cal-hoy-btn" onClick={irHoy}>Hoy</button>
+        {puedeAdminCalendario && (
+          <button onClick={abrirNuevoEvento} style={{
+            marginLeft: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
+            border: 'none', borderRadius: 8, background: 'var(--naranja)', color: '#fff',
+          }}>+ Evento</button>
+        )}
         <div style={{ display: 'flex', gap: 0, marginLeft: 'auto' }}>
           {[['mes', 'Mes'], ['semana', 'Semana'], ['dia', 'Día']].map(([v, label]) => (
             <button key={v} onClick={() => setVista(v)} style={{
@@ -254,6 +335,15 @@ export default function Calendario() {
                           >
                             <div className="cal-fecha">{celda.dia}</div>
                             <div className="cal-chips">
+                              {eventosEnFecha(celda.fecha).map(ev => (
+                                <div key={ev.id} style={{
+                                  fontSize: 10, padding: '1px 5px', borderRadius: 3, marginBottom: 1,
+                                  background: TIPO_EVENTO[ev.tipo]?.color || '#7f8c8d',
+                                  color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                                }} title={ev.titulo}>
+                                  {ev.titulo}
+                                </div>
+                              ))}
                               {sels.slice(0, 2).map(s => (
                                 <div key={s.id}
                                   className={`cal-chip ${esHoy ? 'activa' : 'futura'} ${colorMap[s.grupo_id] || 'color-g1'}`}
@@ -317,6 +407,15 @@ export default function Calendario() {
                           onClick={() => setDiaSeleccionado(d.fecha)}
                         >
                           <div className="cal-chips">
+                            {eventosEnFecha(d.fecha).map(ev => (
+                              <div key={ev.id} style={{
+                                fontSize: 10, padding: '1px 5px', borderRadius: 3, marginBottom: 1,
+                                background: TIPO_EVENTO[ev.tipo]?.color || '#7f8c8d',
+                                color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                              }} title={ev.titulo}>
+                                {ev.titulo}
+                              </div>
+                            ))}
                             {sels.map(s => (
                               <div key={s.id}
                                 className={`cal-chip ${esHoy ? 'activa' : 'futura'} ${colorMap[s.grupo_id] || 'color-g1'}`}
@@ -325,7 +424,7 @@ export default function Calendario() {
                                 {s.hora_inicio} {s.titulo}
                               </div>
                             ))}
-                            {sels.length === 0 && <div style={{ height: 28 }} />}
+                            {sels.length === 0 && eventosEnFecha(d.fecha).length === 0 && <div style={{ height: 28 }} />}
                           </div>
                         </td>
                       )
@@ -344,12 +443,37 @@ export default function Calendario() {
               {fechaLabel}
             </div>
 
-            {sesionesDia.length === 0 ? (
+            {/* Eventos institucionales del día */}
+            {eventosEnFecha(diaSeleccionado).map(ev => (
+              <div key={ev.id} style={{
+                borderLeft: `4px solid ${TIPO_EVENTO[ev.tipo]?.color || '#7f8c8d'}`,
+                paddingLeft: 10, marginBottom: 12,
+              }}>
+                <div style={{ fontWeight: 600, fontSize: 13 }}>{ev.titulo}</div>
+                <div style={{ fontSize: 11, color: 'var(--texto-muted)', marginTop: 2 }}>
+                  📅 {formatRango(ev.fecha_inicio, ev.fecha_fin)}
+                  <span style={{
+                    marginLeft: 8, padding: '1px 6px', borderRadius: 10,
+                    background: TIPO_EVENTO[ev.tipo]?.color || '#7f8c8d',
+                    color: '#fff', fontSize: 10,
+                  }}>{TIPO_EVENTO[ev.tipo]?.label || ev.tipo}</span>
+                </div>
+                {ev.descripcion && <div style={{ fontSize: 12, color: 'var(--texto-muted)', marginTop: 4 }}>{ev.descripcion}</div>}
+                {puedeAdminCalendario && (
+                  <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
+                    <button className="btn-sec mini" onClick={() => abrirEditarEvento(ev)}>Editar</button>
+                    <button className="btn-sec mini" style={{ color: '#e74c3c' }} onClick={() => eliminarEvento(ev.id)}>Eliminar</button>
+                  </div>
+                )}
+              </div>
+            ))}
+
+            {sesionesDia.length === 0 && eventosEnFecha(diaSeleccionado).length === 0 ? (
               <div className="cal-sesion-vacio">
                 <span style={{ fontSize: 28, display: 'block', marginBottom: 8 }}>📭</span>
-                Sin clases programadas.
+                Sin clases ni eventos.
               </div>
-            ) : (
+            ) : sesionesDia.length === 0 ? null : (
               sesionesDia.map(s => {
                 const grupo = grupos.find(g => g.id === s.grupo_id)
                 const esHoy = diaSeleccionado === hoyFecha
@@ -413,6 +537,21 @@ export default function Calendario() {
               </div>
             </div>
           )}
+
+          {/* Leyenda de tipos de evento */}
+          <div className="card" style={{ marginTop: 12 }}>
+            <h4 style={{ marginBottom: 10, fontSize: 12, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--texto-muted)' }}>
+              Eventos institucionales
+            </h4>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 5 }}>
+              {Object.entries(TIPO_EVENTO).map(([key, { label, color }]) => (
+                <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12 }}>
+                  <div style={{ width: 10, height: 10, borderRadius: 2, background: color, flexShrink: 0 }} />
+                  <span className="texto-muted">{label}</span>
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -468,6 +607,71 @@ export default function Calendario() {
           <div className="modal-acciones">
             <button className="btn-sec" onClick={() => setModalRepro(null)}>Cancelar</button>
             <button className="btn-primario" onClick={guardarReprogramacion}>Guardar cambios</button>
+          </div>
+        </Modal>
+      )}
+
+      {/* ── Modal evento institucional ── */}
+      {modalEvento && (
+        <Modal
+          titulo={modalEvento === 'nuevo' ? 'Nuevo evento institucional' : 'Editar evento'}
+          onClose={() => setModalEvento(null)}
+          ancho={480}
+        >
+          <label>Título *
+            <input
+              value={eventoForm.titulo}
+              onChange={e => setEvenForm({ ...eventoForm, titulo: e.target.value })}
+              placeholder="Ej. Inicio de inscripciones"
+              maxLength={100}
+            />
+          </label>
+
+          <label>Tipo
+            <select value={eventoForm.tipo} onChange={e => setEvenForm({ ...eventoForm, tipo: e.target.value })}>
+              {Object.entries(TIPO_EVENTO).map(([key, { label }]) => (
+                <option key={key} value={key}>{label}</option>
+              ))}
+            </select>
+          </label>
+
+          <div className="form-grid">
+            <label>Fecha inicio *
+              <input
+                type="date"
+                value={eventoForm.fecha_inicio}
+                onChange={e => setEvenForm({ ...eventoForm, fecha_inicio: e.target.value })}
+              />
+            </label>
+            <label>Fecha fin <span style={{ fontWeight: 400, fontSize: 11 }}>(opcional)</span>
+              <input
+                type="date"
+                value={eventoForm.fecha_fin}
+                min={eventoForm.fecha_inicio}
+                onChange={e => setEvenForm({ ...eventoForm, fecha_fin: e.target.value })}
+              />
+            </label>
+          </div>
+
+          <label>Descripción <span style={{ fontWeight: 400, fontSize: 11 }}>(opcional)</span>
+            <textarea
+              value={eventoForm.descripcion}
+              onChange={e => setEvenForm({ ...eventoForm, descripcion: e.target.value })}
+              rows={3}
+              placeholder="Detalles adicionales..."
+              style={{ resize: 'vertical' }}
+            />
+          </label>
+
+          <div className="modal-acciones">
+            <button className="btn-sec" onClick={() => setModalEvento(null)}>Cancelar</button>
+            <button
+              className="btn-primario"
+              onClick={guardarEvento}
+              disabled={guardandoEvento || !eventoForm.titulo.trim() || !eventoForm.fecha_inicio}
+            >
+              {guardandoEvento ? 'Guardando…' : 'Guardar'}
+            </button>
           </div>
         </Modal>
       )}
