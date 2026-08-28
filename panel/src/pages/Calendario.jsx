@@ -46,6 +46,7 @@ export default function Calendario() {
   const [idiomas, setIdiomas] = useState([])
   const [niveles, setNiveles] = useState([])
   const [eventos, setEventos] = useState([])
+  const [planteles, setPlanteles] = useState([])
 
   // Modal de reprogramación
   const [modalRepro, setModalRepro] = useState(null)
@@ -53,18 +54,19 @@ export default function Calendario() {
 
   // Modal de evento institucional
   const [modalEvento, setModalEvento] = useState(null) // null | 'nuevo' | evento-obj
-  const [eventoForm, setEvenForm] = useState({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: hoyFecha, fecha_fin: '' })
+  const [eventoForm, setEvenForm] = useState({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: hoyFecha, fecha_fin: '', plantel_id: '' })
   const [guardandoEvento, setGuardandoEvento] = useState(false)
 
   const puedeAdminCalendario = tienePermiso(P.CALENDARIO_ADMIN)
 
   async function cargar() {
     try {
-      const [todosGrupos, ins, idiomas, evArr] = await Promise.all([
+      const [todosGrupos, ins, idiomas, evArr, plArr] = await Promise.all([
         api.getGrupos(),
         api.getInscripciones(),
         api.getIdiomas(),
         api.getEventosCalendario(),
+        usuario.rol === 'superadmin' ? api.getPlanteles() : Promise.resolve([]),
       ])
       let g = []
       if (usuario.rol === 'alumno') {
@@ -78,6 +80,7 @@ export default function Calendario() {
       setGrupos(g)
       setIdiomas(idiomas)
       setEventos(evArr)
+      setPlanteles(plArr)
       const gids2 = g.map(x => x.id)
       const [sesArr, nivelesArr] = await Promise.all([
         gids2.length > 0
@@ -146,6 +149,7 @@ export default function Calendario() {
         tipo: eventoForm.tipo,
         fecha_inicio: eventoForm.fecha_inicio,
         fecha_fin: eventoForm.fecha_fin || undefined,
+        plantel_id: eventoForm.plantel_id || undefined,
       }
       if (modalEvento === 'nuevo') {
         await api.crearEventoCalendario(data)
@@ -172,12 +176,12 @@ export default function Calendario() {
   }
 
   function abrirNuevoEvento() {
-    setEvenForm({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: diaSeleccionado, fecha_fin: '' })
+    setEvenForm({ titulo: '', descripcion: '', tipo: 'general', fecha_inicio: diaSeleccionado, fecha_fin: '', plantel_id: '' })
     setModalEvento('nuevo')
   }
 
   function abrirEditarEvento(ev) {
-    setEvenForm({ titulo: ev.titulo, descripcion: ev.descripcion || '', tipo: ev.tipo, fecha_inicio: ev.fecha_inicio, fecha_fin: ev.fecha_fin || '' })
+    setEvenForm({ titulo: ev.titulo, descripcion: ev.descripcion || '', tipo: ev.tipo, fecha_inicio: ev.fecha_inicio, fecha_fin: ev.fecha_fin || '', plantel_id: ev.plantel_id || '' })
     setModalEvento(ev)
   }
 
@@ -634,6 +638,15 @@ export default function Calendario() {
               ))}
             </select>
           </label>
+
+          {usuario.rol === 'superadmin' && (
+            <label>Plantel <span style={{ fontWeight: 400, fontSize: 11 }}>(vacío = visible para todos)</span>
+              <select value={eventoForm.plantel_id} onChange={e => setEvenForm({ ...eventoForm, plantel_id: e.target.value })}>
+                <option value="">— Global (todos los planteles) —</option>
+                {planteles.map(p => <option key={p.id} value={p.id}>{p.nombre}</option>)}
+              </select>
+            </label>
+          )}
 
           <div className="form-grid">
             <label>Fecha inicio *

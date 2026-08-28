@@ -524,6 +524,7 @@ async function initDB() {
     )
   `)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_eventos_cal_fecha ON eventos_calendario (fecha_inicio, activo)`)
+  await pool.query(`ALTER TABLE eventos_calendario ADD COLUMN IF NOT EXISTS plantel_id TEXT`)
 
   console.log('PostgreSQL inicializado correctamente.')
 }
