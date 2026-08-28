@@ -2,9 +2,10 @@ const jwt = require('jsonwebtoken')
 const { queryOne, query } = require('../db/pool')
 
 if (!process.env.JWT_SECRET) {
-  console.warn('[SEGURIDAD] JWT_SECRET no configurado — usando clave por defecto. No usar en producción.')
+  console.error('[FATAL] JWT_SECRET no está configurado. Define la variable de entorno antes de iniciar el servidor.')
+  process.exit(1)
 }
-const JWT_SECRET = process.env.JWT_SECRET || 'lengua-joven-secret-2026'
+const JWT_SECRET = process.env.JWT_SECRET
 
 function requireAuth(req, res, next) {
   _authAsync(req, res, next).catch(next)

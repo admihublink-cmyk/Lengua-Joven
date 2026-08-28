@@ -418,6 +418,11 @@ router.get('/extemporaneas/verificar-grupo/:grupo_id', requireAuth, async (req, 
 
 router.delete('/:id', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador'].includes(req.user.rol)) return res.status(403).json({ error: 'Sin permiso' })
+  const ins = await queryOne('SELECT plantel_id FROM inscripciones WHERE id = $1', [req.params.id])
+  if (!ins) return res.status(404).json({ error: 'No encontrada' })
+  if (req.user.rol !== 'superadmin' && ins.plantel_id !== req.user.plantel_id) {
+    return res.status(403).json({ error: 'Sin permiso para esta inscripción' })
+  }
   await run('DELETE FROM inscripciones WHERE id = $1', [req.params.id])
   res.json({ ok: true })
 })

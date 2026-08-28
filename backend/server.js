@@ -10,21 +10,15 @@ const app = express()
 const PORT = Number(process.env.PORT || 3001)
 
 if (!process.env.JWT_SECRET) {
-  if (process.env.NODE_ENV === 'production') {
-    console.error('[FATAL] JWT_SECRET no configurado en producción. Abortando.')
-    process.exit(1)
-  }
-  console.warn('[SEGURIDAD] JWT_SECRET no configurado — usando clave por defecto. No usar en producción.')
+  console.error('[FATAL] JWT_SECRET no está configurado. Define la variable de entorno antes de iniciar el servidor.')
+  process.exit(1)
 }
 
 const ALLOWED_ORIGINS = (process.env.ALLOWED_ORIGINS || 'http://localhost:5173,http://127.0.0.1:5173').split(',').map(o => o.trim()).filter(Boolean)
 
 function isAllowedOrigin(origin) {
-  if (!origin) return true
+  if (!origin) return false // rechazar requests sin Origin con credentials
   try {
-    const requestUrl = new URL(origin)
-    const isLocalhost = ['localhost', '127.0.0.1', '::1'].includes(requestUrl.hostname)
-    if (isLocalhost) return true
     return ALLOWED_ORIGINS.includes(origin.replace(/\/$/, ''))
   } catch {
     return false

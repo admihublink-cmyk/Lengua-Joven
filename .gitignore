@@ -27,3 +27,7 @@ backend/uploads/
 # OS
 .DS_Store
 Thumbs.db
+
+# Archivos con datos sensibles de prueba
+backend/usuarios_prueba.txt
+**/usuarios_prueba.txt

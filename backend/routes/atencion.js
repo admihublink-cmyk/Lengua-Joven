@@ -184,24 +184,27 @@ router.get('/solicitudes', requireAuth, async (req, res) => {
 router.get('/dashboard', requireAuth, async (req, res) => {
   if (!esGestor(req.user)) return res.status(403).json({ error: 'Sin permiso' })
 
-  const plantelFilter = req.user.rol === 'director' && req.user.plantel_id
-    ? `WHERE plantel_id = '${req.user.plantel_id}'` : ''
+  const filtraPlantel = req.user.rol === 'director' && req.user.plantel_id
+  const plantelParams = filtraPlantel ? [req.user.plantel_id] : []
+  const plantelCond   = filtraPlantel ? 'WHERE plantel_id = $1' : ''
+  const plantelCondS  = filtraPlantel ? 'WHERE s.plantel_id = $1' : ''
 
   const estados = await query(
-    `SELECT estado, COUNT(*) AS n FROM atencion_solicitudes ${plantelFilter}
-     GROUP BY estado`
+    `SELECT estado, COUNT(*) AS n FROM atencion_solicitudes ${plantelCond} GROUP BY estado`,
+    plantelParams
   )
   const porCategoria = await query(
-    `SELECT categoria, COUNT(*) AS n FROM atencion_solicitudes ${plantelFilter}
-     GROUP BY categoria ORDER BY n DESC`
+    `SELECT categoria, COUNT(*) AS n FROM atencion_solicitudes ${plantelCond} GROUP BY categoria ORDER BY n DESC`,
+    plantelParams
   )
   const recientes = await query(
     `SELECT s.id, s.titulo, s.categoria, s.estado, s.prioridad, s.creado_en,
             u.nombre AS alumno_nombre
      FROM atencion_solicitudes s
      LEFT JOIN usuarios u ON u.id = s.alumno_id
-     ${plantelFilter}
-     ORDER BY s.creado_en DESC LIMIT 10`
+     ${plantelCondS}
+     ORDER BY s.creado_en DESC LIMIT 10`,
+    plantelParams
   )
 
   const conteo = {}
