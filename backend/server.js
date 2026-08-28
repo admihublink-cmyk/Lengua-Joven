@@ -170,6 +170,7 @@ app.use('/api/liquidaciones', require('./routes/liquidaciones'))
 app.use('/api/legal', require('./routes/legal'))
 app.use('/api/atencion', require('./routes/atencion'))
 app.use('/api/eventos-calendario', require('./routes/eventosCalendario'))
+app.use('/api/cambios', require('./routes/cambios'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 
