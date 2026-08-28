@@ -84,7 +84,7 @@ router.post('/cambiar-password', requireAuth, async (req, res) => {
   if (!bcrypt.compareSync(actualPwd, user.password_hash)) {
     return res.status(400).json({ error: 'Contraseña actual incorrecta' })
   }
-  if (!nuevaPwd || nuevaPwd.length < 6) return res.status(400).json({ error: 'Nueva contraseña muy corta' })
+  if (!nuevaPwd || nuevaPwd.length < 8) return res.status(400).json({ error: 'La nueva contraseña debe tener al menos 8 caracteres' })
   const hash = bcrypt.hashSync(nuevaPwd, 10)
   await run('UPDATE usuarios SET password_hash = $1 WHERE id = $2', [hash, req.user.id])
   await logActividad(req.user.id, 'CAMBIO_PASSWORD', `Usuario ${user.email} cambió su contraseña`, req)
@@ -135,7 +135,7 @@ router.get('/reset-password/:token', async (req, res) => {
 // ── Restablecer contraseña con token ─────────────────────────────────────────
 router.post('/reset-password/:token', async (req, res) => {
   const { nueva } = req.body
-  if (!nueva || nueva.length < 6) return res.status(400).json({ error: 'La contraseña debe tener al menos 6 caracteres' })
+  if (!nueva || nueva.length < 8) return res.status(400).json({ error: 'La contraseña debe tener al menos 8 caracteres' })
 
   // Operación atómica: marca como usado solo si aún no lo estaba (previene TOCTOU)
   const row = await queryOne(
