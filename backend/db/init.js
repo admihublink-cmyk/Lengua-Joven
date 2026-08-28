@@ -509,6 +509,22 @@ async function initDB() {
   // Columna meta en notificaciones (para guardar solicitud_id, etc.)
   await pool.query(`ALTER TABLE notificaciones ADD COLUMN IF NOT EXISTS meta TEXT`)
 
+  // ── Calendario institucional (v2.8) ─────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS eventos_calendario (
+      id TEXT PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      descripcion TEXT,
+      tipo TEXT NOT NULL DEFAULT 'general',
+      fecha_inicio TEXT NOT NULL,
+      fecha_fin TEXT,
+      creado_por TEXT NOT NULL,
+      activo INTEGER DEFAULT 1,
+      creado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_eventos_cal_fecha ON eventos_calendario (fecha_inicio, activo)`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 

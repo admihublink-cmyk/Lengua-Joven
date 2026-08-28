@@ -223,6 +223,9 @@ router.get('/dashboard', requireAuth, async (req, res) => {
 
 // ── POST /api/atencion/solicitudes (crear) ────────────────────────────────────
 router.post('/solicitudes', requireAuth, (req, res) => {
+  if (req.user.rol === 'superadmin') {
+    return res.status(403).json({ error: 'El superadmin no puede crear solicitudes de atención.' })
+  }
   // necesitamos el folio antes de que multer guarde los archivos
   ;(async () => {
     const folio = await generarFolio()
