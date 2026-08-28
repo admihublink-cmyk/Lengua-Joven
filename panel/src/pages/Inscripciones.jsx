@@ -79,6 +79,14 @@ export default function Inscripciones() {
   const [extemporaneasPendientes, setExtemporaneasPendientes] = useState([])
   const [autorizandoExt, setAutorizandoExt] = useState(null) // id de inscripción
 
+  // Cambios de grupo/nivel
+  const [cambios, setCambios] = useState([])
+  const [modalCambio, setModalCambio] = useState(null) // inscripcion obj | null
+  const [cambioExistente, setCambioExistente] = useState(null) // solicitud guardada
+  const [cambioForm, setCambioForm] = useState({ tipo: 'grupo', nivel_deseado: '', horario_preferido: '', notas: '' })
+  const [guardandoCambio, setGuardandoCambio] = useState(false)
+  const puedeRegistrarCambios = tienePermiso(P.CAMBIO_REGISTRAR)
+
   // Estado para importación CSV
   const [csvTexto, setCsvTexto] = useState('')
   const [csvFilas, setCsvFilas] = useState([])
@@ -103,7 +111,8 @@ export default function Inscripciones() {
     try {
       const puedeVerPre = tienePermiso(P.INSC_CONFIRMAR) || tienePermiso(P.INSC_CREAR)
       const puedeAutorizar = ['superadmin', 'coordinador', 'director'].includes(usuario?.rol)
-      const [ins, g, p, u, idiomas, pre, extPend] = await Promise.all([
+      const puedeVerCambios = tienePermiso(P.CAMBIO_REGISTRAR)
+      const [ins, g, p, u, idiomas, pre, extPend, cambiosArr] = await Promise.all([
         api.getInscripciones(),
         api.getGrupos(),
         api.getPlanteles(),
@@ -111,6 +120,7 @@ export default function Inscripciones() {
         api.getIdiomas(),
         puedeVerPre ? api.getPreRegistros() : Promise.resolve([]),
         puedeAutorizar ? api.getExtemporaneasPendientes() : Promise.resolve([]),
+        puedeVerCambios ? api.getCambios() : Promise.resolve([]),
       ])
       setInscripciones(ins)
       setGrupos(g)
@@ -118,6 +128,7 @@ export default function Inscripciones() {
       setUsuarios(u)
       if (puedeVerPre) setPreRegistros(pre)
       if (puedeAutorizar) setExtemporaneasPendientes(extPend)
+      if (puedeVerCambios) setCambios(cambiosArr)
       const nivelesArr = await Promise.all(idiomas.map(i => api.getNiveles(i.id)))
       setNiveles(nivelesArr.flat())
     } catch (e) {
@@ -320,10 +331,14 @@ export default function Inscripciones() {
         </div>
       </div>
 
-      {/* Pestañas: Inscripciones / Pre-registros */}
+      {/* Pestañas: Inscripciones / Pre-registros / Cambios */}
       {puedeGestionar && (
         <div style={{ display: 'flex', gap: 0, marginBottom: 20, borderBottom: '2px solid var(--borde)' }}>
-          {[['inscripciones', '📋 Inscripciones'], ['pre_registros', '📝 Pre-registros']].map(([tab, label]) => (
+          {[
+            ['inscripciones', '📋 Inscripciones'],
+            ['pre_registros', '📝 Pre-registros'],
+            ...(puedeRegistrarCambios ? [['cambios', '🔄 Cambios']] : []),
+          ].map(([tab, label]) => (
             <button key={tab} onClick={() => setTabActivo(tab)} style={{
               padding: '10px 20px', fontWeight: 700, fontSize: 13, cursor: 'pointer',
               background: 'none', border: 'none', borderBottom: tabActivo === tab ? '2px solid var(--naranja)' : '2px solid transparent',
@@ -332,6 +347,11 @@ export default function Inscripciones() {
               {tab === 'pre_registros' && preRegistros.filter(p => p.estado === 'pendiente_pago').length > 0 && (
                 <span style={{ marginLeft: 6, background: '#e74c3c', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11 }}>
                   {preRegistros.filter(p => p.estado === 'pendiente_pago').length}
+                </span>
+              )}
+              {tab === 'cambios' && cambios.filter(c => c.estado === 'pendiente').length > 0 && (
+                <span style={{ marginLeft: 6, background: '#e67e22', color: '#fff', borderRadius: 10, padding: '1px 7px', fontSize: 11 }}>
+                  {cambios.filter(c => c.estado === 'pendiente').length}
                 </span>
               )}
             </button>
@@ -566,6 +586,73 @@ export default function Inscripciones() {
         </div>
       )}
 
+      {/* ── TAB: CAMBIOS DE GRUPO/NIVEL ── */}
+      {puedeRegistrarCambios && tabActivo === 'cambios' && (
+        <div>
+          {cambios.length === 0 ? (
+            <div className="card texto-muted" style={{ textAlign: 'center', padding: 40 }}>
+              No hay solicitudes de cambio registradas.
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table className="tabla">
+                <thead>
+                  <tr>
+                    <th>Alumno</th>
+                    <th>Folio</th>
+                    <th>Tipo</th>
+                    <th>Nivel deseado</th>
+                    <th>Horario preferido</th>
+                    <th>Notas</th>
+                    <th>Estado</th>
+                    <th>Registrada</th>
+                    <th></th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {cambios.map(c => {
+                    const ESTADO_COLOR = { pendiente: '#e67e22', en_proceso: '#2980b9', resuelto: '#27ae60', cancelado: '#95a5a6' }
+                    const ESTADO_LABEL = { pendiente: 'Pendiente', en_proceso: 'En proceso', resuelto: 'Resuelto', cancelado: 'Cancelado' }
+                    return (
+                      <tr key={c.id}>
+                        <td style={{ fontWeight: 600 }}>{c.alumno_nombre || c.alumno_id}</td>
+                        <td style={{ fontSize: 12 }}>{c.folio || '—'}</td>
+                        <td><span style={{ padding: '2px 8px', borderRadius: 6, fontSize: 12, background: 'var(--bg-3)', fontWeight: 600 }}>{c.tipo === 'nivel' ? 'Nivel' : 'Grupo'}</span></td>
+                        <td style={{ fontSize: 13 }}>{c.nivel_deseado || '—'}</td>
+                        <td style={{ fontSize: 13 }}>{c.horario_preferido || '—'}</td>
+                        <td style={{ fontSize: 12, maxWidth: 180, whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{c.notas || '—'}</td>
+                        <td>
+                          <select value={c.estado} style={{ fontSize: 12, padding: '3px 6px', borderRadius: 6, border: `1px solid ${ESTADO_COLOR[c.estado]}`, color: ESTADO_COLOR[c.estado], background: 'transparent', fontWeight: 600 }}
+                            onChange={async e => {
+                              try {
+                                await api.cambiarEstadoCambio(c.id, e.target.value)
+                                await cargar()
+                              } catch (err) { alert('Error: ' + err.message) }
+                            }}>
+                            {['pendiente', 'en_proceso', 'resuelto', 'cancelado'].map(s => (
+                              <option key={s} value={s}>{ESTADO_LABEL[s]}</option>
+                            ))}
+                          </select>
+                        </td>
+                        <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{c.creado_en ? c.creado_en.slice(0, 10) : '—'}</td>
+                        <td>
+                          <button className="btn-mini" style={{ color: '#e74c3c', borderColor: 'rgba(231,76,60,.4)' }}
+                            onClick={async () => {
+                              if (!confirm('¿Eliminar esta solicitud?')) return
+                              try { await api.eliminarCambio(c.id); await cargar() }
+                              catch (err) { alert('Error: ' + err.message) }
+                            }}>Eliminar</button>
+                        </td>
+                      </tr>
+                    )
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* ── TAB: INSCRIPCIONES (contenido original) ── */}
       {(!puedeGestionar || tabActivo === 'inscripciones') && (
       <div>
@@ -791,6 +878,23 @@ export default function Inscripciones() {
                       disabled={enviandoLiga === i.id}
                       onClick={() => enviarLiga(i.id)}>
                       {enviandoLiga === i.id ? '…' : '🏦 Liga'}
+                    </button>
+                  )}
+                  {puedeRegistrarCambios && i.estado === 'asignada' && i.alumno_id && (
+                    <button className="btn-mini" title="Registrar solicitud de cambio de grupo o nivel"
+                      style={cambios.some(c => c.inscripcion_id === i.id && c.estado === 'pendiente')
+                        ? { background: '#e67e22', color: '#fff', borderColor: '#e67e22' }
+                        : {}}
+                      onClick={() => {
+                        const existente = cambios.find(c => c.inscripcion_id === i.id)
+                        setCambioExistente(existente || null)
+                        setCambioForm(existente
+                          ? { tipo: existente.tipo, nivel_deseado: existente.nivel_deseado || '', horario_preferido: existente.horario_preferido || '', notas: existente.notas || '' }
+                          : { tipo: 'grupo', nivel_deseado: '', horario_preferido: '', notas: '' }
+                        )
+                        setModalCambio(i)
+                      }}>
+                      🔄{cambios.some(c => c.inscripcion_id === i.id && c.estado === 'pendiente') ? ' ⚠' : ''}
                     </button>
                   )}
                 </td>
@@ -1040,6 +1144,58 @@ export default function Inscripciones() {
         </Modal>
       )}
       </div>
+      )}
+
+      {/* ── Modal solicitud de cambio ── */}
+      {modalCambio && (
+        <Modal titulo={`Cambio de grupo/nivel — ${nombre(modalCambio)}`} onClose={() => setModalCambio(null)} ancho={480}>
+          {cambioExistente && (
+            <div style={{ marginBottom: 16, padding: '8px 12px', borderRadius: 8, background: 'var(--bg-3)', fontSize: 13 }}>
+              Solicitud registrada el {cambioExistente.creado_en?.slice(0, 10)}.
+              Estado actual: <strong style={{ color: { pendiente: '#e67e22', en_proceso: '#2980b9', resuelto: '#27ae60', cancelado: '#95a5a6' }[cambioExistente.estado] }}>
+                {{ pendiente: 'Pendiente', en_proceso: 'En proceso', resuelto: 'Resuelto', cancelado: 'Cancelado' }[cambioExistente.estado]}
+              </strong>
+            </div>
+          )}
+          <label>Tipo de cambio
+            <select value={cambioForm.tipo} onChange={e => setCambioForm({ ...cambioForm, tipo: e.target.value })}>
+              <option value="grupo">Cambio de grupo / horario</option>
+              <option value="nivel">Cambio de nivel</option>
+            </select>
+          </label>
+          <label>Nivel deseado <span style={{ fontWeight: 400, fontSize: 11 }}>(opcional)</span>
+            <input value={cambioForm.nivel_deseado} onChange={e => setCambioForm({ ...cambioForm, nivel_deseado: e.target.value })} placeholder="Ej. Inglés Intermedio 2" />
+          </label>
+          <label>Horario preferido <span style={{ fontWeight: 400, fontSize: 11 }}>(opcional)</span>
+            <input value={cambioForm.horario_preferido} onChange={e => setCambioForm({ ...cambioForm, horario_preferido: e.target.value })} placeholder="Ej. Lunes y miércoles 7pm" />
+          </label>
+          <label>Notas <span style={{ fontWeight: 400, fontSize: 11 }}>(opcional)</span>
+            <textarea rows={3} value={cambioForm.notas} onChange={e => setCambioForm({ ...cambioForm, notas: e.target.value })} placeholder="Motivo o detalles adicionales…" style={{ resize: 'vertical' }} />
+          </label>
+          <div className="modal-acciones">
+            {cambioExistente && (
+              <button className="btn-sec" style={{ color: '#e74c3c', marginRight: 'auto' }}
+                onClick={async () => {
+                  if (!confirm('¿Cancelar esta solicitud de cambio?')) return
+                  try { await api.cambiarEstadoCambio(cambioExistente.id, 'cancelado'); await cargar(); setModalCambio(null) }
+                  catch (e) { alert('Error: ' + e.message) }
+                }}>Cancelar solicitud</button>
+            )}
+            <button className="btn-sec" onClick={() => setModalCambio(null)}>Cerrar</button>
+            <button className="btn-primario" disabled={guardandoCambio}
+              onClick={async () => {
+                setGuardandoCambio(true)
+                try {
+                  await api.registrarCambio({ inscripcion_id: modalCambio.id, alumno_id: modalCambio.alumno_id, ...cambioForm })
+                  await cargar()
+                  setModalCambio(null)
+                } catch (e) { alert('Error: ' + e.message) }
+                finally { setGuardandoCambio(false) }
+              }}>
+              {guardandoCambio ? 'Guardando…' : cambioExistente ? 'Actualizar' : 'Registrar'}
+            </button>
+          </div>
+        </Modal>
       )}
 
       {/* ── Modal grupo lleno: ¿poner en espera? ── */}

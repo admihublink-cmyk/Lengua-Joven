@@ -526,6 +526,25 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_eventos_cal_fecha ON eventos_calendario (fecha_inicio, activo)`)
   await pool.query(`ALTER TABLE eventos_calendario ADD COLUMN IF NOT EXISTS plantel_id TEXT`)
 
+  // ── Solicitudes de cambio de grupo/nivel (v2.9) ──────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS solicitudes_cambio (
+      id TEXT PRIMARY KEY,
+      inscripcion_id TEXT NOT NULL UNIQUE,
+      alumno_id TEXT NOT NULL,
+      plantel_id TEXT,
+      tipo TEXT NOT NULL DEFAULT 'grupo',
+      nivel_deseado TEXT,
+      horario_preferido TEXT,
+      notas TEXT,
+      estado TEXT NOT NULL DEFAULT 'pendiente',
+      creado_por TEXT NOT NULL,
+      creado_en TEXT NOT NULL,
+      actualizado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_cambios_estado ON solicitudes_cambio (estado, plantel_id)`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 

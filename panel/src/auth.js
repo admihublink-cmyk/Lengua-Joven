@@ -47,6 +47,8 @@ export const P = {
   ATENCION_GESTIONAR: 'ATENCION_GESTIONAR', // ver bandeja, cambiar estado, notas internas
   // v2.8 — Calendario institucional
   CALENDARIO_ADMIN: 'CALENDARIO_ADMIN',   // crear/editar/eliminar eventos institucionales
+  // v2.9 — Cambios de grupo/nivel
+  CAMBIO_REGISTRAR: 'CAMBIO_REGISTRAR',   // registrar y gestionar solicitudes de cambio
 }
 
 const TODOS = Object.values(P)
@@ -78,6 +80,7 @@ export const ROL_PERMISOS = {
       P.ARCO_ATENDER,
       P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
       P.CALENDARIO_ADMIN,
+      P.CAMBIO_REGISTRAR,
     ],
     scope: 'plantel',
     label: 'Director',
@@ -99,6 +102,7 @@ export const ROL_PERMISOS = {
       P.ARCO_ATENDER,
       P.ATENCION_CREAR, P.ATENCION_GESTIONAR,
       P.CALENDARIO_ADMIN,
+      P.CAMBIO_REGISTRAR,
     ],
     scope: 'multi-plantel',
     label: 'Coordinador LJ',

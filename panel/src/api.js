@@ -465,6 +465,13 @@ export const revisarDocAtencion = (docId, estado, motivo_rechazo) =>
 export const getAtencionDashboard = () => get('/atencion/dashboard')
 export const getCategoriasAtencion = () => get('/atencion/categorias')
 
+// ── Cambios de grupo/nivel ────────────────────────────────────────────────────
+export const getCambios = () => get('/cambios')
+export const getCambioDeInscripcion = (inscripcion_id) => get(`/cambios/inscripcion/${inscripcion_id}`)
+export const registrarCambio = (data) => post('/cambios', data)
+export const cambiarEstadoCambio = (id, estado) => req('PATCH', `/cambios/${id}/estado`, { estado })
+export const eliminarCambio = (id) => del(`/cambios/${id}`)
+
 // ── Calendario institucional ──────────────────────────────────────────────────
 export const getEventosCalendario = () => get('/eventos-calendario')
 export const crearEventoCalendario = (data) => post('/eventos-calendario', data)
