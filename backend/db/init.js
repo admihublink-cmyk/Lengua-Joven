@@ -374,6 +374,15 @@ async function initDB() {
   await syncPlantalesOferta()
 
   // Migraciones incrementales
+  await pool.query(`ALTER TABLE grupos ADD COLUMN IF NOT EXISTS link_meet TEXT`)
+  await pool.query(`ALTER TABLE sesiones ADD COLUMN IF NOT EXISTS link_meet TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS domicilio TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS num_exterior TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS colonia TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS municipio TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS rango_edad TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS apellido_paterno TEXT`)
+  await pool.query(`ALTER TABLE pre_registros ADD COLUMN IF NOT EXISTS apellido_materno TEXT`)
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS curp TEXT`)
   await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS genero_nacimiento TEXT`)
 
