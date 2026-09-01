@@ -5,6 +5,7 @@ import * as api from '../api.js'
 
 const NAV_ITEMS = [
   // — General —
+  { id: 'portal_alumno', icon: '🏠', label: 'Mi Portal',          permiso: P.PORTAL_VER },
   { id: 'dashboard',     icon: '⊞',  label: 'Inicio',            permiso: null },
   { id: 'calendario',    icon: '📅',  label: 'Calendario',        permiso: P.GRUPO_VER },
   { id: 'mensajes',      icon: '💬',  label: 'Mensajes',          permiso: P.MENSAJE_ENVIAR },

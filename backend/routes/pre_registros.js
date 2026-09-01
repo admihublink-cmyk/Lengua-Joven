@@ -20,9 +20,11 @@ router.post('/publico', async (req, res) => { try {
   if (!checkPreRegRL(req.ip)) {
     return res.status(429).json({ error: 'Demasiadas solicitudes. Espera unos minutos e intenta de nuevo.' })
   }
-  const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
+  const { nombre: _nombre, apellido_paterno, apellido_materno, email, tel, curp, fecha_nacimiento, estado_entidad, idioma_interes, proveedor_interes,
     horario_preferido, como_entero, tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
-    genero_nacimiento, estado_nacimiento, acepto_aviso, aviso_id } = req.body
+    genero_nacimiento, estado_nacimiento, acepto_aviso, aviso_id,
+    domicilio, num_exterior, colonia, municipio, rango_edad } = req.body
+  const nombre = [_nombre, apellido_paterno, apellido_materno].filter(Boolean).join(' ') || _nombre
   if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
   if (!acepto_aviso) return res.status(400).json({ error: 'Debes aceptar el aviso de privacidad para continuar.' })
   const CURP_REGEX = /^[A-Z]{4}\d{6}[HM][A-Z]{5}[A-Z\d]\d$/
@@ -53,14 +55,18 @@ router.post('/publico', async (req, res) => { try {
      idioma_interes, proveedor_interes, horario_preferido, como_entero,
      estado, fecha_registro, fecha_pago, usuario_id,
      tutor_nombre, tutor_tel, tutor_email, grupo_interes_id,
-     genero_nacimiento, estado_nacimiento)
-    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
+     genero_nacimiento, estado_nacimiento,
+     domicilio, num_exterior, colonia, municipio, rango_edad,
+     apellido_paterno, apellido_materno)
+    VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25,$26,$27,$28,$29)`,
     [newId, folio, nombre, email, tel || '', (curp || '').toUpperCase(), fecha_nacimiento || '', estado_entidad || '',
     idioma_interes || '', proveedor_interes || '', horario_preferido || '', como_entero || '',
     'pendiente_pago', fecha, null, null,
     tutor_nombre || null, tutor_tel || null, tutor_email || null,
     grupo_interes_id || null,
-    genero_nacimiento || null, estado_nacimiento || null])
+    genero_nacimiento || null, estado_nacimiento || null,
+    domicilio || null, num_exterior || null, colonia || null, municipio || null, rango_edad || null,
+    apellido_paterno || null, apellido_materno || null])
   // Registrar aceptación del aviso de privacidad
   try {
     let avisoData = null

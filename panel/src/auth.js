@@ -49,6 +49,8 @@ export const P = {
   CALENDARIO_ADMIN: 'CALENDARIO_ADMIN',   // crear/editar/eliminar eventos institucionales
   // v2.9 — Cambios de grupo/nivel
   CAMBIO_REGISTRAR: 'CAMBIO_REGISTRAR',   // registrar y gestionar solicitudes de cambio
+  // v3.0 — Portal del alumno
+  PORTAL_VER: 'PORTAL_VER',              // acceder al portal de alumno
 }
 
 const TODOS = Object.values(P)
@@ -140,6 +142,7 @@ export const ROL_PERMISOS = {
       P.TAREA_VER,
       P.BUZON_ENVIAR,
       P.ATENCION_CREAR,
+      P.PORTAL_VER,
     ],
     scope: 'propio',
     label: 'Alumno',

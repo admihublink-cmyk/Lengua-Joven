@@ -29,6 +29,8 @@ import LigasPago from './pages/LigasPago.jsx'
 import PagosMaestros from './pages/PagosMaestros.jsx'
 import Legal from './pages/Legal.jsx'
 import Atencion from './pages/Atencion.jsx'
+import PortalAlumno from './pages/PortalAlumno.jsx'
+import PreRegistro from './pages/PreRegistro.jsx'
 
 export const AuthCtx = createContext(null)
 export const NavCtx  = createContext(null)
@@ -65,6 +67,7 @@ const RUTAS = {
   pagos_maestro: PagosMaestros,
   legal: Legal,
   atencion: Atencion,
+  portal_alumno: PortalAlumno,
 }
 
 export default function App() {
@@ -92,7 +95,10 @@ export default function App() {
   }, [])
 
   function entrar(u) {
-    setUsuario(u); setRuta('dashboard'); setParams({}); setVistaComoRol(null)
+    setUsuario(u)
+    setRuta(u?.rol === 'alumno' ? 'portal_alumno' : 'dashboard')
+    setParams({})
+    setVistaComoRol(null)
   }
   function salir() {
     apiLogout()
@@ -101,7 +107,18 @@ export default function App() {
   }
   function navegar(r, p = {}) { setRuta(r); setParams(p) }
 
-  if (!usuario) return <Login onLogin={entrar} />
+  // Mostrar formulario de pre-registro si la URL tiene ?registro=1
+  if (!usuario) {
+    const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null
+    if (urlParams?.get('registro') === '1') {
+      return <PreRegistro onVolver={() => {
+        if (typeof window !== 'undefined') {
+          window.history.replaceState({}, '', window.location.pathname)
+        }
+      }} />
+    }
+    return <Login onLogin={entrar} />
+  }
 
   // Usuario efectivo para permisos: si hay simulación, sobreescribir el rol
   const usuarioEfectivo = vistaComoRol
