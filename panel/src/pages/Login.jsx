@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
-import { login, getOfertas, crearPreRegistro, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
+import { login, getOfertas, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
+import PreRegistro from './PreRegistro.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
 const fetchPublico = (path) => fetch(API_BASE + '/api/publico/' + path).then(r => r.json())
@@ -37,15 +38,6 @@ export default function Login({ onLogin }) {
   const [resetErr, setResetErr]         = useState('')
   const [resetLoading, setResetLoading] = useState(false)
 
-  // Pre-registro form state
-  const [pre, setPre] = useState({
-    nombre: '', email: '', tel: '', curp: '', fecha_nacimiento: '',
-    estado_entidad: '', idioma_interes: '', proveedor_interes: '',
-    horario_preferido: '', como_entero: '',
-    tutor_nombre: '', tutor_tel: '', tutor_email: '',
-    genero_nacimiento: '', estado_nacimiento: '',
-  })
-  const [preErr, setPreErr] = useState('')
   const [focusedInput, setFocusedInput] = useState('')
 
   const [ofertas, setOfertas] = useState([])
@@ -55,9 +47,6 @@ export default function Login({ onLogin }) {
   const [filtroIdioma, setFiltroIdioma] = useState('')
   const [periodo, setPeriodo] = useState(null)
   const [cargandoPeriodo, setCargandoPeriodo] = useState(false)
-  const [gruposDisponibles, setGruposDisponibles] = useState([])
-  const [grupoInteres, setGrupoInteres] = useState('')
-  const [cargandoGruposPreReg, setCargandoGruposPreReg] = useState(false)
   const [gruposPeriodo, setGruposPeriodo] = useState([])
   const [subForm, setSubForm] = useState({ nombre: '', email: '', whatsapp: '', municipio: '' })
   const [subOk, setSubOk] = useState(false)
@@ -86,11 +75,6 @@ export default function Login({ onLogin }) {
   }, [])
 
   const idiomasResumen = [...new Set(ofertas.filter(o => o.proveedor !== 'Altissia').map(o => o.idioma))].sort()
-
-  // Planteles que ofrecen el idioma seleccionado en el form de pre-registro
-  const plantelesPorIdioma = pre.idioma_interes
-    ? planteles.filter(p => ofertas.some(o => o.plantel_id === p.id && o.idioma === pre.idioma_interes))
-    : planteles
 
   // Ofertas del idioma seleccionado en la sección pública (para el panel de horarios)
   const ofertasIdioma = idiomaAbierto
@@ -137,55 +121,6 @@ export default function Login({ onLogin }) {
       setResetLoading(false)
     }
   }
-
-  function calcularEdad(fechaNac) {
-    if (!fechaNac) return null
-    const hoy = new Date()
-    const nac = new Date(fechaNac)
-    let edad = hoy.getFullYear() - nac.getFullYear()
-    const m = hoy.getMonth() - nac.getMonth()
-    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
-    return edad
-  }
-
-  const edadActual = calcularEdad(pre.fecha_nacimiento)
-  const esMenorDeEdad = edadActual !== null && edadActual < 18
-
-  async function enviarPreRegistro(e) {
-    e.preventDefault()
-    setPreErr('')
-    if (!pre.nombre.trim()) { setPreErr('El nombre es requerido.'); return }
-    if (!pre.email.trim())  { setPreErr('El correo es requerido.'); return }
-    if (!pre.tel.trim())    { setPreErr('El teléfono es requerido.'); return }
-    if (!pre.curp.trim() || pre.curp.trim().length < 18) { setPreErr('El CURP es requerido (18 caracteres).'); return }
-    if (edadActual !== null && edadActual < 12) { setPreErr('El programa es para personas de 12 años en adelante.'); return }
-    if (esMenorDeEdad) {
-      if (!pre.tutor_nombre.trim()) { setPreErr('El nombre del tutor es requerido para menores de edad.'); return }
-      if (!pre.tutor_tel.trim())   { setPreErr('El teléfono del tutor es requerido para menores de edad.'); return }
-      if (!pre.tutor_email.trim()) { setPreErr('El correo del tutor es requerido para menores de edad.'); return }
-    }
-    try {
-      const result = await crearPreRegistro({ ...pre, grupo_interes_id: grupoInteres || null })
-      setFolioOk(result.folio)
-      setModal('ok')
-      setGrupoInteres('')
-      setGruposDisponibles([])
-      setPre({ nombre: '', email: '', tel: '', curp: '', fecha_nacimiento: '', estado_entidad: '', idioma_interes: '', proveedor_interes: '', horario_preferido: '', como_entero: '', tutor_nombre: '', tutor_tel: '', tutor_email: '', genero_nacimiento: '', estado_nacimiento: '' })
-    } catch (err) {
-      setPreErr(err.message || 'Error al enviar, intenta de nuevo.')
-    }
-  }
-
-  // Cuando el alumno elige idioma + escuela en el pre-registro, carga grupos disponibles
-  useEffect(() => {
-    const plantel = planteles.find(p => p.nombre === pre.proveedor_interes)
-    if (!plantel || !pre.idioma_interes) { setGruposDisponibles([]); setGrupoInteres(''); return }
-    setCargandoGruposPreReg(true)
-    fetchPublico(`grupos?plantel_id=${plantel.id}&idioma=${encodeURIComponent(pre.idioma_interes)}`)
-      .then(g => { setGruposDisponibles(g); setGrupoInteres('') })
-      .catch(() => { setGruposDisponibles([]); setGrupoInteres('') })
-      .finally(() => setCargandoGruposPreReg(false))
-  }, [pre.idioma_interes, pre.proveedor_interes, planteles])
 
   useEffect(() => {
     if (!filtroPlantel || !filtroIdioma) { setPeriodo(null); setGruposPeriodo([]); return }
@@ -235,33 +170,6 @@ export default function Login({ onLogin }) {
     }
   }
 
-  const CURP_ESTADOS = {
-    AS:'Aguascalientes',BC:'Baja California',BS:'Baja California Sur',CC:'Campeche',
-    CS:'Chiapas',CH:'Chihuahua',CL:'Colima',DF:'Ciudad de México',DG:'Durango',
-    GT:'Guanajuato',GR:'Guerrero',HG:'Hidalgo',JC:'Jalisco',MC:'Estado de México',
-    MN:'Michoacán',MS:'Morelos',NT:'Nayarit',NL:'Nuevo León',OC:'Oaxaca',
-    PL:'Puebla',QT:'Querétaro',QR:'Quintana Roo',SP:'San Luis Potosí',SL:'Sinaloa',
-    SR:'Sonora',TC:'Tabasco',TS:'Tamaulipas',TL:'Tlaxcala',VZ:'Veracruz',
-    YN:'Yucatán',ZS:'Zacatecas',NE:'Nacido en el extranjero',
-  }
-
-  function parseCurp(curp) {
-    if (!curp || curp.length < 18) return {}
-    const yy = curp.slice(4, 6)
-    const mm = curp.slice(6, 8)
-    const dd = curp.slice(8, 10)
-    const sexo = curp[10]
-    const estadoCod = curp.slice(11, 13).toUpperCase()
-    const yyNum = parseInt(yy, 10)
-    const currentYY = new Date().getFullYear() % 100
-    const century = yyNum <= currentYY ? '20' : '19'
-    return {
-      fecha_nacimiento: `${century}${yy}-${mm}-${dd}`,
-      genero_nacimiento: sexo === 'H' ? 'Masculino' : sexo === 'M' ? 'Femenino' : '',
-      estado_nacimiento: CURP_ESTADOS[estadoCod] || estadoCod,
-    }
-  }
-
   const glass = {
     bg:     'rgba(255,255,255,0.65)',
     border: 'rgba(0,0,0,0.07)',
@@ -304,8 +212,15 @@ export default function Login({ onLogin }) {
         </div>
       </nav>
 
+      {/* ── PRE-REGISTRO (componente nuevo) ── */}
+      {modal === 'prereg' && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200, overflowY: 'auto', padding: '24px 16px' }}>
+          <PreRegistro onVolver={cerrar} />
+        </div>
+      )}
+
       {/* ── MODALES ── */}
-      {(modal === 'login' || modal === 'prereg' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok' || modal === 'suscribir' || modal === 'suscribir_ok') && (
+      {(modal === 'login' || modal === 'ok' || modal === 'forgot' || modal === 'forgot_ok' || modal === 'reset' || modal === 'reset_ok' || modal === 'suscribir' || modal === 'suscribir_ok') && (
         <div onClick={cerrar} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.45)', zIndex: 200, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div onClick={e => e.stopPropagation()} style={{ background: modal === 'prereg' ? 'rgba(255,246,228,0.95)' : glass.bg, backdropFilter: glass.blur, WebkitBackdropFilter: glass.blur, border: `1px solid ${glass.border}`, borderRadius: 20, padding: '36px', width: '100%', maxWidth: modal === 'prereg' ? 560 : 380, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 24px 80px rgba(0,0,0,0.15), inset 0 1px 0 rgba(255,255,255,0.9)', color: txt }}>
 
@@ -501,174 +416,6 @@ export default function Login({ onLogin }) {
                 </p>
                 <button onClick={cerrar} style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 28px', fontWeight: 700, cursor: 'pointer' }}>Cerrar</button>
               </div>
-            )}
-
-            {/* PRE-REGISTRO */}
-            {modal === 'prereg' && (
-              <>
-                <h3 style={{ margin: '0 0 4px', fontSize: 20, fontWeight: 800 }}>Pre-registro</h3>
-                <p style={{ color: '#888', fontSize: 13, margin: '0 0 12px' }}>
-                  Completa tus datos. Una vez que realices tu pago, recibirás tus credenciales de acceso.
-                </p>
-                <div style={{ background: '#f5f9ff', border: '1px solid #d0e4ff', borderRadius: 8, padding: '10px 14px', fontSize: 12, color: '#2c5f8a', marginBottom: 12 }}>
-                  <strong>Requisitos:</strong> Tener 12 años en adelante · Identificación oficial o acta de nacimiento · CURP
-                </div>
-                <form onSubmit={enviarPreRegistro} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-                  {preErr && <div style={{ background: '#fff0f0', border: '1px solid #ffbaba', borderRadius: 8, padding: '10px 14px', fontSize: 13, color: '#c0392b' }}>{preErr}</div>}
-
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                      Nombre completo *
-                      <input value={pre.nombre} onChange={e => setPre({ ...pre, nombre: e.target.value })} placeholder="Ej. Ana González Martínez"
-                        style={inputStyle(focusedInput === 'nombre')} onFocus={() => setFocusedInput('nombre')} onBlur={() => setFocusedInput('')} />
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Correo electrónico *
-                      <input type="email" value={pre.email} onChange={e => setPre({ ...pre, email: e.target.value })} placeholder="correo@ejemplo.com"
-                        style={inputStyle(focusedInput === 'email')} onFocus={() => setFocusedInput('email')} onBlur={() => setFocusedInput('')} />
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Teléfono / WhatsApp *
-                      <input value={pre.tel} onChange={e => setPre({ ...pre, tel: e.target.value })} placeholder="81 1234 5678"
-                        style={inputStyle(focusedInput === 'tel')} onFocus={() => setFocusedInput('tel')} onBlur={() => setFocusedInput('')} />
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      CURP *
-                      <input value={pre.curp} onChange={e => {
-                        const val = e.target.value.toUpperCase()
-                        const parsed = parseCurp(val)
-                        setPre(p => ({ ...p, curp: val, ...parsed }))
-                      }} placeholder="XXXX000000XXXXXX00" maxLength={18}
-                        style={inputStyle(focusedInput === 'curp')} onFocus={() => setFocusedInput('curp')} onBlur={() => setFocusedInput('')} />
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Fecha de nacimiento
-                      <input type="date" value={pre.fecha_nacimiento}
-                        readOnly={pre.curp.length >= 18}
-                        onChange={e => pre.curp.length < 18 && setPre({ ...pre, fecha_nacimiento: e.target.value })}
-                        style={{ ...inputStyle(focusedInput === 'fnac'), background: pre.curp.length >= 18 ? '#f5f5f5' : undefined, color: pre.curp.length >= 18 ? '#888' : undefined }}
-                        onFocus={() => setFocusedInput('fnac')} onBlur={() => setFocusedInput('')} />
-                      {edadActual !== null && (
-                        <span style={{
-                          display: 'inline-flex', alignItems: 'center', gap: 5,
-                          fontSize: 12, fontWeight: 600, marginTop: 2,
-                          color: edadActual < 12 ? '#c0392b' : edadActual < 18 ? '#e67e22' : '#27ae60',
-                        }}>
-                          {edadActual < 12
-                            ? `⚠️ ${edadActual} años — el programa es para mayores de 12 años`
-                            : edadActual < 18
-                              ? `🔔 ${edadActual} años — menor de edad (se pedirán datos del tutor)`
-                              : `✓ ${edadActual} años`}
-                        </span>
-                      )}
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Municipio de residencia
-                      <input value={pre.estado_entidad} onChange={e => setPre({ ...pre, estado_entidad: e.target.value })} placeholder="Ej. Monterrey"
-                        style={inputStyle(focusedInput === 'mun')} onFocus={() => setFocusedInput('mun')} onBlur={() => setFocusedInput('')} />
-                    </label>
-                  </div>
-
-                  <div style={{ borderTop: '1px solid #f0f0f0', paddingTop: 14, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Idioma de interés
-                      <select value={pre.idioma_interes} onChange={e => setPre({ ...pre, idioma_interes: e.target.value, proveedor_interes: '' })}
-                        style={{ ...inputStyle(false), appearance: 'auto' }}>
-                        <option value="">Seleccionar…</option>
-                        {[...new Set(ofertas.map(o => o.idioma))].sort().map(i => (
-                          <option key={i} value={i}>{ICONOS_IDIOMA[i] || '🌐'} {i}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                      Escuela de preferencia
-                      <select value={pre.proveedor_interes} onChange={e => setPre({ ...pre, proveedor_interes: e.target.value })}
-                        style={{ ...inputStyle(false), appearance: 'auto' }}>
-                        <option value="">Sin preferencia</option>
-                        {plantelesPorIdioma.map(p => <option key={p.id} value={p.nombre}>{p.nombre}</option>)}
-                      </select>
-                    </label>
-                    {/* Selector de grupo/horario — siempre dropdown */}
-                    {(() => {
-                      const tienePlantel = !!pre.proveedor_interes && pre.proveedor_interes !== ''
-                      const tieneIdioma  = !!pre.idioma_interes
-                      const listo        = tienePlantel && tieneIdioma && !cargandoGruposPreReg
-
-                      let placeholder = 'Selecciona un idioma y una escuela primero'
-                      if (tieneIdioma && !tienePlantel) placeholder = 'Selecciona una escuela primero'
-                      if (tienePlantel && !tieneIdioma) placeholder = 'Selecciona un idioma primero'
-                      if (cargandoGruposPreReg) placeholder = 'Cargando horarios…'
-                      if (listo && gruposDisponibles.length === 0) placeholder = 'No hay grupos abiertos para esta selección'
-
-                      return (
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                          Horario preferido
-                          <select
-                            value={grupoInteres}
-                            onChange={e => setGrupoInteres(e.target.value)}
-                            disabled={!listo || gruposDisponibles.length === 0}
-                            style={{ ...inputStyle(false), appearance: 'auto', color: (!listo || gruposDisponibles.length === 0) ? '#aaa' : 'inherit' }}
-                          >
-                            <option value="">{listo && gruposDisponibles.length > 0 ? 'Sin preferencia de horario' : placeholder}</option>
-                            {gruposDisponibles.map(g => (
-                              <option key={g.id} value={g.id} disabled={g.cupo_disponible === 0}>
-                                {g.nivel_nombre ? `${g.nivel_nombre} — ` : ''}{g.horario || 'Horario por confirmar'}
-                                {g.cupo_disponible === 0 ? ' (sin cupo)' : ` (${g.cupo_disponible} lugar${g.cupo_disponible !== 1 ? 'es' : ''} disponible${g.cupo_disponible !== 1 ? 's' : ''})`}
-                              </option>
-                            ))}
-                          </select>
-                        </label>
-                      )
-                    })()}
-                    <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                      ¿Cómo te enteraste? (opcional)
-                      <select value={pre.como_entero} onChange={e => setPre({ ...pre, como_entero: e.target.value })}
-                        style={{ ...inputStyle(false), appearance: 'auto' }}>
-                        <option value="">Seleccionar…</option>
-                        {['Redes sociales', 'Amigo / familiar', 'Escuela', 'INJUVE', 'Internet / búsqueda', 'Otro'].map(o => <option key={o} value={o}>{o}</option>)}
-                      </select>
-                    </label>
-                  </div>
-
-                  {/* SECCIÓN TUTOR — solo si el alumno es menor de edad */}
-                  {esMenorDeEdad && (
-                    <div style={{ borderTop: '2px solid #f18b11', paddingTop: 14 }}>
-                      <div style={{ fontWeight: 700, fontSize: 13, color: '#f18b11', marginBottom: 4 }}>
-                        Datos del tutor / padre / madre
-                      </div>
-                      <p style={{ fontSize: 12, color: '#888', margin: '0 0 12px' }}>
-                        Como eres menor de edad, es necesario registrar los datos de un tutor responsable. Se le enviará información sobre tu inscripción.
-                      </p>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555', gridColumn: '1/-1' }}>
-                          Nombre del tutor *
-                          <input value={pre.tutor_nombre} onChange={e => setPre({ ...pre, tutor_nombre: e.target.value })} placeholder="Nombre completo del padre, madre o tutor"
-                            style={inputStyle(focusedInput === 'tutor_nombre')} onFocus={() => setFocusedInput('tutor_nombre')} onBlur={() => setFocusedInput('')} />
-                        </label>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                          Teléfono / WhatsApp del tutor *
-                          <input value={pre.tutor_tel} onChange={e => setPre({ ...pre, tutor_tel: e.target.value })} placeholder="81 1234 5678"
-                            style={inputStyle(focusedInput === 'tutor_tel')} onFocus={() => setFocusedInput('tutor_tel')} onBlur={() => setFocusedInput('')} />
-                        </label>
-                        <label style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 13, color: '#555' }}>
-                          Correo electrónico del tutor *
-                          <input type="email" value={pre.tutor_email} onChange={e => setPre({ ...pre, tutor_email: e.target.value })} placeholder="tutor@ejemplo.com"
-                            style={inputStyle(focusedInput === 'tutor_email')} onFocus={() => setFocusedInput('tutor_email')} onBlur={() => setFocusedInput('')} />
-                        </label>
-                      </div>
-                    </div>
-                  )}
-
-                  <div style={{ background: '#fff8f0', border: '1px solid #f0e0cc', borderRadius: 10, padding: '12px 16px', fontSize: 12, color: '#888' }}>
-                    ℹ️ Después de enviar tu pre-registro, un coordinador te contactará con los pasos para realizar tu pago. Una vez confirmado, recibirás tu usuario y contraseña.
-                  </div>
-
-                  <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                    <button type="button" onClick={cerrar} style={{ background: '#f0f0f0', color: '#555', border: 'none', borderRadius: 8, padding: '10px 20px', fontWeight: 600, cursor: 'pointer' }}>Cancelar</button>
-                    <button type="submit" style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 8, padding: '10px 24px', fontWeight: 700, cursor: 'pointer' }}>Enviar pre-registro</button>
-                  </div>
-                </form>
-              </>
             )}
 
             {/* CONFIRMACIÓN */}
