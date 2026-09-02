@@ -214,7 +214,7 @@ export default function Login({ onLogin }) {
 
       {/* ── PRE-REGISTRO (componente nuevo) ── */}
       {modal === 'prereg' && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.55)', zIndex: 200, overflowY: 'auto', padding: '24px 16px' }}>
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,.82)', zIndex: 200, overflowY: 'auto', padding: '24px 16px' }}>
           <PreRegistro onVolver={cerrar} />
         </div>
       )}
