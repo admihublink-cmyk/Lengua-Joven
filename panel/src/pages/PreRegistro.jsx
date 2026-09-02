@@ -396,8 +396,25 @@ export default function PreRegistro({ onVolver }) {
                 { v: 'Femenino', l: 'Femenino' },
                 { v: 'Prefiero no indicar', l: 'Prefiero no indicar' },
               ]} />
-              <Chips k="rango_edad" label="Rango de edad" opts={RANGOS}
-                onChangeOverride={(v) => setAndRerender('rango_edad', v)} />
+              <div style={s.field}>
+                <label style={s.label}>Rango de edad</label>
+                {d.rango_edad ? (
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 10, fontSize: 15, fontWeight: 700,
+                    background: '#FEF3E2', color: '#C97309', border: '1.5px solid #F18B11',
+                  }}>
+                    {RANGOS.find(r => r.v === d.rango_edad)?.l} — {RANGOS.find(r => r.v === d.rango_edad)?.s}
+                  </div>
+                ) : (
+                  <div style={{
+                    padding: '10px 14px', borderRadius: 10, fontSize: 14,
+                    background: '#f9fafb', color: '#9ca3af', border: '1.5px solid #e5e7eb',
+                  }}>
+                    Se detecta automáticamente al ingresar tu CURP
+                  </div>
+                )}
+                {errs.rango_edad && <span style={s.errTxt}>⚠ {errs.rango_edad}</span>}
+              </div>
             </>}
 
             {paso === 2 && <>
