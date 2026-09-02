@@ -133,9 +133,9 @@ export default function PreRegistro({ onVolver }) {
   const s = {
     wrap: { maxWidth: 640, margin: '0 auto', padding: '16px' },
     card: {
-      background: 'var(--fondo)', border: '1px solid var(--borde, #e5e7eb)',
+      background: '#ffffff', border: '1px solid #e5e7eb',
       borderRadius: 16, overflow: 'hidden',
-      boxShadow: '0 2px 16px rgba(0,0,0,.06)',
+      boxShadow: '0 8px 40px rgba(0,0,0,.3)',
     },
     head: {
       background: '#F18B11', padding: '22px 28px', color: '#fff',
@@ -152,14 +152,14 @@ export default function PreRegistro({ onVolver }) {
       padding: '0 20px', overflowX: 'auto',
     },
     formArea: { padding: '28px 28px 20px' },
-    stepTitle: { fontWeight: 800, fontSize: 19, marginBottom: 5 },
-    stepSub: { color: 'var(--gris)', fontSize: 13.5, marginBottom: 24, lineHeight: 1.5 },
+    stepTitle: { fontWeight: 800, fontSize: 19, marginBottom: 5, color: '#1a1a2e' },
+    stepSub: { color: '#6b7280', fontSize: 13.5, marginBottom: 24, lineHeight: 1.5 },
     fields: { display: 'flex', flexDirection: 'column', gap: 15 },
     field: { display: 'flex', flexDirection: 'column', gap: 5 },
-    label: { fontSize: 11.5, fontWeight: 700, color: 'var(--gris)', textTransform: 'uppercase', letterSpacing: .5 },
+    label: { fontSize: 11.5, fontWeight: 700, color: '#6b7280', textTransform: 'uppercase', letterSpacing: .5 },
     input: {
-      width: '100%', padding: '10px 13px', border: '1.5px solid var(--borde, #e5e7eb)',
-      borderRadius: 10, fontSize: 15, background: 'var(--fondo)', color: 'var(--texto)',
+      width: '100%', padding: '10px 13px', border: '1.5px solid #e5e7eb',
+      borderRadius: 10, fontSize: 15, background: '#fff', color: '#1a1a2e',
       fontFamily: 'inherit', outline: 'none', boxSizing: 'border-box',
     },
     inputErr: { borderColor: '#DC2626' },
