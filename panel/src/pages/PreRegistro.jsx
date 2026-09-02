@@ -372,30 +372,31 @@ export default function PreRegistro({ onVolver }) {
           <div style={s.fields}>
 
             {paso === 1 && <>
-              <Inp k="nombre" label="Nombre(s) *" placeholder="Ej. Ana Sofía"
-                hint='Tal como aparece en tu identificación oficial.' />
+              {Inp({ k: 'nombre', label: 'Nombre(s) *', placeholder: 'Ej. Ana Sofía', hint: 'Tal como aparece en tu identificación oficial.' })}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Inp k="apellido_paterno" label="Apellido paterno *" placeholder="Ej. González" />
-                <Inp k="apellido_materno" label="Apellido materno *" placeholder="Ej. Martínez" />
+                {Inp({ k: 'apellido_paterno', label: 'Apellido paterno *', placeholder: 'Ej. González' })}
+                {Inp({ k: 'apellido_materno', label: 'Apellido materno *', placeholder: 'Ej. Martínez' })}
               </div>
-              <Inp k="curp" label="CURP * (18 caracteres)" placeholder="XXXX000000XXXXXX00"
-                maxLength={18} transform={v => v.toUpperCase()}
-                onAfterChange={curp => {
+              {Inp({ k: 'curp', label: 'CURP * (18 caracteres)', placeholder: 'XXXX000000XXXXXX00',
+                maxLength: 18, transform: v => v.toUpperCase(),
+                onAfterChange: curp => {
                   const rango = calcularRangoDesdeCurp(curp)
                   if (rango) setD(prev => ({ ...prev, rango_edad: rango }))
-                }}
-                hint='Si no lo recuerdas: <a href="https://www.gob.mx/curp/" target="_blank" style="color:#F18B11;font-weight:600;">consulta tu CURP aquí</a>.' />
+                },
+                hint: 'Si no lo recuerdas: <a href="https://www.gob.mx/curp/" target="_blank" style="color:#F18B11;font-weight:600;">consulta tu CURP aquí</a>.',
+              })}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Inp k="email" label="Correo electrónico *" type="email" placeholder="tu@correo.com" />
-                <Inp k="tel" label="WhatsApp * 📱" type="tel" placeholder="10 dígitos" maxLength={10}
-                  transform={v => v.replace(/\D/g, '').slice(0, 10)}
-                  hint="Exactamente 10 dígitos, solo números." />
+                {Inp({ k: 'email', label: 'Correo electrónico *', type: 'email', placeholder: 'tu@correo.com' })}
+                {Inp({ k: 'tel', label: 'WhatsApp * 📱', type: 'tel', placeholder: '10 dígitos', maxLength: 10,
+                  transform: v => v.replace(/\D/g, '').slice(0, 10),
+                  hint: 'Exactamente 10 dígitos, solo números.',
+                })}
               </div>
-              <Chips k="sexo" label="Sexo" opts={[
+              {Chips({ k: 'sexo', label: 'Sexo', opts: [
                 { v: 'Masculino', l: 'Masculino' },
                 { v: 'Femenino', l: 'Femenino' },
                 { v: 'Prefiero no indicar', l: 'Prefiero no indicar' },
-              ]} />
+              ] })}
               <div style={s.field}>
                 <label style={s.label}>Rango de edad</label>
                 {d.rango_edad ? (
@@ -418,37 +419,29 @@ export default function PreRegistro({ onVolver }) {
             </>}
 
             {paso === 2 && <>
-              <Inp k="domicilio" label="Calle" placeholder="Nombre de la calle" />
+              {Inp({ k: 'domicilio', label: 'Calle', placeholder: 'Nombre de la calle' })}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Inp k="num_exterior" label="Número exterior" placeholder="Ej: 204" />
-                <Inp k="colonia" label="Colonia" placeholder="Nombre de la colonia" />
+                {Inp({ k: 'num_exterior', label: 'Número exterior', placeholder: 'Ej: 204' })}
+                {Inp({ k: 'colonia', label: 'Colonia', placeholder: 'Nombre de la colonia' })}
               </div>
-              <Inp k="municipio" label="Municipio / Ciudad" placeholder="Ej: Monterrey, Guadalupe…" />
+              {Inp({ k: 'municipio', label: 'Municipio / Ciudad', placeholder: 'Ej: Monterrey, Guadalupe…' })}
             </>}
 
             {paso === 3 && <>
-              <Sel k="idioma_interes" label="Idioma"
-                opts={idiomas.map(i => ({ v: i, l: i }))}
-                placeholder="Elige el idioma que quieres aprender…" />
-              <Sel k="plantel_id" label="Sede"
-                opts={planteles.map(p => ({ v: p.id, l: p.nombre }))}
-                placeholder="Elige la sede más cercana…" />
+              {Sel({ k: 'idioma_interes', label: 'Idioma', opts: idiomas.map(i => ({ v: i, l: i })), placeholder: 'Elige el idioma que quieres aprender…' })}
+              {Sel({ k: 'plantel_id', label: 'Sede', opts: planteles.map(p => ({ v: p.id, l: p.nombre })), placeholder: 'Elige la sede más cercana…' })}
               <span style={s.hint}>Si no hay sede en tu zona, elige "Clases en línea".</span>
-              {grupos.length > 0 && (
-                <Sel k="grupo_interes_id" label="Horario preferido (opcional)"
-                  opts={grupos.map(g => ({ v: g.id, l: g.horario }))}
-                  placeholder="Sin preferencia de horario" />
-              )}
+              {grupos.length > 0 && Sel({ k: 'grupo_interes_id', label: 'Horario preferido (opcional)', opts: grupos.map(g => ({ v: g.id, l: g.horario })), placeholder: 'Sin preferencia de horario' })}
             </>}
 
             {paso === 4 && esMenor(d.rango_edad) && <>
               <div style={{ background: '#FEF3E2', borderRadius: 12, padding: '12px 16px', fontSize: 13.5, color: '#C97309', lineHeight: 1.5 }}>
                 Como eres menor de edad, necesitamos los datos de tu papá, mamá o tutor para que acepte el aviso de privacidad.
               </div>
-              <Inp k="tutor_nombre" label="Nombre del tutor" placeholder="Nombre completo" />
+              {Inp({ k: 'tutor_nombre', label: 'Nombre del tutor', placeholder: 'Nombre completo' })}
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                <Inp k="tutor_tel" label="WhatsApp del tutor 📱" type="tel" placeholder="10 dígitos" />
-                <Inp k="tutor_email" label="Email del tutor" type="email" placeholder="tutor@correo.com" />
+                {Inp({ k: 'tutor_tel', label: 'WhatsApp del tutor 📱', type: 'tel', placeholder: '10 dígitos' })}
+                {Inp({ k: 'tutor_email', label: 'Email del tutor', type: 'email', placeholder: 'tutor@correo.com' })}
               </div>
             </>}
 
