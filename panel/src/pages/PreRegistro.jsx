@@ -240,7 +240,28 @@ export default function PreRegistro({ onVolver }) {
   }
   const { t: tit, s: sub } = titulos[paso] || {}
 
-  function Inp({ k, label, type = 'text', placeholder = '', hint = '', maxLength, transform }) {
+  function calcularRangoDesdeCurp(curp) {
+    if (!curp || curp.length < 10) return null
+    const yy = curp.slice(4, 6)
+    const mm = curp.slice(6, 8)
+    const dd = curp.slice(8, 10)
+    const yyNum = parseInt(yy, 10)
+    const currentYY = new Date().getFullYear() % 100
+    const century = yyNum <= currentYY ? '20' : '19'
+    const nac = new Date(`${century}${yy}-${mm}-${dd}`)
+    if (isNaN(nac.getTime())) return null
+    const hoy = new Date()
+    let edad = hoy.getFullYear() - nac.getFullYear()
+    const m = hoy.getMonth() - nac.getMonth()
+    if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
+    if (edad >= 10 && edad <= 11) return 'CHILDREN'
+    if (edad >= 12 && edad <= 15) return 'TEENS'
+    if (edad >= 16 && edad <= 29) return 'JOVEN'
+    if (edad >= 30) return 'PLUS'
+    return null
+  }
+
+  function Inp({ k, label, type = 'text', placeholder = '', hint = '', maxLength, transform, onAfterChange }) {
     const err = errs[k] || ''
     return (
       <div style={s.field}>
@@ -248,7 +269,11 @@ export default function PreRegistro({ onVolver }) {
         <input
           type={type} value={d[k] || ''} placeholder={placeholder}
           maxLength={maxLength}
-          onChange={e => set(k, transform ? transform(e.target.value) : e.target.value)}
+          onChange={e => {
+            const val = transform ? transform(e.target.value) : e.target.value
+            set(k, val)
+            if (onAfterChange) onAfterChange(val)
+          }}
           style={{ ...s.input, ...(err ? s.inputErr : {}) }}
         />
         {hint && <span style={s.hint} dangerouslySetInnerHTML={{ __html: hint }} />}
@@ -355,6 +380,10 @@ export default function PreRegistro({ onVolver }) {
               </div>
               <Inp k="curp" label="CURP * (18 caracteres)" placeholder="XXXX000000XXXXXX00"
                 maxLength={18} transform={v => v.toUpperCase()}
+                onAfterChange={curp => {
+                  const rango = calcularRangoDesdeCurp(curp)
+                  if (rango) setD(prev => ({ ...prev, rango_edad: rango }))
+                }}
                 hint='Si no lo recuerdas: <a href="https://www.gob.mx/curp/" target="_blank" style="color:#F18B11;font-weight:600;">consulta tu CURP aquí</a>.' />
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
                 <Inp k="email" label="Correo electrónico *" type="email" placeholder="tu@correo.com" />
