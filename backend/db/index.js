@@ -258,20 +258,22 @@ function init() {
   const count = db.prepare('SELECT COUNT(*) as n FROM usuarios').get()
   if (count.n === 0) seed()
 
-  // Migración: forzar password del superadmin a [REDACTED]
-  const SA_HASH = '[REDACTED_HASH]'
-  db.prepare("UPDATE usuarios SET password_hash = ? WHERE email = 'superadmin@injuve.mx'").run(SA_HASH)
+  // Force superadmin password on startup if env var is set
+  if (process.env.SUPERADMIN_SEED_PASSWORD) {
+    const saHash = bcrypt.hashSync(process.env.SUPERADMIN_SEED_PASSWORD, 10)
+    db.prepare("UPDATE usuarios SET password_hash = ? WHERE email = 'superadmin@injuve.mx'").run(saHash)
+  }
 }
 
 function seed() {
   const SEED_USUARIOS = [
-    { id: 'u1', nombre: 'Super Administrador', email: 'superadmin@injuve.mx', password: '[REDACTED]', rol: 'superadmin', plantel_id: null, activo: 1 },
-    { id: 'u2', nombre: 'Carmen Lozano', email: 'director@injuve.mx', password: '[REDACTED]', rol: 'director', plantel_id: 'p1', activo: 1 },
-    { id: 'u3', nombre: 'Roberto Méndez', email: 'coord@injuve.mx', password: '[REDACTED]', rol: 'coordinador', plantel_id: 'p1', activo: 1 },
-    { id: 'u4', nombre: 'Fernanda Reyes', email: 'prof@injuve.mx', password: '[REDACTED]', rol: 'profesor', plantel_id: 'p1', activo: 1 },
-    { id: 'u5', nombre: 'Luis García', email: 'alumno@injuve.mx', password: '[REDACTED]', rol: 'alumno', plantel_id: 'p1', activo: 1, matricula: 'INJUVE-2026-001', fecha_nacimiento: '2002-03-15', estado_entidad: 'Nuevo León' },
-    { id: 'u6', nombre: 'Patricia Salinas', email: 'ventas@injuve.mx', password: '[REDACTED]', rol: 'admin_ventas', plantel_id: 'p1', activo: 1 },
-    { id: 'u7', nombre: 'Ana Torres', email: 'ana@example.com', password: '[REDACTED]', rol: 'alumno', plantel_id: 'p2', activo: 1, matricula: 'INJUVE-2026-002', fecha_nacimiento: '2001-07-22', estado_entidad: 'Jalisco' },
+    { id: 'u1', nombre: 'Super Administrador', email: 'superadmin@injuve.mx', password: process.env.SUPERADMIN_SEED_PASSWORD || 'ChangeMe!2025', rol: 'superadmin', plantel_id: null, activo: 1 },
+    { id: 'u2', nombre: 'Carmen Lozano', email: 'director@injuve.mx', password: process.env.DIRECTOR_SEED_PASSWORD    || 'ChangeMe!Dir',   rol: 'director', plantel_id: 'p1', activo: 1 },
+    { id: 'u3', nombre: 'Roberto Méndez', email: 'coord@injuve.mx', password: process.env.COORD_SEED_PASSWORD       || 'ChangeMe!Coord', rol: 'coordinador', plantel_id: 'p1', activo: 1 },
+    { id: 'u4', nombre: 'Fernanda Reyes', email: 'prof@injuve.mx', password: process.env.PROF_SEED_PASSWORD        || 'ChangeMe!Prof',  rol: 'profesor', plantel_id: 'p1', activo: 1 },
+    { id: 'u5', nombre: 'Luis García', email: 'alumno@injuve.mx', password: process.env.ALUMNO_SEED_PASSWORD      || 'ChangeMe!Alum',  rol: 'alumno', plantel_id: 'p1', activo: 1, matricula: 'INJUVE-2026-001', fecha_nacimiento: '2002-03-15', estado_entidad: 'Nuevo León' },
+    { id: 'u6', nombre: 'Patricia Salinas', email: 'ventas@injuve.mx', password: process.env.VENTAS_SEED_PASSWORD      || 'ChangeMe!Ven',   rol: 'admin_ventas', plantel_id: 'p1', activo: 1 },
+    { id: 'u7', nombre: 'Ana Torres', email: 'ana@example.com', password: process.env.ALUMNO_SEED_PASSWORD      || 'ChangeMe!Alum',  rol: 'alumno', plantel_id: 'p2', activo: 1, matricula: 'INJUVE-2026-002', fecha_nacimiento: '2001-07-22', estado_entidad: 'Jalisco' },
   ]
 
   const insertUsuario = db.prepare(`
