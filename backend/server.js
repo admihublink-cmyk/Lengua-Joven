@@ -173,6 +173,14 @@ app.use('/api/alertas', require('./routes/alertas'))
 app.use('/api/comisiones', require('./routes/comisiones'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
+app.get('/api/db-check', async (req, res) => {
+  try {
+    const r = await query('SELECT COUNT(*) AS n FROM ofertas')
+    res.json({ ok: true, ofertas: r[0]?.n })
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e.message, code: e.code })
+  }
+})
 
 app.use((err, req, res, next) => {
   if (err instanceof SyntaxError && err.status === 400 && 'body' in err) {
