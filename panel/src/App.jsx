@@ -1,6 +1,29 @@
-import { useState, useEffect, createContext, useContext } from 'react'
+import { useState, useEffect, createContext, useContext, Component } from 'react'
 import { tienePermiso } from './auth.js'
 import { getUsuarioActual, logout as apiLogout } from './api.js'
+
+class ErrorBoundary extends Component {
+  constructor(props) { super(props); this.state = { crashed: false } }
+  static getDerivedStateFromError() { return { crashed: true } }
+  componentDidCatch(err) { console.error('[ErrorBoundary]', err) }
+  render() {
+    if (this.state.crashed) {
+      try { localStorage.removeItem('lj_user') } catch {}
+      return (
+        <div style={{ minHeight: '100vh', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontFamily: 'system-ui', background: '#f0f2f8', gap: 16, padding: 24 }}>
+          <div style={{ fontSize: 48 }}>⚠️</div>
+          <h2 style={{ margin: 0, color: '#1a1a2e' }}>Ocurrió un error inesperado</h2>
+          <p style={{ color: '#555', textAlign: 'center', maxWidth: 400 }}>Tu sesión fue cerrada por seguridad. Por favor vuelve a iniciar sesión.</p>
+          <button onClick={() => { this.setState({ crashed: false }); window.location.href = '/' }}
+            style={{ background: '#f18b11', color: '#fff', border: 'none', borderRadius: 10, padding: '12px 28px', fontWeight: 700, fontSize: 15, cursor: 'pointer' }}>
+            Ir al inicio de sesión
+          </button>
+        </div>
+      )
+    }
+    return this.props.children
+  }
+}
 import Layout from './components/Layout.jsx'
 import Login from './pages/Login.jsx'
 import Dashboard from './pages/Dashboard.jsx'
@@ -130,21 +153,23 @@ export default function App() {
   const Pagina = RUTAS[ruta] || Dashboard
 
   return (
-    <AuthCtx.Provider value={{
-      usuario: usuarioEfectivo,
-      usuarioReal: usuario,
-      vistaComoRol,
-      setVistaComoRol,
-      salir,
-      tienePermiso: (p) => tienePermiso(usuarioEfectivo, p),
-    }}>
-      <NavCtx.Provider value={{ ruta, navegar, params }}>
-        <TemaCtx.Provider value={{ tema }}>
-          <Layout>
-            <Pagina params={params} />
-          </Layout>
-        </TemaCtx.Provider>
-      </NavCtx.Provider>
-    </AuthCtx.Provider>
+    <ErrorBoundary>
+      <AuthCtx.Provider value={{
+        usuario: usuarioEfectivo,
+        usuarioReal: usuario,
+        vistaComoRol,
+        setVistaComoRol,
+        salir,
+        tienePermiso: (p) => tienePermiso(usuarioEfectivo, p),
+      }}>
+        <NavCtx.Provider value={{ ruta, navegar, params }}>
+          <TemaCtx.Provider value={{ tema }}>
+            <Layout>
+              <Pagina params={params} />
+            </Layout>
+          </TemaCtx.Provider>
+        </NavCtx.Provider>
+      </AuthCtx.Provider>
+    </ErrorBoundary>
   )
 }

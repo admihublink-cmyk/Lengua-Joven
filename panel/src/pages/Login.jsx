@@ -144,7 +144,7 @@ export default function Login({ onLogin }) {
     return `${parseInt(d)} ${meses[parseInt(m) - 1]} ${y}`
   }
 
-  function cerrar() { setModal(null); setLoginErr(''); setPreErr('') }
+  function cerrar() { setModal(null); setLoginErr('') }
 
   async function enviarSuscripcion(e) {
     e.preventDefault()

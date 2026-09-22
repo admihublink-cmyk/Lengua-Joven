@@ -9,6 +9,9 @@ const path = require('path')
 const app = express()
 const PORT = Number(process.env.PORT || 3001)
 
+// Render y Vercel usan proxies — confiar en el X-Forwarded-For para obtener la IP real del usuario
+app.set('trust proxy', 1)
+
 if (!process.env.JWT_SECRET) {
   console.error('[FATAL] JWT_SECRET no está configurado. Define la variable de entorno antes de iniciar el servidor.')
   process.exit(1)

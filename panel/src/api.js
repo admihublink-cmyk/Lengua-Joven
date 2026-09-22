@@ -51,6 +51,12 @@ async function req(method, path, body, options = {}) {
         if (text) errMessage = text
       }
     } catch {}
+    // Si el servidor responde 401 en una ruta que no es login, la sesión expiró
+    if (res.status === 401 && !path.startsWith('/auth/')) {
+      try { localStorage.removeItem('lj_user') } catch {}
+      window.location.href = '/'
+      return
+    }
     const err = new Error(errMessage)
     err.status = res.status
     err.data = errData

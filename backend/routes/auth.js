@@ -9,8 +9,8 @@ function getRL(req) { return req.app.get('rateLimit') }
 const rl5per60m  = (req, res, next) => (getRL(req)?.(5, 60 * 60 * 1000)  || ((r,s,n) => n()))(req, res, next)
 
 // Login: rastrear intentos FALLIDOS en DB — persiste entre reinicios
-const WINDOW_LOGIN = 5 * 60 * 60 * 1000 // 5 horas
-const MAX_FAILS    = 3
+const WINDOW_LOGIN = 30 * 60 * 1000 // 30 minutos
+const MAX_FAILS    = 10
 
 async function getLoginRecord(ip) {
   const now = new Date().toISOString()
@@ -152,6 +152,18 @@ router.post('/reset-password/:token', async (req, res) => {
 
   await logActividad(row.usuario_id, 'RESET_PASSWORD', 'Contraseña restablecida vía enlace de recuperación', req)
   res.json({ ok: true })
+})
+
+// ── Desbloquear IP de login (solo superadmin) ────────────────────────────────
+router.delete('/bloqueos', requireAuth, async (req, res) => {
+  if (req.user.rol !== 'superadmin') return res.status(403).json({ error: 'Solo superadmin' })
+  const { ip } = req.query
+  if (ip) {
+    await run('DELETE FROM login_bloqueos WHERE ip = $1', [ip])
+    return res.json({ ok: true, mensaje: `IP ${ip} desbloqueada` })
+  }
+  await run('DELETE FROM login_bloqueos')
+  res.json({ ok: true, mensaje: 'Todos los bloqueos eliminados' })
 })
 
 // ── Logout (invalida el token actual) ────────────────────────────────────────
