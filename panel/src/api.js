@@ -481,6 +481,18 @@ export const crearEventoCalendario = (data) => post('/eventos-calendario', data)
 export const actualizarEventoCalendario = (id, data) => put(`/eventos-calendario/${id}`, data)
 export const eliminarEventoCalendario = (id) => del(`/eventos-calendario/${id}`)
 
+// ── Alertas del sistema ───────────────────────────────────────────────────────
+export const getAlertas = () => get('/alertas')
+
+// ── Comisiones INJUVE ─────────────────────────────────────────────────────────
+export const getComisiones = (params = {}) => {
+  const qs = new URLSearchParams(Object.fromEntries(Object.entries(params).filter(([,v]) => v))).toString()
+  return get('/comisiones' + (qs ? '?' + qs : ''))
+}
+export const getComisionesResumen = () => get('/comisiones/resumen')
+export const cobrarComision = (id) => req('PATCH', `/comisiones/${id}/cobrar`, {})
+export const cobrarTodasComisiones = (plantelId) => req('PATCH', `/comisiones/plantel/${plantelId}/cobrar-todas`, {})
+
 export async function exportarLiquidacionesCSV(periodo) {
   const res = await fetch(`${BASE}/liquidaciones/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al exportar')

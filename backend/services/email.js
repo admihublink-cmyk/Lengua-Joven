@@ -272,4 +272,77 @@ async function enviarGrupoAsignado({ destinatario, nombre, folio, grupo, nivel, 
   })
 }
 
-module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor, enviarNotificacionApertura, enviarGrupoAsignado }
+async function enviarRecordatorioAlertas(destinatario, { conveniosVencimiento, pagosVencidos }) {
+  const transporter = crearTransporter()
+  const hoy = new Date().toLocaleDateString('es-MX', { day: '2-digit', month: 'long', year: 'numeric' })
+
+  const filasConvenio = (conveniosVencimiento || []).map(p => {
+    const dias = Math.ceil((new Date(p.convenio_vencimiento) - new Date()) / 86400000)
+    const color = dias <= 7 ? '#e74c3c' : dias <= 15 ? '#e67e22' : '#f39c12'
+    return `<tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escHtml(p.nombre)}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escHtml(p.ciudad || '—')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;color:${color};font-weight:700;">${dias} día${dias !== 1 ? 's' : ''}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escHtml(p.convenio_vencimiento)}</td>
+    </tr>`
+  }).join('')
+
+  const filasComision = (pagosVencidos || []).map(p => `<tr>
+    <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${escHtml(p.plantel_nombre || p.plantel_id)}</td>
+    <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;">${p.total}</td>
+    <td style="padding:10px 12px;border-bottom:1px solid #f0f0f0;font-weight:700;">$${(p.monto_total || 0).toLocaleString('es-MX')} MXN</td>
+  </tr>`).join('')
+
+  await transporter.sendMail({
+    from: `"Lengua Joven" <${process.env.GMAIL_USER}>`,
+    to: destinatario,
+    subject: `⚠️ Alertas del sistema — ${hoy} · Lengua Joven`,
+    html: `
+      <div style="font-family:Arial,sans-serif;max-width:640px;margin:0 auto;background:#f9f9f9;padding:0;">
+        <div style="background:linear-gradient(135deg,#F18B11,#e07a00);padding:32px;text-align:center;border-radius:12px 12px 0 0;">
+          <div style="font-size:28px;font-weight:800;color:#fff;">Lengua <span style="color:#fff3d4;">Joven</span></div>
+          <div style="color:#fff3d4;font-size:13px;margin-top:4px;letter-spacing:1px;text-transform:uppercase;">Resumen de alertas · ${hoy}</div>
+        </div>
+        <div style="background:#fff;padding:32px;">
+          ${conveniosVencimiento?.length ? `
+          <h2 style="color:#e67e22;font-size:17px;margin:0 0 12px;">⚠️ Convenios próximos a vencer (${conveniosVencimiento.length})</h2>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:28px;">
+            <thead>
+              <tr style="background:#fff8f0;">
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Plantel</th>
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Ciudad</th>
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Días restantes</th>
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Vence</th>
+              </tr>
+            </thead>
+            <tbody>${filasConvenio}</tbody>
+          </table>` : ''}
+
+          ${pagosVencidos?.length ? `
+          <h2 style="color:#e74c3c;font-size:17px;margin:0 0 12px;">💰 Comisiones INJUVE pendientes de cobro (${pagosVencidos.length} plantel${pagosVencidos.length !== 1 ? 'es' : ''})</h2>
+          <table style="width:100%;border-collapse:collapse;font-size:14px;margin-bottom:28px;">
+            <thead>
+              <tr style="background:#fff8f0;">
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Plantel</th>
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Inscripciones</th>
+                <th style="padding:10px 12px;text-align:left;color:#555;font-weight:600;">Monto pendiente</th>
+              </tr>
+            </thead>
+            <tbody>${filasComision}</tbody>
+          </table>` : ''}
+
+          ${!conveniosVencimiento?.length && !pagosVencidos?.length
+            ? '<p style="color:#27ae60;font-size:15px;">✅ Todo en orden. Sin alertas pendientes hoy.</p>'
+            : ''}
+
+          <p style="color:#888;font-size:13px;margin:24px 0 0;">Este correo se genera automáticamente cada 24 horas. Ingresa al panel para tomar acciones.</p>
+        </div>
+        <div style="background:#f0f0f0;padding:16px 32px;text-align:center;border-radius:0 0 12px 12px;">
+          <p style="color:#aaa;font-size:12px;margin:0;">Lengua Joven · Panel de Gestión Educativa</p>
+        </div>
+      </div>
+    `,
+  })
+}
+
+module.exports = { enviarRecuperacion, enviarBienvenida, enviarBienvenidaTutor, enviarNotificacionApertura, enviarGrupoAsignado, enviarRecordatorioAlertas }

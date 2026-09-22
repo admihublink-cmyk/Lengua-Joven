@@ -12,6 +12,7 @@ const TIPOS_VALIDOS = [
   'id_representante_reverso',
   'comprobante_domicilio',
   'rfc',
+  'acuerdo_confidencialidad',
 ]
 
 const storage = multer.diskStorage({

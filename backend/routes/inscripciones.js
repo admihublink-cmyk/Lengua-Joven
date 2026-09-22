@@ -282,6 +282,21 @@ router.put('/:id', requireAuth, async (req, res) => {
     }
   }
 
+  // Registrar comisión INJUVE $200 cuando se marca como pagada por primera vez
+  if (nuevoEstado === 'pagada' && ins.estado !== 'pagada' && actualizada.plantel_id) {
+    try {
+      const yaExiste = await queryOne('SELECT id FROM comisiones WHERE inscripcion_id = $1', [actualizada.id])
+      if (!yaExiste) {
+        const comId = 'com_ins_' + actualizada.id + '_' + Date.now()
+        await run(
+          `INSERT INTO comisiones (id, plantel_id, inscripcion_id, monto, concepto, estado, fecha)
+           VALUES ($1,$2,$3,200,$4,'pendiente',$5) ON CONFLICT DO NOTHING`,
+          [comId, actualizada.plantel_id, actualizada.id, `Comisión inscripción ${actualizada.folio}`, new Date().toISOString()]
+        )
+      }
+    } catch (e) { console.error('[comision inscripcion]', e.message) }
+  }
+
   // Notificación para alumno auto-promovido desde lista de espera
   if (siguientePromovido) {
     const sig = siguientePromovido

@@ -148,6 +148,20 @@ router.put('/:id/marcar-pagado', requireAuth, async (req, res) => {
     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT DO NOTHING`,
     [pagId, pr.usuario_id || null, null, monto, fecha, 'pagado', req.body.metodo_pago || 'efectivo', `PRE-${pr.folio}`])
 
+  // Registrar comisión INJUVE $200 por este pre-registro pagado
+  if (pr.proveedor_interes) {
+    try {
+      const plantel = await queryOne('SELECT id FROM planteles WHERE nombre ILIKE $1 LIMIT 1', [pr.proveedor_interes])
+      const plantelId = plantel?.id || 'desconocido'
+      const comId = 'com_pr_' + pr.id + '_' + Date.now()
+      await run(
+        `INSERT INTO comisiones (id, plantel_id, pre_registro_id, monto, concepto, estado, fecha)
+         VALUES ($1,$2,$3,200,$4,'pendiente',$5) ON CONFLICT DO NOTHING`,
+        [comId, plantelId, pr.id, `Comisión pre-registro ${pr.folio}`, fecha]
+      )
+    } catch (e) { console.error('[comision pre-registro]', e.message) }
+  }
+
   res.json(await queryOne('SELECT * FROM pre_registros WHERE id = $1', [req.params.id]))
 })
 

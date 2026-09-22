@@ -35,6 +35,7 @@ const NAV_ITEMS = [
   // — Administración —
   { seccion: 'Administración', icon: '📄' },
   { id: 'convenios',     icon: '📄',  label: 'Convenios',         permiso: P.CONVENIO_GESTIONAR },
+  { id: 'comisiones',    icon: '🏷️',  label: 'Comisiones',        permiso: P.CONFIG_SISTEMA },
   { id: 'legal',         icon: '⚖️',  label: 'Legal y ARCO',      permiso: P.ARCO_ATENDER },
   { id: 'reportes',      icon: '📈',  label: 'Reportes',          permiso: P.REPORTE_VER_PLANTEL },
   // — Sistema —

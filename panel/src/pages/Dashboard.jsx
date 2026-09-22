@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth, useNav } from '../App.jsx'
 import { P, ROL_PERMISOS } from '../auth.js'
 import * as api from '../api.js'
@@ -6,6 +6,7 @@ import * as api from '../api.js'
 export default function Dashboard() {
   const { usuario, tienePermiso } = useAuth()
   const { navegar } = useNav()
+
   const [datos, setDatos] = useState({})
   const [buscandoCoordi, setBuscandoCoordi] = useState(false)
   const rolCfg = ROL_PERMISOS[usuario.rol]
@@ -64,6 +65,10 @@ export default function Dashboard() {
           api.getPagos(),
           api.getAvisos(),
         ])
+        let alertas = { convenios: [], comisiones: [] }
+        if (['superadmin', 'director'].includes(usuario.rol)) {
+          try { alertas = await api.getAlertas() } catch {}
+        }
         setDatos({
           totalIns: ins.length,
           nuevas: ins.filter(i => i.estado === 'nueva').length,
@@ -73,6 +78,7 @@ export default function Dashboard() {
           ingresoTotal: pagos.filter(p => p.estado === 'pagado').reduce((s, p) => s + (p.monto || 0), 0),
           avisos,
           ins,
+          alertas,
         })
       } catch (e) {
         console.error('Error cargando dashboard:', e)
@@ -260,6 +266,65 @@ export default function Dashboard() {
               </div>
             )}
           </div>
+
+          {/* Widget de alertas — solo superadmin / director */}
+          {['superadmin', 'director'].includes(usuario.rol) && (
+            (datos.alertas?.convenios?.length > 0 || datos.alertas?.comisiones?.length > 0) && (
+              <div style={{ marginBottom: 20 }}>
+                <h3 style={{ marginBottom: 12 }}>⚠️ Alertas del sistema</h3>
+                <div className="dash-grid">
+                  {datos.alertas?.convenios?.length > 0 && (
+                    <div className="card" style={{ borderLeft: '4px solid #e67e22' }}>
+                      <h4 style={{ color: '#e67e22', margin: '0 0 12px' }}>
+                        Convenios próximos a vencer ({datos.alertas.convenios.length})
+                      </h4>
+                      {datos.alertas.convenios.map(p => {
+                        const dias = Math.ceil((new Date(p.convenio_vencimiento) - new Date()) / 86400000)
+                        return (
+                          <div key={p.id} className="lista-item">
+                            <div>
+                              <strong>{p.nombre}</strong>
+                              <p className="texto-muted chico">{p.ciudad}</p>
+                            </div>
+                            <span style={{
+                              background: dias <= 7 ? '#fde8e8' : dias <= 15 ? '#fef3e0' : '#fffde7',
+                              color: dias <= 7 ? '#c0392b' : dias <= 15 ? '#e67e22' : '#f39c12',
+                              borderRadius: 20, padding: '3px 10px', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap',
+                            }}>
+                              {dias}d restantes
+                            </span>
+                          </div>
+                        )
+                      })}
+                      <button className="btn-link" style={{ marginTop: 8, color: '#e67e22', fontSize: 13 }}
+                        onClick={() => navegar('convenios')}>
+                        Ver todos los convenios →
+                      </button>
+                    </div>
+                  )}
+                  {datos.alertas?.comisiones?.length > 0 && (
+                    <div className="card" style={{ borderLeft: '4px solid #e74c3c' }}>
+                      <h4 style={{ color: '#e74c3c', margin: '0 0 12px' }}>
+                        Comisiones pendientes de cobro
+                      </h4>
+                      {datos.alertas.comisiones.slice(0, 4).map(c => (
+                        <div key={c.plantel_id} className="lista-item">
+                          <span>{c.plantel_nombre || c.plantel_id}</span>
+                          <strong style={{ color: '#e74c3c' }}>
+                            ${Number(c.monto_total || 0).toLocaleString()} MXN
+                          </strong>
+                        </div>
+                      ))}
+                      <button className="btn-link" style={{ marginTop: 8, color: '#e74c3c', fontSize: 13 }}
+                        onClick={() => navegar('comisiones')}>
+                        Ir a Comisiones →
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          )}
 
           <div className="dash-grid">
             <div className="card">

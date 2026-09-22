@@ -166,6 +166,8 @@ app.use('/api/atencion', require('./routes/atencion'))
 app.use('/api/eventos-calendario', require('./routes/eventosCalendario'))
 app.use('/api/cambios', require('./routes/cambios'))
 app.use('/api/portal', require('./routes/portal'))
+app.use('/api/alertas', require('./routes/alertas'))
+app.use('/api/comisiones', require('./routes/comisiones'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 
@@ -186,11 +188,13 @@ app.use((err, req, res, next) => {
 
 // Inicializar DB y arrancar servidor
 const { initDB } = require('./db/init')
+const { iniciarRecordatorios } = require('./services/recordatorios')
 initDB()
   .then(() => {
     app.listen(PORT, '0.0.0.0', () => {
       console.log(`Lengua Joven API corriendo en http://0.0.0.0:${PORT}`)
     })
+    iniciarRecordatorios()
   })
   .catch(err => {
     console.error('Error inicializando la base de datos:', err)

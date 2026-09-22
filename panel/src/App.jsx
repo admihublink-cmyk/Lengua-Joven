@@ -31,6 +31,7 @@ import Legal from './pages/Legal.jsx'
 import Atencion from './pages/Atencion.jsx'
 import PortalAlumno from './pages/PortalAlumno.jsx'
 import PreRegistro from './pages/PreRegistro.jsx'
+import Comisiones from './pages/Comisiones.jsx'
 
 export const AuthCtx = createContext(null)
 export const NavCtx  = createContext(null)
@@ -68,6 +69,7 @@ const RUTAS = {
   legal: Legal,
   atencion: Atencion,
   portal_alumno: PortalAlumno,
+  comisiones: Comisiones,
 }
 
 export default function App() {

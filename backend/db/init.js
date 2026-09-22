@@ -556,6 +556,30 @@ async function initDB() {
   `)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_cambios_estado ON solicitudes_cambio (estado, plantel_id)`)
 
+  // ── Baja de planteles (v3.0) ─────────────────────────────────────────────────
+  await pool.query(`ALTER TABLE planteles ADD COLUMN IF NOT EXISTS convenio_baja BOOLEAN DEFAULT false`)
+  await pool.query(`ALTER TABLE planteles ADD COLUMN IF NOT EXISTS convenio_baja_fecha TEXT`)
+  await pool.query(`ALTER TABLE planteles ADD COLUMN IF NOT EXISTS motivo_baja TEXT`)
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS suspendido_por_convenio BOOLEAN DEFAULT false`)
+
+  // ── Comisiones INJUVE $200 por inscripción (v3.0) ────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS comisiones (
+      id              TEXT PRIMARY KEY,
+      plantel_id      TEXT NOT NULL,
+      inscripcion_id  TEXT,
+      pre_registro_id TEXT,
+      monto           REAL NOT NULL DEFAULT 200,
+      concepto        TEXT,
+      estado          TEXT NOT NULL DEFAULT 'pendiente',
+      fecha           TEXT NOT NULL,
+      cobrado_en      TEXT
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_plantel ON comisiones (plantel_id, estado)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_ins ON comisiones (inscripcion_id)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_pre ON comisiones (pre_registro_id)`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 
