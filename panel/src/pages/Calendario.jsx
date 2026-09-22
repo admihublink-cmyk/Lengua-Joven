@@ -47,6 +47,7 @@ export default function Calendario() {
   const [niveles, setNiveles] = useState([])
   const [eventos, setEventos] = useState([])
   const [planteles, setPlanteles] = useState([])
+  const [filtroPlante, setFiltroPlante] = useState('') // '' = todos (solo superadmin)
 
   // Modal de reprogramación
   const [modalRepro, setModalRepro] = useState(null)
@@ -135,8 +136,12 @@ export default function Calendario() {
     setDiaSeleccionado(nueva); setAnio(d.getFullYear()); setMes(d.getMonth())
   }
 
+  const eventosFiltrados = filtroPlante
+    ? eventos.filter(e => e.plantel_id === filtroPlante)
+    : eventos
+
   function eventosEnFecha(fecha) {
-    return eventos.filter(e => fecha >= e.fecha_inicio && fecha <= (e.fecha_fin || e.fecha_inicio))
+    return eventosFiltrados.filter(e => fecha >= e.fecha_inicio && fecha <= (e.fecha_fin || e.fecha_inicio))
   }
 
   async function guardarEvento() {
@@ -298,6 +303,17 @@ export default function Calendario() {
             marginLeft: 8, padding: '6px 14px', fontSize: 13, fontWeight: 600, cursor: 'pointer',
             border: 'none', borderRadius: 8, background: 'var(--naranja)', color: '#fff',
           }}>+ Evento</button>
+        )}
+        {usuario.rol === 'superadmin' && planteles.length > 0 && (
+          <select value={filtroPlante} onChange={e => setFiltroPlante(e.target.value)}
+            title="Filtrar por escuela"
+            style={{ marginLeft: 8, padding: '6px 10px', fontSize: 13, borderRadius: 8,
+              border: '1px solid var(--borde)', background: filtroPlante ? '#fff3e0' : 'var(--fondo-card)',
+              color: filtroPlante ? '#e67e22' : 'var(--texto)', fontWeight: filtroPlante ? 700 : 400 }}>
+            <option value="">🌐 Todas las escuelas</option>
+            <option value="__global__" disabled style={{ color: '#aaa' }}>— Solo globales —</option>
+            {planteles.map(p => <option key={p.id} value={p.id}>🏫 {p.nombre}</option>)}
+          </select>
         )}
         <div style={{ display: 'flex', gap: 0, marginLeft: 'auto' }}>
           {[['mes', 'Mes'], ['semana', 'Semana'], ['dia', 'Día']].map(([v, label]) => (
@@ -463,6 +479,14 @@ export default function Calendario() {
                   }}>{TIPO_EVENTO[ev.tipo]?.label || ev.tipo}</span>
                 </div>
                 {ev.descripcion && <div style={{ fontSize: 12, color: 'var(--texto-muted)', marginTop: 4 }}>{ev.descripcion}</div>}
+                {ev.plantel_id && usuario.rol === 'superadmin' && (
+                  <div style={{ fontSize: 11, color: '#2980b9', marginTop: 3, fontWeight: 600 }}>
+                    🏫 {planteles.find(p => p.id === ev.plantel_id)?.nombre || ev.plantel_id}
+                  </div>
+                )}
+                {!ev.plantel_id && usuario.rol === 'superadmin' && (
+                  <div style={{ fontSize: 11, color: 'var(--texto-muted)', marginTop: 3 }}>🌐 Todas las escuelas</div>
+                )}
                 {puedeAdminCalendario && (
                   <div style={{ display: 'flex', gap: 6, marginTop: 6 }}>
                     <button className="btn-sec mini" onClick={() => abrirEditarEvento(ev)}>Editar</button>
