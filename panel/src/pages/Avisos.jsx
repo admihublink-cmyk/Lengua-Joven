@@ -4,6 +4,14 @@ import { P } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
 
+const ROL_LABEL = {
+  superadmin: 'Super Admin',
+  coordinador: 'Coordinador',
+  director: 'Director',
+  profesor: 'Maestro',
+  alumno: 'Alumno',
+}
+
 function fechaHora(iso) {
   if (!iso) return ''
   return new Date(iso).toLocaleString('es-MX', {
@@ -133,7 +141,13 @@ export default function Avisos() {
                     )}
                   </div>
                   <div className="aviso-meta">
-                    {a.autor_nombre && <span>👤 {a.autor_nombre}</span>}
+                    {a.autor_nombre && (
+                      <span>👤 {a.autor_nombre}{a.autor_rol && (
+                        <span style={{ marginLeft: 4, fontSize: 10, background: 'rgba(241,139,17,0.12)', color: '#c47209', borderRadius: 8, padding: '1px 7px', fontWeight: 600, letterSpacing: 0.2 }}>
+                          {ROL_LABEL[a.autor_rol] || a.autor_rol}
+                        </span>
+                      )}</span>
+                    )}
                     <span>📅 {fechaHora(a.creado_en) || a.fecha}</span>
                     {a.plantel_id && <span>🏫 {nomPlantel(a.plantel_id)}</span>}
                     {a.grupo_id && <span>👥 {nomGrupo(a.grupo_id)}</span>}

@@ -7,20 +7,20 @@ router.get('/', requireAuth, async (req, res) => {
   let rows
   if (me.rol === 'superadmin') {
     rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre
+      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
       FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
       WHERE a.activo = 1 ORDER BY COALESCE(a.creado_en, a.fecha) DESC
     `)
   } else if (me.plantel_id) {
     rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre
+      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
       FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
       WHERE a.activo = 1 AND (a.plantel_id IS NULL OR a.plantel_id = $1)
       ORDER BY COALESCE(a.creado_en, a.fecha) DESC
     `, [me.plantel_id])
   } else {
     rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre
+      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
       FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
       WHERE a.activo = 1 AND a.plantel_id IS NULL
       ORDER BY COALESCE(a.creado_en, a.fecha) DESC
