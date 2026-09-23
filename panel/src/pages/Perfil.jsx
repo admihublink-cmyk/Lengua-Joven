@@ -201,15 +201,12 @@ export default function Perfil() {
             <>
               <div className="detalle-grid" style={{ marginBottom: 16 }}>
                 <div><label>Nombre completo</label><p>{perfil.nombre}</p></div>
-                <div><label>Correo de cuenta</label><p>{perfil.email}</p></div>
+                <div><label>Correo electrónico</label><p>{perfil.email}</p></div>
                 {edad !== null && (
                   <div><label>Edad</label><p>{edad} años</p></div>
                 )}
                 {perfil.municipio && (
                   <div><label>Municipio</label><p>{perfil.municipio}</p></div>
-                )}
-                {perfil.email_contacto && (
-                  <div><label>Correo de contacto</label><p>{perfil.email_contacto}</p></div>
                 )}
                 {perfil.whatsapp && (
                   <div><label>WhatsApp</label><p>{perfil.whatsapp}</p></div>
@@ -233,12 +230,8 @@ export default function Perfil() {
                 <label style={{ gridColumn: '1/-1' }}>Nombre completo *
                   <input value={form.nombre || ''} onChange={e => setForm({ ...form, nombre: e.target.value })} />
                 </label>
-                <label style={{ gridColumn: '1/-1' }}>Correo de cuenta *
+                <label style={{ gridColumn: '1/-1' }}>Correo electrónico *
                   <input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} />
-                </label>
-                <label style={{ gridColumn: '1/-1' }}>Correo de contacto
-                  <input type="email" value={form.email_contacto || ''} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
-                    placeholder="Correo alternativo para notificaciones" />
                 </label>
                 <label style={{ gridColumn: '1/-1' }}>WhatsApp *
                   <input value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
