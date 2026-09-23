@@ -197,17 +197,20 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Error interno del servidor' })
 })
 
-// Inicializar DB y arrancar servidor
+// Arrancar servidor PRIMERO para que el health-check de Render pase,
+// luego inicializar la DB en segundo plano.
 const { initDB } = require('./db/init')
 const { iniciarRecordatorios } = require('./services/recordatorios')
-initDB()
-  .then(() => {
-    app.listen(PORT, '0.0.0.0', () => {
-      console.log(`Lengua Joven API corriendo en http://0.0.0.0:${PORT}`)
+
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`Lengua Joven API arrancó en http://0.0.0.0:${PORT} — iniciando DB...`)
+  initDB()
+    .then(() => {
+      console.log('DB lista.')
+      iniciarRecordatorios()
     })
-    iniciarRecordatorios()
-  })
-  .catch(err => {
-    console.error('Error inicializando la base de datos:', err)
-    process.exit(1)
-  })
+    .catch(err => {
+      console.error('[FATAL] Error inicializando DB:', err.message)
+      process.exit(1)
+    })
+})

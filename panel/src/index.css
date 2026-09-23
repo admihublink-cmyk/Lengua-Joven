@@ -718,6 +718,19 @@ code { font-family: monospace; font-size: 12px; color: var(--texto-muted); }
   .main-content { padding: 16px; }
   .cal-chip { display: none; }
   .cal-cell { min-height: 50px; }
+  /* Tablas: scroll horizontal en móvil */
+  .tabla-wrap { -webkit-overflow-scrolling: touch; }
+  .tabla { min-width: 540px; }
+  /* Modal ancho completo */
+  .modal-box { max-width: 100% !important; margin: 0 8px; border-radius: 12px; }
+  /* Card head: permitir wrap */
+  .card-head-row { flex-wrap: wrap; gap: 8px; }
+  .card-head-row > * { flex-shrink: 0; }
+  /* Topbar */
+  .topbar { padding: 0 12px; }
+  .topbar-titulo { font-size: 14px; }
+  /* Ocultar badge de plantel en móvil (ocupa espacio) */
+  .badge-plantel { display: none; }
 }
 @media (max-width: 480px) {
   .metricas-grid { grid-template-columns: 1fr 1fr; }
@@ -727,6 +740,11 @@ code { font-family: monospace; font-size: 12px; color: var(--texto-muted); }
   .filtros-bar { flex-direction: column; }
   .filtros-bar input, .filtros-bar select { width: 100%; }
   .modal-content { padding: 16px !important; }
+  /* Botones: texto más pequeño en pantallas muy chicas */
+  .btn-primario, .btn-sec, .btn-rojo { padding: 8px 12px; font-size: 13px; }
+  /* Dashboard: métricas en 2 columnas */
+  .metricas-grid { grid-template-columns: 1fr 1fr; gap: 10px; }
+  .metrica-num { font-size: 22px; }
 }
 @media (max-width: 600px) {
   .chat-layout { grid-template-columns: 1fr; }
@@ -734,3 +752,11 @@ code { font-family: monospace; font-size: 12px; color: var(--texto-muted); }
   .chat-layout.conv-abierto .chat-contactos { display: none; }
   .chat-layout.conv-abierto .chat-conversacion { display: flex; }
 }
+
+/* ── HELPERS adicionales ─── */
+.btn-link {
+  background: none; border: none; padding: 0;
+  color: var(--naranja); text-decoration: underline; font-size: 13px;
+  cursor: pointer; font-family: inherit;
+}
+.btn-link:hover { color: var(--naranja-claro); }
