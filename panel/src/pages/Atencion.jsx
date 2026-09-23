@@ -715,7 +715,7 @@ function ChatEnVivoPane({ currentUser }) {
 
 // ─── Lista de solicitudes con vista de subpestaña ────────────────────────────
 function SolicitudesPane({ usuario, esGestor, selected, setSelected, showNueva, setShowNueva }) {
-  const [subTab, setSubTab] = useState('sin_tomar')
+  const [subTab, setSubTab] = useState(esGestor ? 'sin_tomar' : 'mis_tickets')
   const [solicitudes, setSolicitudes] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -828,8 +828,8 @@ function SolicitudesPane({ usuario, esGestor, selected, setSelected, showNueva, 
               {solicitudes.map(s => (
                 <div key={s.id}>
                   <SolicitudCard sol={s} onClick={setSelected} selected={selected === s.id} />
-                  {/* Mostrar contenido de la pregunta en "sin tomar" */}
-                  {subTab === 'sin_tomar' && (
+                  {/* Mostrar contenido + botón tomar — solo gestores en sub-tab sin_tomar */}
+                  {esGestor && subTab === 'sin_tomar' && (
                     <div style={{ margin: '-4px 0 8px', padding: '10px 14px', background: 'rgba(241,139,17,.04)', borderRadius: '0 0 10px 10px', borderTop: 'none', border: '1.5px solid rgba(241,139,17,.15)', borderTopWidth: 0, fontSize: 13, color: '#444' }}>
                       <p style={{ margin: '0 0 8px', lineHeight: 1.5 }}>
                         {s.descripcion?.length > 160 ? s.descripcion.slice(0, 160) + '…' : s.descripcion}
@@ -875,7 +875,7 @@ function SolicitudesPane({ usuario, esGestor, selected, setSelected, showNueva, 
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Atencion() {
   const { usuario } = useAuth()
-  const esGestor = ['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(usuario?.rol)
+  const esGestor = ['superadmin', 'coordinador', 'admin_ventas'].includes(usuario?.rol)
   const [tab, setTab] = useState('solicitudes')
   const [selected, setSelected] = useState(null)
   const [showNueva, setShowNueva] = useState(false)

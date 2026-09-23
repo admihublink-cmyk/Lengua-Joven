@@ -580,6 +580,26 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_ins ON comisiones (inscripcion_id)`)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_pre ON comisiones (pre_registro_id)`)
 
+  // ── Migrar buzón → atencion_solicitudes (v3.2) ───────────────────────────────
+  await pool.query(`
+    INSERT INTO atencion_solicitudes (id, alumno_id, categoria, titulo, descripcion, estado, prioridad, confidencial, plantel_id, creado_en, actualizado_en)
+    SELECT
+      'bz-' || b.id,
+      b.autor_id,
+      CASE b.tipo WHEN 'queja' THEN 'quejas' WHEN 'sugerencia' THEN 'sugerencias' ELSE 'otro' END,
+      COALESCE(b.asunto, 'Sin asunto'),
+      COALESCE(b.mensaje, ''),
+      CASE b.estado WHEN 'nueva' THEN 'nueva' WHEN 'resuelta' THEN 'cerrada' ELSE 'nueva' END,
+      'media',
+      0,
+      b.plantel_id,
+      COALESCE(b.fecha, NOW()::TEXT),
+      COALESCE(b.fecha, NOW()::TEXT)
+    FROM buzon b
+    WHERE b.autor_id IS NOT NULL
+      AND NOT EXISTS (SELECT 1 FROM atencion_solicitudes WHERE id = 'bz-' || b.id)
+  `)
+
   // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS editado_en TEXT`)

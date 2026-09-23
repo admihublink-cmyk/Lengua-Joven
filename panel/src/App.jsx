@@ -43,7 +43,6 @@ import Clase from './pages/Clase.jsx'
 import Mensajes from './pages/Mensajes.jsx'
 import Tareas from './pages/Tareas.jsx'
 import Perfil from './pages/Perfil.jsx'
-import Buzon from './pages/Buzon.jsx'
 import Convenios from './pages/Convenios.jsx'
 import OfertaEducativa from './pages/OfertaEducativa.jsx'
 import Actividad from './pages/Actividad.jsx'
@@ -82,7 +81,7 @@ const RUTAS = {
   mensajes: Mensajes,
   tareas: Tareas,
   perfil: Perfil,
-  buzon: Buzon,
+  buzon: Atencion,
   convenios: Convenios,
   oferta: OfertaEducativa,
   actividad: Actividad,
