@@ -580,6 +580,18 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_ins ON comisiones (inscripcion_id)`)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_pre ON comisiones (pre_registro_id)`)
 
+  // ── Perfil extendido — todos los usuarios (v3.2) ─────────────────────────────
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS whatsapp TEXT`)
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS email_contacto TEXT`)
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS municipio TEXT`)
+  await pool.query(`ALTER TABLE usuarios ADD COLUMN IF NOT EXISTS foto_perfil TEXT`)
+  // Poblar municipio desde pre_registros para alumnos existentes
+  await pool.query(`
+    UPDATE usuarios u SET municipio = pr.municipio
+    FROM pre_registros pr
+    WHERE lower(pr.email) = lower(u.email) AND u.municipio IS NULL AND pr.municipio IS NOT NULL
+  `)
+
   // ── Migrar buzón → atencion_solicitudes (v3.2) ───────────────────────────────
   await pool.query(`
     INSERT INTO atencion_solicitudes (id, alumno_id, categoria, titulo, descripcion, estado, prioridad, confidencial, plantel_id, creado_en, actualizado_en)

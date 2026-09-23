@@ -107,7 +107,7 @@ router.put('/:id', requireAuth, async (req, res) => {
 
   if (!canEdit) return res.status(403).json({ error: 'Sin permiso' })
 
-  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento } = req.body
+  const { nombre, email, password, rol, plantel_id, activo, matricula, fecha_nacimiento, estado_entidad, proveedor, curp, genero_nacimiento, whatsapp, email_contacto, municipio, foto_perfil } = req.body
   const updates = {}
   if (nombre !== undefined) updates.nombre = nombre
   if (email !== undefined) updates.email = email.toLowerCase()
@@ -126,6 +126,10 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (proveedor !== undefined) updates.proveedor = proveedor || null
   if (curp !== undefined) updates.curp = curp || null
   if (genero_nacimiento !== undefined) updates.genero_nacimiento = genero_nacimiento || null
+  if (whatsapp !== undefined) updates.whatsapp = whatsapp || null
+  if (email_contacto !== undefined) updates.email_contacto = email_contacto || null
+  if (municipio !== undefined) updates.municipio = municipio || null
+  if (foto_perfil !== undefined) updates.foto_perfil = foto_perfil || null
   if (password) updates.password_hash = bcrypt.hashSync(password, 10)
 
   const setClauses = Object.keys(updates).map((k, i) => `${k} = $${i + 1}`).join(', ')

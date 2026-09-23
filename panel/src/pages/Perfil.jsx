@@ -1,8 +1,42 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../App.jsx'
 import { ROL_PERMISOS } from '../auth.js'
 import * as api from '../api.js'
 import Modal from '../components/Modal.jsx'
+
+const ORANGE = '#f18b11'
+
+function edadDesdeCurp(curp) {
+  if (!curp || curp.length < 10) return null
+  const yy = parseInt(curp.substring(4, 6), 10)
+  const mm = parseInt(curp.substring(6, 8), 10) - 1
+  const dd = parseInt(curp.substring(8, 10), 10)
+  if (isNaN(yy) || isNaN(mm) || isNaN(dd)) return null
+  const hoy = new Date()
+  const century = yy <= hoy.getFullYear() % 100 ? 2000 : 1900
+  const nac = new Date(century + yy, mm, dd)
+  let edad = hoy.getFullYear() - nac.getFullYear()
+  const m = hoy.getMonth() - nac.getMonth()
+  if (m < 0 || (m === 0 && hoy.getDate() < nac.getDate())) edad--
+  return edad > 0 && edad < 120 ? edad : null
+}
+
+function resizeImagen(file, maxPx = 160) {
+  return new Promise((resolve) => {
+    const img = new Image()
+    const url = URL.createObjectURL(file)
+    img.onload = () => {
+      const scale = Math.min(maxPx / img.width, maxPx / img.height, 1)
+      const canvas = document.createElement('canvas')
+      canvas.width = Math.round(img.width * scale)
+      canvas.height = Math.round(img.height * scale)
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height)
+      URL.revokeObjectURL(url)
+      resolve(canvas.toDataURL('image/jpeg', 0.82))
+    }
+    img.src = url
+  })
+}
 
 export default function Perfil() {
   const { usuario } = useAuth()
@@ -18,15 +52,18 @@ export default function Perfil() {
   const [guardado, setGuardado] = useState('')
   const [pwdErr, setPwdErr] = useState('')
   const [modalPwd, setModalPwd] = useState(false)
+  const [err, setErr] = useState('')
+  const [subiendo, setSubiendo] = useState(false)
+  const fileRef = useRef()
 
   async function cargar() {
     try {
       const [u, ins, g, i, p] = await Promise.all([
         api.getUsuario(usuario.id),
-        api.getInscripciones(),
-        api.getGrupos(),
-        api.getIdiomas(),
-        api.getPlanteles(),
+        api.getInscripciones().catch(() => []),
+        api.getGrupos().catch(() => []),
+        api.getIdiomas().catch(() => []),
+        api.getPlanteles().catch(() => []),
       ])
       setPerfil(u)
       setInscripciones(ins)
@@ -34,7 +71,7 @@ export default function Perfil() {
       setIdiomas(i)
       setPlanteles(p)
       if (i.length > 0) {
-        const todos = await Promise.all(i.map(id => api.getNiveles(id.id)))
+        const todos = await Promise.all(i.map(id => api.getNiveles(id.id))).catch(() => [])
         setNiveles(todos.flat())
       }
     } catch (e) {
@@ -46,11 +83,30 @@ export default function Perfil() {
 
   function iniciarEdicion() {
     setForm({ ...perfil })
+    setErr('')
     setEditando(true)
   }
 
+  async function handleAvatar(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    if (!file.type.startsWith('image/')) return setErr('Solo se permiten imágenes.')
+    setSubiendo(true)
+    try {
+      const b64 = await resizeImagen(file)
+      await api.actualizarUsuario(usuario.id, { foto_perfil: b64 })
+      await cargar()
+      setGuardado('foto')
+      setTimeout(() => setGuardado(''), 2500)
+    } catch (e) {
+      setErr('Error al subir la foto.')
+    } finally { setSubiendo(false) }
+  }
+
   async function guardarPerfil() {
-    if (!form.nombre?.trim() || !form.email?.trim()) return alert('Nombre y correo son requeridos.')
+    setErr('')
+    if (!form.nombre?.trim() || !form.email?.trim()) return setErr('Nombre y correo son requeridos.')
+    if (form.whatsapp && form.whatsapp.replace(/\D/g, '').length < 10) return setErr('WhatsApp debe tener al menos 10 dígitos.')
     try {
       await api.actualizarUsuario(usuario.id, form)
       setEditando(false)
@@ -58,7 +114,7 @@ export default function Perfil() {
       setTimeout(() => setGuardado(''), 2500)
       await cargar()
     } catch (e) {
-      alert('Error al guardar: ' + e.message)
+      setErr('Error al guardar: ' + e.message)
     }
   }
 
@@ -88,8 +144,9 @@ export default function Perfil() {
 
   function nomPlantel(id) { return planteles.find(p => p.id === id)?.nombre || '—' }
 
-  const rolCfg = ROL_PERMISOS[usuario.rol]
+  const rolCfg = ROL_PERMISOS[usuario.rol] || { color: '#888', label: usuario.rol }
   const inscripcionesActivas = inscripciones.filter(i => ['asignada', 'pagada'].includes(i.estado))
+  const edad = perfil ? edadDesdeCurp(perfil.curp) : null
 
   if (!perfil) return null
 
@@ -99,13 +156,39 @@ export default function Perfil() {
         <h2>Mi Perfil</h2>
         {guardado === 'perfil' && <span className="badge asignada">✓ Perfil guardado</span>}
         {guardado === 'pwd' && <span className="badge asignada">✓ Contraseña actualizada</span>}
+        {guardado === 'foto' && <span className="badge asignada">✓ Foto actualizada</span>}
       </div>
 
       <div className="dash-grid">
         <div className="card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-            <div className="avatar" style={{ background: rolCfg.color, width: 56, height: 56, fontSize: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, flexShrink: 0 }}>
-              {perfil.nombre?.charAt(0) || '?'}
+          {/* Avatar + encabezado */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+            <div style={{ position: 'relative', flexShrink: 0 }}>
+              {perfil.foto_perfil ? (
+                <img src={perfil.foto_perfil} alt="Avatar"
+                  style={{ width: 72, height: 72, borderRadius: '50%', objectFit: 'cover', border: `3px solid ${ORANGE}` }} />
+              ) : (
+                <div style={{
+                  width: 72, height: 72, borderRadius: '50%', background: rolCfg.color,
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  color: '#fff', fontWeight: 700, fontSize: 28, flexShrink: 0,
+                }}>
+                  {perfil.nombre?.charAt(0) || '?'}
+                </div>
+              )}
+              <button
+                onClick={() => fileRef.current?.click()}
+                disabled={subiendo}
+                title="Cambiar foto"
+                style={{
+                  position: 'absolute', bottom: 0, right: 0,
+                  width: 24, height: 24, borderRadius: '50%',
+                  background: ORANGE, border: '2px solid #fff',
+                  cursor: 'pointer', fontSize: 12, display: 'flex',
+                  alignItems: 'center', justifyContent: 'center', color: '#fff',
+                }}
+              >✎</button>
+              <input ref={fileRef} type="file" accept="image/*" style={{ display: 'none' }} onChange={handleAvatar} />
             </div>
             <div>
               <div style={{ fontSize: 20, fontWeight: 700 }}>{perfil.nombre}</div>
@@ -118,12 +201,24 @@ export default function Perfil() {
             <>
               <div className="detalle-grid" style={{ marginBottom: 16 }}>
                 <div><label>Nombre completo</label><p>{perfil.nombre}</p></div>
-                <div><label>Correo electrónico</label><p>{perfil.email}</p></div>
+                <div><label>Correo de cuenta</label><p>{perfil.email}</p></div>
+                {edad !== null && (
+                  <div><label>Edad</label><p>{edad} años</p></div>
+                )}
+                {perfil.municipio && (
+                  <div><label>Municipio</label><p>{perfil.municipio}</p></div>
+                )}
+                {perfil.email_contacto && (
+                  <div><label>Correo de contacto</label><p>{perfil.email_contacto}</p></div>
+                )}
+                {perfil.whatsapp && (
+                  <div><label>WhatsApp</label><p>{perfil.whatsapp}</p></div>
+                )}
                 {perfil.rol === 'alumno' && (
                   <>
-                    <div><label>No. Matrícula</label><p>{perfil.matricula || '—'}</p></div>
-                    <div><label>Fecha de nacimiento</label><p>{perfil.fecha_nacimiento || '—'}</p></div>
-                    <div><label>Estado / Entidad</label><p>{perfil.estado_entidad || '—'}</p></div>
+                    {perfil.matricula && <div><label>No. Matrícula</label><p>{perfil.matricula}</p></div>}
+                    {perfil.fecha_nacimiento && <div><label>Fecha de nacimiento</label><p>{perfil.fecha_nacimiento}</p></div>}
+                    {perfil.estado_entidad && <div><label>Estado / Entidad</label><p>{perfil.estado_entidad}</p></div>}
                   </>
                 )}
               </div>
@@ -138,9 +233,28 @@ export default function Perfil() {
                 <label style={{ gridColumn: '1/-1' }}>Nombre completo *
                   <input value={form.nombre || ''} onChange={e => setForm({ ...form, nombre: e.target.value })} />
                 </label>
-                <label style={{ gridColumn: '1/-1' }}>Correo electrónico *
+                <label style={{ gridColumn: '1/-1' }}>Correo de cuenta *
                   <input type="email" value={form.email || ''} onChange={e => setForm({ ...form, email: e.target.value })} />
                 </label>
+                <label style={{ gridColumn: '1/-1' }}>Correo de contacto
+                  <input type="email" value={form.email_contacto || ''} onChange={e => setForm({ ...form, email_contacto: e.target.value })}
+                    placeholder="Correo alternativo para notificaciones" />
+                </label>
+                <label style={{ gridColumn: '1/-1' }}>WhatsApp *
+                  <input value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
+                    placeholder="Ej. 8112345678 (mínimo 10 dígitos)" />
+                </label>
+                {/* Campos solo lectura */}
+                {perfil.municipio && (
+                  <label style={{ gridColumn: '1/-1' }}>Municipio
+                    <input value={perfil.municipio} readOnly style={{ background: 'rgba(0,0,0,.04)', color: '#666', cursor: 'default' }} />
+                  </label>
+                )}
+                {edad !== null && (
+                  <label>Edad
+                    <input value={`${edad} años`} readOnly style={{ background: 'rgba(0,0,0,.04)', color: '#666', cursor: 'default' }} />
+                  </label>
+                )}
                 {perfil.rol === 'alumno' && (
                   <>
                     <label>No. Matrícula
@@ -155,8 +269,9 @@ export default function Perfil() {
                   </>
                 )}
               </div>
+              {err && <p style={{ color: 'var(--rojo)', fontSize: 13, margin: '8px 0' }}>{err}</p>}
               <div className="modal-acciones" style={{ marginTop: 12 }}>
-                <button className="btn-sec" onClick={() => setEditando(false)}>Cancelar</button>
+                <button className="btn-sec" onClick={() => { setEditando(false); setErr('') }}>Cancelar</button>
                 <button className="btn-primario" onClick={guardarPerfil}>Guardar cambios</button>
               </div>
             </>
