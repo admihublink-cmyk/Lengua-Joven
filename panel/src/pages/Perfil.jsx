@@ -106,7 +106,7 @@ export default function Perfil() {
   async function guardarPerfil() {
     setErr('')
     if (!form.nombre?.trim() || !form.email?.trim()) return setErr('Nombre y correo son requeridos.')
-    if (form.whatsapp && form.whatsapp.replace(/\D/g, '').length < 10) return setErr('WhatsApp debe tener al menos 10 dígitos.')
+    if (form.whatsapp && form.whatsapp.replace(/\D/g, '').length !== 10) return setErr('WhatsApp debe tener exactamente 10 dígitos.')
     try {
       await api.actualizarUsuario(usuario.id, form)
       setEditando(false)
@@ -242,7 +242,7 @@ export default function Perfil() {
                 </label>
                 <label style={{ gridColumn: '1/-1' }}>WhatsApp *
                   <input value={form.whatsapp || ''} onChange={e => setForm({ ...form, whatsapp: e.target.value })}
-                    placeholder="Ej. 8112345678 (mínimo 10 dígitos)" />
+                    placeholder="10 dígitos, ej. 8112345678" />
                 </label>
                 {/* Campos solo lectura */}
                 {perfil.municipio && (
