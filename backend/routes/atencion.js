@@ -402,8 +402,30 @@ router.post('/solicitudes/:folio/mensajes', requireAuth, (req, res) => {
   })
 })
 
+// ── PATCH /api/atencion/solicitudes/:folio/tomar ──────────────────────────────
+router.patch('/solicitudes/:folio/tomar', requireAuth, async (req, res) => {
+  if (!esGestor(req.user)) return res.status(403).json({ error: 'Sin permiso' })
+  const sol = await queryOne('SELECT * FROM atencion_solicitudes WHERE id = $1', [req.params.folio])
+  if (!sol) return res.status(404).json({ error: 'No encontrada' })
+  if (sol.asignado_a && sol.asignado_a !== req.user.id) {
+    return res.status(409).json({ error: 'Este ticket ya fue tomado por otro agente' })
+  }
+  const ahora = new Date().toISOString()
+  const nuevoEstado = sol.estado === 'nueva' ? 'recibida' : sol.estado
+  await run('UPDATE atencion_solicitudes SET asignado_a = $1, estado = $2, actualizado_en = $3 WHERE id = $4',
+    [req.user.id, nuevoEstado, ahora, sol.id])
+  const msgId = crypto.randomUUID()
+  await run(
+    `INSERT INTO atencion_mensajes (id, solicitud_id, autor_id, contenido, interno, tipo, meta, creado_en)
+     VALUES ($1,$2,$3,$4,1,'sistema',$5,$6)`,
+    [msgId, sol.id, req.user.id, `Ticket tomado por ${req.user.nombre}.`,
+     JSON.stringify({ asignado_a: req.user.id }), ahora]
+  )
+  res.json({ ok: true, estado: nuevoEstado, asignado_a: req.user.id })
+})
+
 // ── PATCH /api/atencion/solicitudes/:folio/estado ─────────────────────────────
-const ESTADOS_VALIDOS = ['nueva','recibida','en_revision','esperando_informacion','en_proceso','resuelta','cerrada']
+const ESTADOS_VALIDOS = ['nueva','recibida','en_revision','esperando_informacion','en_proceso','resuelta','cerrada','turno_alumno']
 
 router.patch('/solicitudes/:folio/estado', requireAuth, async (req, res) => {
   if (!esGestor(req.user)) return res.status(403).json({ error: 'Sin permiso' })
@@ -473,25 +495,37 @@ router.patch('/solicitudes/:folio/satisfaccion', requireAuth, async (req, res) =
   const sol = await queryOne('SELECT * FROM atencion_solicitudes WHERE id = $1', [req.params.folio])
   if (!sol) return res.status(404).json({ error: 'No encontrada' })
   if (sol.alumno_id !== req.user.id) return res.status(403).json({ error: 'Sin permiso' })
-  if (sol.estado !== 'resuelta') return res.status(400).json({ error: 'Solo se puede valorar cuando la solicitud está resuelta' })
+  if (!['resuelta', 'turno_alumno'].includes(sol.estado)) {
+    return res.status(400).json({ error: 'Solo se puede valorar cuando la solicitud está en estado "resuelta" o "turno del alumno"' })
+  }
 
-  await run('UPDATE atencion_solicitudes SET satisfaccion = $1, actualizado_en = $2 WHERE id = $3',
-    [satisfaccion ? 1 : 0, new Date().toISOString(), sol.id])
+  const ahora = new Date().toISOString()
 
-  // Si no está satisfecho, reabre el caso
-  if (!satisfaccion) {
-    await run(`UPDATE atencion_solicitudes SET estado = 'en_revision', actualizado_en = $1 WHERE id = $2`,
-      [new Date().toISOString(), sol.id])
+  if (satisfaccion) {
+    // Resuelto → cerrar ticket
+    await run('UPDATE atencion_solicitudes SET satisfaccion = 1, estado = $1, actualizado_en = $2 WHERE id = $3',
+      ['cerrada', ahora, sol.id])
     const msgId = crypto.randomUUID()
     await run(
       `INSERT INTO atencion_mensajes (id, solicitud_id, autor_id, contenido, interno, tipo, meta, creado_en)
        VALUES ($1,$2,$3,$4,0,'sistema',$5,$6)`,
-      [msgId, sol.id, req.user.id, 'El alumno indicó que su problema no fue resuelto. El caso fue reabierto.',
-       null, new Date().toISOString()]
+      [msgId, sol.id, req.user.id, 'El alumno confirmó que su duda fue resuelta. Ticket cerrado.', null, ahora]
     )
+    return res.json({ ok: true, estado: 'cerrada' })
   }
 
-  res.json({ ok: true, estado: satisfaccion ? 'resuelta' : 'en_revision' })
+  // No resuelto → volver a en_proceso (turno del agente)
+  const msgId2 = crypto.randomUUID()
+  await run(
+    `INSERT INTO atencion_mensajes (id, solicitud_id, autor_id, contenido, interno, tipo, meta, creado_en)
+     VALUES ($1,$2,$3,$4,0,'sistema',$5,$6)`,
+    [msgId2, sol.id, req.user.id, 'El alumno indicó que su problema no fue resuelto. El caso fue reabierto.', null, ahora]
+  )
+  if (sol.asignado_a) {
+    await crearNotificacion(sol.asignado_a, 'atencion_reabierto',
+      `El alumno indicó que su duda no fue resuelta. Solicitud ${sol.id} reabierta.`, sol.id)
+  }
+  res.json({ ok: true, estado: 'en_proceso' })
 })
 
 // ── POST /api/atencion/solicitudes/:folio/docs-solicitados ────────────────────

@@ -24,6 +24,7 @@ const ESTADO_LABEL = {
   en_revision: 'En revisión',
   esperando_informacion: 'Esperando información',
   en_proceso: 'En proceso',
+  turno_alumno: 'Turno del alumno',
   resuelta: 'Resuelta',
   cerrada: 'Cerrada',
 }
@@ -34,6 +35,7 @@ const ESTADO_COLOR = {
   en_revision: '#8e44ad',
   esperando_informacion: '#c0392b',
   en_proceso: '#27ae60',
+  turno_alumno: '#1abc9c',
   resuelta: '#16a085',
   cerrada: '#7f8c8d',
 }
@@ -430,10 +432,11 @@ function SolicitudDetalle({ folio, currentUser, esGestor, onBack, onStatusChange
 
   const ESTADOS_SIGUIENTE = {
     nueva: ['recibida'],
-    recibida: ['en_revision', 'esperando_informacion', 'en_proceso'],
-    en_revision: ['esperando_informacion', 'en_proceso'],
-    esperando_informacion: ['en_revision', 'en_proceso'],
-    en_proceso: ['resuelta'],
+    recibida: ['en_revision', 'turno_alumno', 'esperando_informacion', 'en_proceso'],
+    en_revision: ['turno_alumno', 'esperando_informacion', 'en_proceso'],
+    esperando_informacion: ['turno_alumno', 'en_revision', 'en_proceso'],
+    en_proceso: ['turno_alumno', 'resuelta'],
+    turno_alumno: ['en_proceso', 'cerrada'],
     resuelta: ['cerrada', 'en_proceso'],
   }
   const siguientes = esGestor ? (ESTADOS_SIGUIENTE[sol.estado] || []) : []
@@ -477,13 +480,14 @@ function SolicitudDetalle({ folio, currentUser, esGestor, onBack, onStatusChange
           </div>
         )}
 
-        {/* Valoración alumno */}
-        {!esGestor && sol.estado === 'resuelta' && sol.satisfaccion == null && (
-          <div style={{ marginTop: 12, padding: 12, background: 'rgba(22,160,133,.08)', borderRadius: 8 }}>
-            <p style={{ fontWeight: 600, fontSize: 13, margin: '0 0 8px' }}>¿La respuesta resolvió tu problema?</p>
+        {/* Valoración alumno — aparece en turno_alumno y resuelta */}
+        {!esGestor && ['turno_alumno', 'resuelta'].includes(sol.estado) && sol.satisfaccion == null && (
+          <div style={{ marginTop: 12, padding: 14, background: 'rgba(26,188,156,.1)', borderRadius: 8, border: '1.5px solid rgba(26,188,156,.3)' }}>
+            <p style={{ fontWeight: 700, fontSize: 14, margin: '0 0 4px', color: '#0d6e5c' }}>¿Tu duda fue resuelta?</p>
+            <p style={{ fontSize: 13, color: '#555', margin: '0 0 10px' }}>Un agente respondió a tu solicitud. Cuéntanos cómo te fue.</p>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button disabled={accionLoading} onClick={() => valorar(true)} style={btnPri}>✓ Sí, gracias</button>
-              <button disabled={accionLoading} onClick={() => valorar(false)} style={{ ...btnSec, borderColor: '#c0392b', color: '#c0392b' }}>✗ No fue resuelto</button>
+              <button disabled={accionLoading} onClick={() => valorar(true)} style={btnPri}>✓ Sí, resuelta</button>
+              <button disabled={accionLoading} onClick={() => valorar(false)} style={{ ...btnSec, borderColor: '#c0392b', color: '#c0392b' }}>✗ No, sigue sin resolverse</button>
             </div>
           </div>
         )}
@@ -709,54 +713,185 @@ function ChatEnVivoPane({ currentUser }) {
   )
 }
 
+// ─── Lista de solicitudes con vista de subpestaña ────────────────────────────
+function SolicitudesPane({ usuario, esGestor, selected, setSelected, showNueva, setShowNueva }) {
+  const [subTab, setSubTab] = useState('sin_tomar')
+  const [solicitudes, setSolicitudes] = useState([])
+  const [total, setTotal] = useState(0)
+  const [loading, setLoading] = useState(true)
+  const [q, setQ] = useState('')
+  const [tomando, setTomando] = useState(null)
+  const offset = useRef(0)
+
+  const SUB_TABS = esGestor
+    ? [
+        ['sin_tomar', '📥 Sin tomar'],
+        ['mis_tickets', '🎧 Mis tickets'],
+        ['turno_alumno', '⏳ Turno del alumno'],
+        ['cerrados', '✅ Cerrados'],
+      ]
+    : [['mis_tickets', '🎧 Mis solicitudes'], ['cerrados', '✅ Cerradas']]
+
+  const cargar = useCallback(async () => {
+    setLoading(true)
+    try {
+      let params = { limit: 30, offset: offset.current }
+      if (q) params.q = q
+      if (subTab === 'sin_tomar') {
+        params.estado = 'nueva'
+      } else if (subTab === 'mis_tickets') {
+        if (esGestor) params.asignado_a = usuario.id
+        // Para alumnos el backend filtra por alumno_id automáticamente
+        // Excluimos cerrados y turno_alumno
+      } else if (subTab === 'turno_alumno') {
+        params.estado = 'turno_alumno'
+        if (esGestor) params.asignado_a = usuario.id
+      } else if (subTab === 'cerrados') {
+        params.estado = 'cerrada'
+        if (esGestor) params.asignado_a = usuario.id
+      }
+      const res = await api.getAtencionSolicitudes(params)
+      let rows = res.rows
+      // Filtrar mis_tickets: excluir cerrados y turno_alumno y sin tomar
+      if (subTab === 'mis_tickets' && esGestor) {
+        rows = rows.filter(s => !['cerrada', 'turno_alumno', 'nueva'].includes(s.estado))
+      }
+      setSolicitudes(rows)
+      setTotal(res.total)
+    } catch (_) {}
+    finally { setLoading(false) }
+  }, [subTab, q, usuario, esGestor])
+
+  useEffect(() => { offset.current = 0; cargar() }, [cargar])
+
+  async function tomar(folio, e) {
+    e.stopPropagation()
+    setTomando(folio)
+    try {
+      await api.tomarTicket(folio)
+      await cargar()
+      setSelected(folio)
+    } catch (err) {
+      alert(err.message || 'No se pudo tomar el ticket')
+    } finally { setTomando(null) }
+  }
+
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+  const hasSelected = !!selected
+
+  return (
+    <div style={{ display: 'flex', flex: 1, overflow: 'hidden', flexDirection: 'column' }}>
+      {/* Sub-tabs */}
+      <div style={{ display: 'flex', borderBottom: '1.5px solid rgba(0,0,0,.08)', background: '#fafafa', flexShrink: 0, overflowX: 'auto' }}>
+        {SUB_TABS.map(([k, label]) => (
+          <button key={k} onClick={() => { setSubTab(k); setSelected(null); offset.current = 0 }} style={{
+            padding: '10px 16px', border: 'none', borderBottom: `2.5px solid ${subTab === k ? ORANGE : 'transparent'}`,
+            background: 'none', cursor: 'pointer', fontWeight: subTab === k ? 700 : 400,
+            color: subTab === k ? ORANGE : '#666', fontSize: 13, whiteSpace: 'nowrap', marginBottom: -1.5,
+          }}>{label}</button>
+        ))}
+        <div style={{ flex: 1 }} />
+        {usuario?.rol !== 'superadmin' && (
+          <button onClick={() => setShowNueva(true)} style={{ ...btnPri, margin: '6px 10px', fontSize: 13, padding: '6px 14px' }}>+ Nueva</button>
+        )}
+      </div>
+
+      <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+        {(!hasSelected || !isMobile) && (
+          <div style={{ width: selected ? 360 : '100%', minWidth: selected ? 300 : undefined, borderRight: selected ? '1px solid rgba(0,0,0,.1)' : 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            {/* Buscador */}
+            <div style={{ padding: '8px 12px', borderBottom: '1px solid rgba(0,0,0,.06)' }}>
+              <input value={q} onChange={e => setQ(e.target.value)}
+                placeholder="Buscar por folio o asunto..."
+                style={{ ...inpStyle, marginBottom: 0, padding: '6px 10px', fontSize: 13 }} />
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '10px 10px 0' }}>
+              {loading && <p style={{ color: '#888', fontSize: 13, padding: '16px 8px' }}>Cargando...</p>}
+              {!loading && solicitudes.length === 0 && (
+                <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
+                  <div style={{ fontSize: 32, marginBottom: 8 }}>
+                    {subTab === 'sin_tomar' ? '📥' : subTab === 'cerrados' ? '✅' : subTab === 'turno_alumno' ? '⏳' : '🎧'}
+                  </div>
+                  <p style={{ margin: 0, fontSize: 14 }}>
+                    {subTab === 'sin_tomar' ? 'No hay tickets sin tomar' :
+                     subTab === 'cerrados' ? 'No hay tickets cerrados' :
+                     subTab === 'turno_alumno' ? 'No hay tickets en turno del alumno' :
+                     'No hay solicitudes activas'}
+                  </p>
+                  {!esGestor && subTab === 'mis_tickets' && (
+                    <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>
+                  )}
+                </div>
+              )}
+
+              {solicitudes.map(s => (
+                <div key={s.id}>
+                  <SolicitudCard sol={s} onClick={setSelected} selected={selected === s.id} />
+                  {/* Mostrar contenido de la pregunta en "sin tomar" */}
+                  {subTab === 'sin_tomar' && (
+                    <div style={{ margin: '-4px 0 8px', padding: '10px 14px', background: 'rgba(241,139,17,.04)', borderRadius: '0 0 10px 10px', borderTop: 'none', border: '1.5px solid rgba(241,139,17,.15)', borderTopWidth: 0, fontSize: 13, color: '#444' }}>
+                      <p style={{ margin: '0 0 8px', lineHeight: 1.5 }}>
+                        {s.descripcion?.length > 160 ? s.descripcion.slice(0, 160) + '…' : s.descripcion}
+                      </p>
+                      <button
+                        disabled={tomando === s.id}
+                        onClick={(e) => tomar(s.id, e)}
+                        style={{ ...btnPri, fontSize: 12, padding: '6px 14px' }}
+                      >
+                        {tomando === s.id ? 'Tomando...' : '✋ Tomar ticket'}
+                      </button>
+                    </div>
+                  )}
+                </div>
+              ))}
+
+              {total > solicitudes.length && (
+                <button onClick={() => { offset.current += 30; cargar() }}
+                  style={{ ...btnSec, width: '100%', margin: '8px 0 16px', fontSize: 13 }}>
+                  Cargar más ({total - solicitudes.length} restantes)
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        {selected && (
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+            <SolicitudDetalle
+              folio={selected}
+              currentUser={usuario}
+              esGestor={esGestor}
+              onBack={() => setSelected(null)}
+              onStatusChange={cargar}
+            />
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Atencion() {
   const { usuario } = useAuth()
   const esGestor = ['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(usuario?.rol)
   const [tab, setTab] = useState('solicitudes')
-  const [solicitudes, setSolicitudes] = useState([])
-  const [total, setTotal] = useState(0)
-  const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState(null)
   const [showNueva, setShowNueva] = useState(false)
-  const [filtros, setFiltros] = useState({ estado: '', categoria: '', q: '' })
-  const offset = useRef(0)
 
-  const cargarLista = useCallback(async () => {
-    setLoading(true)
-    try {
-      const res = await api.getAtencionSolicitudes({
-        estado: filtros.estado || undefined,
-        categoria: filtros.categoria || undefined,
-        q: filtros.q || undefined,
-        limit: 30,
-        offset: offset.current,
-      })
-      setSolicitudes(res.rows)
-      setTotal(res.total)
-    } catch (_) {}
-    finally { setLoading(false) }
-  }, [filtros])
-
-  useEffect(() => { offset.current = 0; cargarLista() }, [cargarLista])
+  const TABS = esGestor
+    ? [['solicitudes', '🎧 Atención'], ['avisos', '📢 Avisos'], ['chat', '💬 Chat en vivo']]
+    : [['solicitudes', '🎧 Atención']]
 
   function handleCreated(folio) {
     setShowNueva(false)
-    cargarLista()
     setSelected(folio)
   }
 
-  const TABS = esGestor
-    ? [['solicitudes', '🎧 Solicitudes'], ['avisos', '📢 Avisos'], ['chat', '💬 Chat en vivo']]
-    : [['solicitudes', '🎧 Mis solicitudes']]
-
-  // Mobile/desktop split pane
-  const hasSelected = !!selected
-  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
-
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Tab bar */}
+      {/* Tab bar principal */}
       <div style={{ display: 'flex', borderBottom: '2px solid rgba(0,0,0,.08)', background: '#fff', flexShrink: 0 }}>
         {TABS.map(([k, label]) => (
           <button key={k} onClick={() => { setTab(k); setSelected(null) }} style={{
@@ -767,86 +902,22 @@ export default function Atencion() {
         ))}
       </div>
 
-      {/* Contenido tabs */}
       <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-
-        {/* ── Solicitudes ── */}
         {tab === 'solicitudes' && (
-          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
-            {(!hasSelected || !isMobile) && (
-              <div style={{ width: selected ? 340 : '100%', minWidth: selected ? 300 : undefined, borderRight: selected ? '1px solid rgba(0,0,0,.1)' : 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(0,0,0,.08)' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-                    <h2 style={{ margin: 0, fontSize: 18, color: '#222' }}>Atención a Alumnos</h2>
-                    {usuario?.rol !== 'superadmin' && (
-                      <button onClick={() => setShowNueva(true)} style={btnPri}>+ Nueva</button>
-                    )}
-                  </div>
-                  {esGestor && <DashboardStats />}
-                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    <input value={filtros.q} onChange={e => setFiltros(p => ({ ...p, q: e.target.value }))}
-                      placeholder="Buscar folio o asunto..." style={{ ...inpStyle, flex: 1, minWidth: 120, marginBottom: 0, padding: '6px 10px', fontSize: 13 }} />
-                    {esGestor && (
-                      <>
-                        <select value={filtros.estado} onChange={e => setFiltros(p => ({ ...p, estado: e.target.value }))}
-                          style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
-                          <option value="">Todos los estados</option>
-                          {Object.entries(ESTADO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                        <select value={filtros.categoria} onChange={e => setFiltros(p => ({ ...p, categoria: e.target.value }))}
-                          style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
-                          <option value="">Todas las categorías</option>
-                          {Object.entries(CATEGORIAS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                        </select>
-                      </>
-                    )}
-                  </div>
-                </div>
-                <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0' }}>
-                  {loading && <p style={{ color: '#888', fontSize: 13 }}>Cargando...</p>}
-                  {!loading && solicitudes.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
-                      <div style={{ fontSize: 32, marginBottom: 8 }}>🎧</div>
-                      <p style={{ margin: 0, fontSize: 14 }}>No hay solicitudes</p>
-                      {!esGestor && usuario?.rol !== 'superadmin' && (
-                        <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>
-                      )}
-                    </div>
-                  )}
-                  {solicitudes.map(s => (
-                    <SolicitudCard key={s.id} sol={s} onClick={setSelected} selected={selected === s.id} />
-                  ))}
-                  {total > solicitudes.length && (
-                    <button onClick={() => { offset.current += 30; cargarLista() }}
-                      style={{ ...btnSec, width: '100%', margin: '8px 0 16px', fontSize: 13 }}>
-                      Cargar más ({total - solicitudes.length} restantes)
-                    </button>
-                  )}
-                </div>
-              </div>
-            )}
-            {selected && (
-              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-                <SolicitudDetalle
-                  folio={selected}
-                  currentUser={usuario}
-                  esGestor={esGestor}
-                  onBack={() => setSelected(null)}
-                  onStatusChange={cargarLista}
-                />
-              </div>
-            )}
-          </div>
+          <SolicitudesPane
+            usuario={usuario}
+            esGestor={esGestor}
+            selected={selected}
+            setSelected={setSelected}
+            showNueva={showNueva}
+            setShowNueva={setShowNueva}
+          />
         )}
-
-        {/* ── Avisos ── */}
         {tab === 'avisos' && (
           <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 24px' }}>
             <AvisosPage />
           </div>
         )}
-
-        {/* ── Chat en vivo ── */}
         {tab === 'chat' && (
           <div style={{ flex: 1, overflow: 'hidden' }}>
             <ChatEnVivoPane currentUser={usuario} />

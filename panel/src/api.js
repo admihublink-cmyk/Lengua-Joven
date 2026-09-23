@@ -503,6 +503,7 @@ export const cobrarTodasComisiones = (plantelId) => req('PATCH', `/comisiones/pl
 export const iniciarChatSesion = (nombre, email) => post('/chat-en-vivo/sesion', { nombre, email })
 export const enviarMensajeChat = (token, contenido) => req('POST', `/chat-en-vivo/sesion/${token}/mensaje`, { contenido })
 export const getMensajesChat = (token, desde) => get(`/chat-en-vivo/sesion/${token}/mensajes?desde=${encodeURIComponent(desde || '')}`)
+export const tomarTicket = (folio) => req('PATCH', `/atencion/solicitudes/${folio}/tomar`, {})
 export const getChatSesiones = () => get('/chat-en-vivo/sesiones')
 export const getChatSesionMensajes = (id) => get(`/chat-en-vivo/sesiones/${id}/mensajes`)
 export const responderChat = (id, contenido) => req('POST', `/chat-en-vivo/sesiones/${id}/mensaje`, { contenido })
