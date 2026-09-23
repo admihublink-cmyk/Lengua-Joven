@@ -817,7 +817,7 @@ export default function Inscripciones() {
         </div>
       )}
 
-      <div className="tabla-wrap">
+      {usuario.rol !== 'alumno' && <div className="tabla-wrap">
         <table className="tabla">
           <thead>
             <tr>
@@ -905,7 +905,7 @@ export default function Inscripciones() {
             )}
           </tbody>
         </table>
-      </div>
+      </div>}
 
       {/* Modal crear */}
       {modal === 'crear' && (
