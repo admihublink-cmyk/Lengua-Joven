@@ -25,18 +25,14 @@ export default function Avisos() {
   const avisosRef = useRef({})
 
   async function cargar() {
-    try {
-      const [a, g, p] = await Promise.all([
-        api.getAvisos(),
-        api.getGrupos(),
-        api.getPlanteles(),
-      ])
-      setAvisos(a)
-      setGrupos(g)
-      setPlanteles(p)
-    } catch (e) {
-      console.error('Error cargando avisos:', e)
-    }
+    const [a, g, p] = await Promise.all([
+      api.getAvisos().catch(() => []),
+      api.getGrupos().catch(() => []),
+      api.getPlanteles().catch(() => []),
+    ])
+    setAvisos(a)
+    setGrupos(g)
+    setPlanteles(p)
   }
 
   useEffect(() => { cargar() }, [])

@@ -583,6 +583,8 @@ async function initDB() {
   // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS editado_en TEXT`)
+  await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_por TEXT`)
+  await pool.query(`UPDATE avisos SET creado_por = autor_id WHERE creado_por IS NULL AND autor_id IS NOT NULL`)
 
   // ── Chat en vivo — sesiones de visitantes (v3.1) ─────────────────────────────
   await pool.query(`
