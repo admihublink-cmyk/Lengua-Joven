@@ -16,6 +16,8 @@ const NAV_ITEMS = [
   { id: 'oferta',        icon: '🏷',   label: 'Oferta Educativa',  permiso: P.CONFIG_SISTEMA },
   { id: 'idiomas',       icon: '🌐',  label: 'Idiomas y Niveles', permiso: P.IDIOMA_VER },
   { id: 'grupos',        icon: '👥',  label: 'Grupos',            permiso: P.GRUPO_VER },
+  // — Menores (tutor) —
+  { id: 'mis_menores',  icon: '👨‍👩‍👧', label: 'Mis Menores',        permiso: P.VER_MENORES },
   // — Alumnos —
   { seccion: 'Alumnos', icon: '🎓' },
   { id: 'placement',     icon: '🎯',  label: 'Placement Test',    permiso: P.PLACEMENT_VER },

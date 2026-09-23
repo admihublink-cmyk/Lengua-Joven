@@ -38,6 +38,92 @@ function resizeImagen(file, maxPx = 160) {
   })
 }
 
+function VincularTutor({ alumnoId }) {
+  const [tutorVinculado, setTutorVinculado] = useState(null)
+  const [solicitudPendiente, setSolicitudPendiente] = useState(null)
+  const [curp, setCurp] = useState('')
+  const [loading, setLoading] = useState(true)
+  const [busy, setBusy] = useState(false)
+  const [msg, setMsg] = useState(null)
+
+  const cargar = () => {
+    setLoading(true)
+    Promise.all([
+      api.getMiTutor().catch(() => null),
+      api.getTutorSolicitudes().catch(() => []),
+    ]).then(([tutorInfo, solicitudes]) => {
+      setTutorVinculado(tutorInfo)
+      const pendiente = (solicitudes || []).find(s => s.estado === 'pendiente')
+      setSolicitudPendiente(pendiente || null)
+    }).finally(() => setLoading(false))
+  }
+  useEffect(cargar, [alumnoId])
+
+  const enviar = async () => {
+    if (!curp.trim()) return setMsg({ tipo: 'error', texto: 'Ingresa el CURP del tutor' })
+    setBusy(true); setMsg(null)
+    try {
+      const r = await api.crearTutorSolicitud(curp.trim())
+      setMsg({ tipo: 'ok', texto: r.mensaje || 'Solicitud enviada' })
+      setCurp('')
+      cargar()
+    } catch (e) { setMsg({ tipo: 'error', texto: e.message || 'Error al enviar solicitud' }) }
+    finally { setBusy(false) }
+  }
+
+  const cancelar = async () => {
+    if (!solicitudPendiente) return
+    setBusy(true)
+    try { await api.cancelarTutorSolicitud(solicitudPendiente.id); cargar() }
+    catch (e) { setMsg({ tipo: 'error', texto: e.message }) }
+    finally { setBusy(false) }
+  }
+
+  if (loading) return null
+
+  return (
+    <div className="card">
+      <h3>Tutor / Padre de familia</h3>
+      {tutorVinculado ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ width: 40, height: 40, borderRadius: '50%', background: ORANGE, display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#fff', fontWeight: 700, fontSize: 18 }}>
+            {(tutorVinculado.nombre || '?').charAt(0)}
+          </div>
+          <div>
+            <div style={{ fontWeight: 600 }}>{tutorVinculado.nombre}</div>
+            <div style={{ fontSize: 12, color: '#888' }}>{tutorVinculado.email}</div>
+          </div>
+          <span style={{ marginLeft: 'auto', fontSize: 12, background: '#27ae6018', color: '#27ae60', borderRadius: 8, padding: '3px 10px', fontWeight: 600 }}>✓ Vinculado</span>
+        </div>
+      ) : solicitudPendiente ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 10, background: 'rgba(241,139,17,.06)', border: `1.5px solid ${ORANGE}33` }}>
+          <div style={{ flex: 1 }}>
+            <div style={{ fontWeight: 600, fontSize: 14 }}>Solicitud enviada</div>
+            <div style={{ fontSize: 12, color: '#888' }}>Esperando aprobación del tutor</div>
+          </div>
+          <button onClick={cancelar} disabled={busy}
+            style={{ background: '#e74c3c', color: '#fff', border: 'none', borderRadius: 8, padding: '7px 14px', cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>
+            Cancelar
+          </button>
+        </div>
+      ) : (
+        <div>
+          <p style={{ fontSize: 13, color: '#666', margin: '0 0 12px' }}>Ingresa el CURP de tu tutor o padre de familia para enviarle una solicitud de vinculación.</p>
+          <div style={{ display: 'flex', gap: 10 }}>
+            <input value={curp} onChange={e => setCurp(e.target.value.toUpperCase())} placeholder="CURP del tutor"
+              style={{ flex: 1, textTransform: 'uppercase', letterSpacing: 1 }} maxLength={18} />
+            <button onClick={enviar} disabled={busy || !curp.trim()}
+              style={{ background: ORANGE, color: '#fff', border: 'none', borderRadius: 8, padding: '0 20px', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>
+              Enviar solicitud
+            </button>
+          </div>
+          {msg && <p style={{ fontSize: 13, color: msg.tipo === 'error' ? '#e74c3c' : '#27ae60', marginTop: 8 }}>{msg.texto}</p>}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function Perfil() {
   const { usuario } = useAuth()
   const [perfil, setPerfil] = useState(null)
@@ -270,6 +356,8 @@ export default function Perfil() {
             </>
           )}
         </div>
+
+        {perfil.rol === 'alumno' && <VincularTutor alumnoId={perfil.id} />}
 
         {perfil.rol === 'alumno' && (
           <div className="card">

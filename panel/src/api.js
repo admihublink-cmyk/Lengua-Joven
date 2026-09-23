@@ -382,6 +382,11 @@ export async function descargarConvenioDOCX(plantelId) {
 
 // ── Tutor ─────────────────────────────────────────────────────────────────────
 export const getMisAlumnos = () => get('/usuarios/mis-alumnos')
+export const getMiTutor = () => get('/usuarios/mi-tutor')
+export const getTutorSolicitudes = () => get('/tutor-solicitudes')
+export const crearTutorSolicitud = (tutor_curp) => post('/tutor-solicitudes', { tutor_curp })
+export const resolverTutorSolicitud = (id, accion) => put(`/tutor-solicitudes/${id}`, { accion })
+export const cancelarTutorSolicitud = (id) => del(`/tutor-solicitudes/${id}`)
 
 // ── Períodos de inscripción ───────────────────────────────────────────────────
 export const getPeriodos = (params = {}) => {

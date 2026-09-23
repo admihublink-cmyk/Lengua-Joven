@@ -51,6 +51,8 @@ export const P = {
   CAMBIO_REGISTRAR: 'CAMBIO_REGISTRAR',   // registrar y gestionar solicitudes de cambio
   // v3.0 — Portal del alumno
   PORTAL_VER: 'PORTAL_VER',              // acceder al portal de alumno
+  // v3.2 — Tutor / Padre de familia
+  VER_MENORES: 'VER_MENORES',            // ver perfiles de menores vinculados
 }
 
 const TODOS = Object.values(P)
@@ -169,6 +171,8 @@ export const ROL_PERMISOS = {
     permisos: [
       P.EVAL_VER,
       P.PAGO_VER,
+      P.ASIST_VER,
+      P.VER_MENORES,
     ],
     scope: 'menores',
     label: 'Tutor / Padre de familia',

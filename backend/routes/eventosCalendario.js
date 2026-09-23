@@ -10,6 +10,17 @@ router.get('/', requireAuth, async (req, res) => {
     let rows
     if (me.rol === 'superadmin') {
       rows = await query(`SELECT * FROM eventos_calendario WHERE activo = 1 ORDER BY fecha_inicio ASC`, [])
+    } else if (me.rol === 'tutor') {
+      const alumnos = me.alumnos || []
+      if (alumnos.length === 0) return res.json([])
+      const phs = alumnos.map((_, i) => `$${i + 1}`).join(',')
+      const planteles = (await query(`SELECT DISTINCT plantel_id FROM usuarios WHERE id IN (${phs}) AND plantel_id IS NOT NULL`, alumnos)).map(r => r.plantel_id)
+      if (planteles.length === 0) {
+        rows = await query(`SELECT * FROM eventos_calendario WHERE activo = 1 AND plantel_id IS NULL ORDER BY fecha_inicio ASC`, [])
+      } else {
+        const phs2 = planteles.map((_, i) => `$${i + 1}`).join(',')
+        rows = await query(`SELECT * FROM eventos_calendario WHERE activo = 1 AND (plantel_id IS NULL OR plantel_id IN (${phs2})) ORDER BY fecha_inicio ASC`, planteles)
+      }
     } else {
       // Cada rol ve los eventos de su plantel + los globales (plantel_id IS NULL)
       rows = await query(

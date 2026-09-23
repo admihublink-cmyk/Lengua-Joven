@@ -51,6 +51,7 @@ import LigasPago from './pages/LigasPago.jsx'
 import PagosMaestros from './pages/PagosMaestros.jsx'
 import Legal from './pages/Legal.jsx'
 import Atencion from './pages/Atencion.jsx'
+import MisMenores from './pages/MisMenores.jsx'
 import PortalAlumno from './pages/PortalAlumno.jsx'
 import PreRegistro from './pages/PreRegistro.jsx'
 import Comisiones from './pages/Comisiones.jsx'
@@ -90,6 +91,7 @@ const RUTAS = {
   pagos_maestro: PagosMaestros,
   legal: Legal,
   atencion: Atencion,
+  mis_menores: MisMenores,
   portal_alumno: PortalAlumno,
   comisiones: Comisiones,
 }

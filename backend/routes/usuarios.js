@@ -35,6 +35,13 @@ router.get('/tutor-alumnos', requireAuth, async (req, res) => {
   res.json(rows)
 })
 
+// Endpoint para alumnos: obtener su tutor vinculado
+router.get('/mi-tutor', requireAuth, async (req, res) => {
+  if (req.user.rol !== 'alumno') return res.status(403).json({ error: 'Sin permiso' })
+  const row = await queryOne(`SELECT u.id, u.nombre, u.email FROM tutor_alumnos ta JOIN usuarios u ON u.id = ta.tutor_id WHERE ta.alumno_id = $1`, [req.user.id])
+  res.json(row || null)
+})
+
 // Endpoint para tutores: obtener sus alumnos menores con info básica
 router.get('/mis-alumnos', requireAuth, async (req, res) => {
   if (req.user.rol !== 'tutor') return res.status(403).json({ error: 'Sin permiso' })

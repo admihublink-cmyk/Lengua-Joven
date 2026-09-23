@@ -612,6 +612,20 @@ async function initDB() {
       AND NOT EXISTS (SELECT 1 FROM atencion_solicitudes WHERE id = 'bz-' || b.id)
   `)
 
+  // ── Solicitudes de vinculación tutor-menor (v3.3) ────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS tutor_solicitudes (
+      id TEXT PRIMARY KEY,
+      tutor_id TEXT NOT NULL,
+      alumno_id TEXT NOT NULL,
+      estado TEXT NOT NULL DEFAULT 'pendiente',
+      creado_en TEXT NOT NULL,
+      resuelto_en TEXT,
+      UNIQUE (alumno_id)
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_tutor_sol_tutor ON tutor_solicitudes (tutor_id, estado)`)
+
   // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS editado_en TEXT`)
@@ -829,6 +843,8 @@ async function seed() {
     await ins(uid(5), `Tutor ${abbr}`, mail('tutor'), 'tutor', null)
     await run('INSERT INTO tutor_alumnos VALUES ($1,$2) ON CONFLICT DO NOTHING', [uid(5), uid(3)])
     await run('INSERT INTO tutor_alumnos VALUES ($1,$2) ON CONFLICT DO NOTHING', [uid(5), uid(4)])
+    // CURP de prueba para el tutor (para testear vinculación por CURP)
+    await run(`UPDATE usuarios SET curp = $1 WHERE id = $2 AND curp IS NULL`, [`TUTOR${abbr.toUpperCase()}TEST00001`, uid(5)])
   }
 
   console.log('Datos de prueba insertados.')
