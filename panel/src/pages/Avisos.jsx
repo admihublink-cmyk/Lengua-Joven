@@ -19,6 +19,29 @@ function fechaHora(iso) {
   })
 }
 
+const MAX_PDF_MB = 8
+
+function leerArchivoPDF(file) {
+  return new Promise((resolve, reject) => {
+    if (file.size > MAX_PDF_MB * 1024 * 1024) return reject(new Error(`El archivo no debe superar ${MAX_PDF_MB} MB`))
+    if (file.type !== 'application/pdf') return reject(new Error('Solo se permiten archivos PDF'))
+    const reader = new FileReader()
+    reader.onload = e => resolve(e.target.result) // data:application/pdf;base64,...
+    reader.onerror = () => reject(new Error('Error al leer el archivo'))
+    reader.readAsDataURL(file)
+  })
+}
+
+async function descargarAdjunto(avisoId, nombre) {
+  try {
+    const { datos } = await api.getAvisoAdjunto(avisoId)
+    const link = document.createElement('a')
+    link.href = datos
+    link.download = nombre
+    link.click()
+  } catch { alert('No se pudo descargar el adjunto') }
+}
+
 export default function Avisos() {
   const { usuario, tienePermiso } = useAuth()
   const { params } = useNav()
@@ -28,6 +51,7 @@ export default function Avisos() {
   const [modal, setModal] = useState(false)
   const [editando, setEditando] = useState(null) // id del aviso que se edita
   const [form, setForm] = useState({ titulo: '', contenido: '', plantel_id: '', grupo_id: '' })
+  const [adjunto, setAdjunto] = useState(null) // { nombre, base64 }
   const [error, setError] = useState('')
   const [destacado, setDestacado] = useState(null)
   const avisosRef = useRef({})
@@ -72,14 +96,33 @@ export default function Avisos() {
       if (editando) {
         await api.actualizarAviso(editando, { titulo: form.titulo, contenido: form.contenido })
       } else {
-        await api.crearAviso({ ...form, autor_id: usuario.id })
+        await api.crearAviso({
+          ...form,
+          autor_id: usuario.id,
+          adjunto_nombre: adjunto?.nombre || null,
+          adjunto_base64: adjunto?.base64 || null,
+        })
       }
       setModal(false)
       setEditando(null)
       setForm({ titulo: '', contenido: '', plantel_id: '', grupo_id: '' })
+      setAdjunto(null)
       await cargar()
     } catch (e) {
       setError('Error al guardar el aviso. Intenta de nuevo.')
+    }
+  }
+
+  async function manejarArchivo(e) {
+    const file = e.target.files?.[0]
+    if (!file) return setAdjunto(null)
+    try {
+      const base64 = await leerArchivoPDF(file)
+      setAdjunto({ nombre: file.name, base64 })
+      setError('')
+    } catch (err) {
+      setError(err.message)
+      e.target.value = ''
     }
   }
 
@@ -87,6 +130,7 @@ export default function Avisos() {
     setForm({ titulo: a.titulo, contenido: a.contenido, plantel_id: a.plantel_id || '', grupo_id: a.grupo_id || '' })
     setEditando(a.id)
     setError('')
+    setAdjunto(null)
     setModal(true)
   }
 
@@ -164,6 +208,12 @@ export default function Avisos() {
                 </div>
               </div>
               <p className="aviso-contenido">{a.contenido}</p>
+              {a.adjunto_nombre && (
+                <button onClick={() => descargarAdjunto(a.id, a.adjunto_nombre)}
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: 6, marginTop: 8, background: 'rgba(241,139,17,.1)', border: '1.5px solid rgba(241,139,17,.3)', borderRadius: 8, padding: '5px 12px', cursor: 'pointer', fontSize: 13, color: '#c47209', fontWeight: 600 }}>
+                  📎 {a.adjunto_nombre}
+                </button>
+              )}
             </div>
           )
         })}
@@ -200,9 +250,20 @@ export default function Avisos() {
               </select>
             </label>
           )}
+          {!editando && (
+            <label>Adjunto PDF (opcional, máx. {MAX_PDF_MB} MB)
+              <input type="file" accept="application/pdf" onChange={manejarArchivo} />
+              {adjunto && (
+                <span style={{ fontSize: 12, color: '#27ae60', marginTop: 4, display: 'block' }}>
+                  ✓ {adjunto.nombre}
+                  <button onClick={() => setAdjunto(null)} style={{ marginLeft: 8, background: 'none', border: 'none', color: '#e74c3c', cursor: 'pointer', fontSize: 12 }}>✕ quitar</button>
+                </span>
+              )}
+            </label>
+          )}
           {error && <p style={{ color: 'var(--rojo)', fontSize: 13, marginTop: 8 }}>{error}</p>}
           <div className="modal-acciones">
-            <button className="btn-sec" onClick={() => { setModal(false); setEditando(null); setError('') }}>Cancelar</button>
+            <button className="btn-sec" onClick={() => { setModal(false); setEditando(null); setError(''); setAdjunto(null) }}>Cancelar</button>
             <button className="btn-primario" onClick={guardar}>{editando ? 'Guardar cambios' : 'Publicar'}</button>
           </div>
         </Modal>

@@ -53,13 +53,16 @@ export const P = {
   PORTAL_VER: 'PORTAL_VER',              // acceder al portal de alumno
   // v3.2 — Tutor / Padre de familia
   VER_MENORES: 'VER_MENORES',            // ver perfiles de menores vinculados
+  // v3.3 — Recursos / Manuales
+  RECURSOS_VER: 'RECURSOS_VER',          // ver recursos/manuales propios del rol
+  RECURSOS_ADMIN: 'RECURSOS_ADMIN',      // subir y eliminar recursos
 }
 
 const TODOS = Object.values(P)
 
 export const ROL_PERMISOS = {
   superadmin: {
-    permisos: TODOS,
+    permisos: TODOS, // includes RECURSOS_VER and RECURSOS_ADMIN
     scope: 'global',
     label: 'Super Admin',
     color: '#e74c3c',
@@ -67,6 +70,7 @@ export const ROL_PERMISOS = {
   },
   director: {
     permisos: [
+      P.RECURSOS_VER,
       P.PLAN_EDITAR, P.IDIOMA_VER, P.IDIOMA_CONFIG,
       P.GRUPO_VER, P.GRUPO_CREAR, P.GRUPO_ASIGNAR,
       P.ASIST_VER, P.ASIST_REGISTRAR,
@@ -92,6 +96,7 @@ export const ROL_PERMISOS = {
   },
   coordinador: {
     permisos: [
+      P.RECURSOS_VER, P.RECURSOS_ADMIN,
       P.IDIOMA_VER, P.IDIOMA_CONFIG,
       P.GRUPO_VER, P.GRUPO_CREAR, P.GRUPO_ASIGNAR,
       P.INSC_VER, P.INSC_CREAR, P.INSC_CONFIRMAR,
@@ -115,6 +120,7 @@ export const ROL_PERMISOS = {
   },
   profesor: {
     permisos: [
+      P.RECURSOS_VER,
       P.GRUPO_VER,
       P.ASIST_VER, P.ASIST_REGISTRAR,
       P.EVAL_VER, P.EVAL_REGISTRAR,
@@ -133,6 +139,7 @@ export const ROL_PERMISOS = {
   },
   alumno: {
     permisos: [
+      P.RECURSOS_VER,
       P.GRUPO_VER,
       P.ASIST_VER,
       P.EVAL_VER,
@@ -152,6 +159,7 @@ export const ROL_PERMISOS = {
   },
   admin_ventas: {
     permisos: [
+      P.RECURSOS_VER,
       P.GRUPO_VER,
       P.PLACEMENT_VER, P.PLACEMENT_APLICAR,
       P.INSC_VER, P.INSC_CREAR, P.INSC_CONFIRMAR,
@@ -169,6 +177,7 @@ export const ROL_PERMISOS = {
   },
   tutor: {
     permisos: [
+      P.RECURSOS_VER,
       P.EVAL_VER,
       P.PAGO_VER,
       P.ASIST_VER,

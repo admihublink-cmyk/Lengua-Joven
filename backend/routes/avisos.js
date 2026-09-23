@@ -2,38 +2,38 @@ const router = require('express').Router()
 const { query, queryOne, run } = require('../db/pool')
 const { requireAuth } = require('../middleware/auth')
 
+// Lista sin adjunto_base64 para no inflar la respuesta
+const SELECT_AVISOS = `SELECT a.id, a.titulo, a.contenido, a.plantel_id, a.grupo_id, a.creado_por,
+  a.fecha, a.activo, a.creado_en, a.editado_en, a.adjunto_nombre,
+  u.nombre AS autor_nombre, u.rol AS autor_rol`
+
 router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   let rows
   if (me.rol === 'superadmin') {
-    rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
-      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
-      WHERE a.activo = 1 ORDER BY COALESCE(a.creado_en, a.fecha) DESC
-    `)
+    rows = await query(`${SELECT_AVISOS} FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por WHERE a.activo = 1 ORDER BY COALESCE(a.creado_en, a.fecha) DESC`)
   } else if (me.plantel_id) {
-    rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
-      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
-      WHERE a.activo = 1 AND (a.plantel_id IS NULL OR a.plantel_id = $1)
-      ORDER BY COALESCE(a.creado_en, a.fecha) DESC
-    `, [me.plantel_id])
+    rows = await query(`${SELECT_AVISOS} FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por WHERE a.activo = 1 AND (a.plantel_id IS NULL OR a.plantel_id = $1) ORDER BY COALESCE(a.creado_en, a.fecha) DESC`, [me.plantel_id])
   } else {
-    rows = await query(`
-      SELECT a.*, u.nombre AS autor_nombre, u.rol AS autor_rol
-      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
-      WHERE a.activo = 1 AND a.plantel_id IS NULL
-      ORDER BY COALESCE(a.creado_en, a.fecha) DESC
-    `)
+    rows = await query(`${SELECT_AVISOS} FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por WHERE a.activo = 1 AND a.plantel_id IS NULL ORDER BY COALESCE(a.creado_en, a.fecha) DESC`)
   }
   res.json(rows)
+})
+
+// Descargar adjunto PDF de un aviso
+router.get('/:id/adjunto', requireAuth, async (req, res) => {
+  try {
+    const row = await queryOne('SELECT adjunto_nombre, adjunto_base64 FROM avisos WHERE id = $1 AND activo = 1', [req.params.id])
+    if (!row || !row.adjunto_base64) return res.status(404).json({ error: 'Sin adjunto' })
+    res.json({ nombre: row.adjunto_nombre, datos: row.adjunto_base64 })
+  } catch (e) { res.status(500).json({ error: e.message }) }
 })
 
 router.post('/', requireAuth, async (req, res) => {
   if (!['superadmin', 'director', 'coordinador', 'profesor'].includes(req.user.rol)) {
     return res.status(403).json({ error: 'Sin permiso' })
   }
-  const { titulo, contenido, plantel_id, grupo_id } = req.body
+  const { titulo, contenido, plantel_id, grupo_id, adjunto_nombre, adjunto_base64 } = req.body
   const { m: maxNum } = await queryOne(
     `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM avisos WHERE id ~ '^av[0-9]+'`, []
   )
@@ -42,8 +42,8 @@ router.post('/', requireAuth, async (req, res) => {
   const fecha = ahora.split('T')[0]
   const pid = req.user.rol === 'superadmin' ? (plantel_id || null) : req.user.plantel_id
   await run(
-    'INSERT INTO avisos (id, titulo, contenido, plantel_id, grupo_id, creado_por, fecha, activo, creado_en) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
-    [newId, titulo, contenido, pid, grupo_id || null, req.user.id, fecha, 1, ahora]
+    'INSERT INTO avisos (id, titulo, contenido, plantel_id, grupo_id, creado_por, fecha, activo, creado_en, adjunto_nombre, adjunto_base64) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)',
+    [newId, titulo, contenido, pid, grupo_id || null, req.user.id, fecha, 1, ahora, adjunto_nombre || null, adjunto_base64 || null]
   )
   const aviso = await queryOne(`
     SELECT a.*, u.nombre AS autor_nombre

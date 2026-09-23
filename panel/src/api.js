@@ -246,6 +246,13 @@ export const getPortalAlumno = () => get('/portal')
 export const getAvisos = () => get('/avisos')
 export const crearAviso = (data) => post('/avisos', data)
 export const actualizarAviso = (id, data) => put(`/avisos/${id}`, data)
+export const getAvisoAdjunto = (id) => get(`/avisos/${id}/adjunto`)
+// Recursos
+export const getRecursos = () => get('/recursos')
+export const getRecursosTodos = () => get('/recursos/todos')
+export const descargarRecurso = (id) => get(`/recursos/${id}/descargar`)
+export const crearRecurso = (data) => post('/recursos', data)
+export const eliminarRecurso = (id) => del(`/recursos/${id}`)
 export const eliminarAviso = (id) => del(`/avisos/${id}`)
 
 // ── Notificaciones ────────────────────────────────────────────────────────────

@@ -612,6 +612,27 @@ async function initDB() {
       AND NOT EXISTS (SELECT 1 FROM atencion_solicitudes WHERE id = 'bz-' || b.id)
   `)
 
+  // ── Avisos: adjunto PDF (v3.3) ───────────────────────────────────────────────
+  await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS adjunto_nombre TEXT`)
+  await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS adjunto_base64 TEXT`)
+
+  // ── Módulo de Recursos (v3.3) ─────────────────────────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS recursos (
+      id TEXT PRIMARY KEY,
+      titulo TEXT NOT NULL,
+      descripcion TEXT,
+      rol_destino TEXT NOT NULL,
+      archivo_nombre TEXT NOT NULL,
+      archivo_base64 TEXT NOT NULL,
+      archivo_tipo TEXT DEFAULT 'application/pdf',
+      subido_por TEXT NOT NULL,
+      creado_en TEXT NOT NULL,
+      activo INTEGER DEFAULT 1
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_recursos_rol ON recursos (rol_destino, activo)`)
+
   // ── Solicitudes de vinculación tutor-menor (v3.3) ────────────────────────────
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tutor_solicitudes (
