@@ -847,6 +847,14 @@ async function seed() {
     await run(`UPDATE usuarios SET curp = $1 WHERE id = $2 AND curp IS NULL`, [`TUTOR${abbr.toUpperCase()}TEST00001`, uid(5)])
   }
 
+  // Menores de prueba vinculados al superadmin (para simular vista Tutor desde superadmin@injuve.mx)
+  await run(`INSERT INTO usuarios (id,nombre,email,password_hash,rol,plantel_id,activo,matricula,fecha_nacimiento,estado_entidad)
+    VALUES ('u_demo_menor1','Sofía Demo','sofia.demo@lj.test',$1,'alumno','p1',1,'DEMO-001','2012-06-14','Nuevo León') ON CONFLICT DO NOTHING`, [bcrypt.hashSync('Abc12345', 10)])
+  await run(`INSERT INTO usuarios (id,nombre,email,password_hash,rol,plantel_id,activo,matricula,fecha_nacimiento,estado_entidad)
+    VALUES ('u_demo_menor2','Mateo Demo','mateo.demo@lj.test',$1,'alumno','p1',1,'DEMO-002','2014-11-03','Nuevo León') ON CONFLICT DO NOTHING`, [bcrypt.hashSync('Abc12345', 10)])
+  await run('INSERT INTO tutor_alumnos VALUES ($1,$2) ON CONFLICT DO NOTHING', ['u1', 'u_demo_menor1'])
+  await run('INSERT INTO tutor_alumnos VALUES ($1,$2) ON CONFLICT DO NOTHING', ['u1', 'u_demo_menor2'])
+
   console.log('Datos de prueba insertados.')
 }
 

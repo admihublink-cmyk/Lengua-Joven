@@ -42,13 +42,16 @@ router.get('/mi-tutor', requireAuth, async (req, res) => {
   res.json(row || null)
 })
 
-// Endpoint para tutores: obtener sus alumnos menores con info básica
+// Endpoint para tutores (y superadmin en simulación): obtener alumnos menores vinculados
 router.get('/mis-alumnos', requireAuth, async (req, res) => {
-  if (req.user.rol !== 'tutor') return res.status(403).json({ error: 'Sin permiso' })
-  const alumnos = req.user.alumnos || []
+  const me = req.user
+  if (me.rol !== 'tutor' && me.rol !== 'superadmin') return res.status(403).json({ error: 'Sin permiso' })
+  // Busca directamente en tutor_alumnos por el user_id (funciona tanto para tutores reales como para superadmin en simulación)
+  const links = await query('SELECT alumno_id FROM tutor_alumnos WHERE tutor_id = $1', [me.id])
+  const alumnos = links.map(r => r.alumno_id)
   if (alumnos.length === 0) return res.json([])
   const placeholders = alumnos.map((_, i) => `$${i + 1}`).join(',')
-  const rows = await query(`SELECT id, nombre, email, plantel_id, fecha_nacimiento FROM usuarios WHERE id IN (${placeholders})`, alumnos)
+  const rows = await query(`SELECT id, nombre, email, plantel_id, fecha_nacimiento, foto_perfil, matricula FROM usuarios WHERE id IN (${placeholders})`, alumnos)
   res.json(rows)
 })
 
