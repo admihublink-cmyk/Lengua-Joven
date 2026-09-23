@@ -171,6 +171,7 @@ app.use('/api/cambios', require('./routes/cambios'))
 app.use('/api/portal', require('./routes/portal'))
 app.use('/api/alertas', require('./routes/alertas'))
 app.use('/api/comisiones', require('./routes/comisiones'))
+app.use('/api/chat-en-vivo', require('./routes/chat_en_vivo'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))
 app.get('/api/db-check', async (req, res) => {

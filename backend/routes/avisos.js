@@ -6,15 +6,25 @@ router.get('/', requireAuth, async (req, res) => {
   const me = req.user
   let rows
   if (me.rol === 'superadmin') {
-    rows = await query('SELECT * FROM avisos WHERE activo = 1 ORDER BY fecha DESC', [])
+    rows = await query(`
+      SELECT a.*, u.nombre AS autor_nombre
+      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
+      WHERE a.activo = 1 ORDER BY COALESCE(a.creado_en, a.fecha) DESC
+    `)
   } else if (me.plantel_id) {
     rows = await query(`
-      SELECT * FROM avisos
-      WHERE activo = 1 AND (plantel_id IS NULL OR plantel_id = $1)
-      ORDER BY fecha DESC
+      SELECT a.*, u.nombre AS autor_nombre
+      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
+      WHERE a.activo = 1 AND (a.plantel_id IS NULL OR a.plantel_id = $1)
+      ORDER BY COALESCE(a.creado_en, a.fecha) DESC
     `, [me.plantel_id])
   } else {
-    rows = await query('SELECT * FROM avisos WHERE activo = 1 AND plantel_id IS NULL ORDER BY fecha DESC', [])
+    rows = await query(`
+      SELECT a.*, u.nombre AS autor_nombre
+      FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
+      WHERE a.activo = 1 AND a.plantel_id IS NULL
+      ORDER BY COALESCE(a.creado_en, a.fecha) DESC
+    `)
   }
   res.json(rows)
 })
@@ -28,12 +38,19 @@ router.post('/', requireAuth, async (req, res) => {
     `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM avisos WHERE id ~ '^av[0-9]+'`, []
   )
   const newId = 'av' + (maxNum + 1)
-  const fecha = new Date().toISOString().split('T')[0]
+  const ahora = new Date().toISOString()
+  const fecha = ahora.split('T')[0]
   const pid = req.user.rol === 'superadmin' ? (plantel_id || null) : req.user.plantel_id
-  await run('INSERT INTO avisos (id, titulo, contenido, plantel_id, grupo_id, creado_por, fecha, activo) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)', [
-    newId, titulo, contenido, pid, grupo_id || null, req.user.id, fecha, 1
-  ])
-  res.status(201).json(await queryOne('SELECT * FROM avisos WHERE id = $1', [newId]))
+  await run(
+    'INSERT INTO avisos (id, titulo, contenido, plantel_id, grupo_id, creado_por, fecha, activo, creado_en) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9)',
+    [newId, titulo, contenido, pid, grupo_id || null, req.user.id, fecha, 1, ahora]
+  )
+  const aviso = await queryOne(`
+    SELECT a.*, u.nombre AS autor_nombre
+    FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
+    WHERE a.id = $1
+  `, [newId])
+  res.status(201).json(aviso)
 })
 
 router.put('/:id', requireAuth, async (req, res) => {
@@ -60,8 +77,18 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (titulo !== undefined) { sets.push(`titulo = $${sets.length + 1}`); vals.push(titulo) }
   if (contenido !== undefined) { sets.push(`contenido = $${sets.length + 1}`); vals.push(contenido) }
   if (activo !== undefined) { sets.push(`activo = $${sets.length + 1}`); vals.push(activo ? 1 : 0) }
+  // Marcar como editado solo si se cambia contenido real (no solo archivar)
+  if (titulo !== undefined || contenido !== undefined) {
+    sets.push(`editado_en = $${sets.length + 1}`)
+    vals.push(new Date().toISOString())
+  }
   if (sets.length) await run(`UPDATE avisos SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
-  res.json(await queryOne('SELECT * FROM avisos WHERE id = $1', [req.params.id]))
+  const updated = await queryOne(`
+    SELECT a.*, u.nombre AS autor_nombre
+    FROM avisos a LEFT JOIN usuarios u ON u.id = a.creado_por
+    WHERE a.id = $1
+  `, [req.params.id])
+  res.json(updated)
 })
 
 router.delete('/:id', requireAuth, async (req, res) => {

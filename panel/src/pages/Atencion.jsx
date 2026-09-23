@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../App.jsx'
 import { P } from '../auth.js'
 import * as api from '../api.js'
+import AvisosPage from './Avisos.jsx'
 
 // ─── Constantes ───────────────────────────────────────────────────────────────
 const CATEGORIAS_LABEL = {
@@ -550,10 +551,169 @@ function DashboardStats() {
   )
 }
 
+// ─── Chat en vivo — panel de agente ──────────────────────────────────────────
+function ChatEnVivoPane({ currentUser }) {
+  const [sesiones, setSesiones] = useState([])
+  const [selectedId, setSelectedId] = useState(null)
+  const [mensajes, setMensajes] = useState([])
+  const [sesionActiva, setSesionActiva] = useState(null)
+  const [msgInput, setMsgInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const endRef = useRef(null)
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
+
+  const cargarSesiones = useCallback(async () => {
+    try { setSesiones(await api.getChatSesiones()) }
+    catch (_) {}
+    finally { setLoading(false) }
+  }, [])
+
+  const cargarMensajes = useCallback(async (id) => {
+    if (!id) return
+    try {
+      const { sesion, mensajes: msgs } = await api.getChatSesionMensajes(id)
+      setSesionActiva(sesion)
+      setMensajes(msgs)
+      setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    } catch (_) {}
+  }, [])
+
+  useEffect(() => { cargarSesiones() }, [cargarSesiones])
+  useEffect(() => { cargarMensajes(selectedId) }, [selectedId, cargarMensajes])
+
+  // Polling cada 4s
+  useEffect(() => {
+    const t = setInterval(() => {
+      cargarSesiones()
+      if (selectedId) cargarMensajes(selectedId)
+    }, 4000)
+    return () => clearInterval(t)
+  }, [selectedId, cargarSesiones, cargarMensajes])
+
+  async function enviar() {
+    if (!msgInput.trim() || !selectedId) return
+    setSending(true)
+    try {
+      await api.responderChat(selectedId, msgInput.trim())
+      setMsgInput('')
+      await cargarMensajes(selectedId)
+      await cargarSesiones()
+    } catch (_) {}
+    finally { setSending(false) }
+  }
+
+  async function cerrarSesion(id) {
+    await api.cambiarEstadoChat(id, 'cerrado')
+    if (selectedId === id) setSelectedId(null)
+    await cargarSesiones()
+  }
+
+  function fechaMsg(iso) {
+    return new Date(iso).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })
+  }
+
+  const tieneSeleccionada = !!selectedId
+
+  return (
+    <div style={{ display: 'flex', height: '100%', overflow: 'hidden' }}>
+      {/* Lista de sesiones */}
+      {(!tieneSeleccionada || !isMobile) && (
+        <div style={{ width: tieneSeleccionada ? 280 : '100%', minWidth: tieneSeleccionada ? 240 : undefined, borderRight: tieneSeleccionada ? '1px solid rgba(0,0,0,.1)' : 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '14px 14px 8px', borderBottom: '1px solid rgba(0,0,0,.08)' }}>
+            <h3 style={{ margin: 0, fontSize: 15, color: '#222' }}>💬 Conversaciones activas</h3>
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: 10 }}>
+            {loading && <p style={{ color: '#888', fontSize: 13 }}>Cargando...</p>}
+            {!loading && sesiones.length === 0 && (
+              <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
+                <div style={{ fontSize: 28 }}>💬</div>
+                <p style={{ fontSize: 13, margin: '8px 0 0' }}>Sin conversaciones activas</p>
+              </div>
+            )}
+            {sesiones.map(s => (
+              <div key={s.id} onClick={() => setSelectedId(s.id)} style={{
+                padding: '10px 12px', borderRadius: 10, cursor: 'pointer', marginBottom: 6,
+                border: selectedId === s.id ? `2px solid ${ORANGE}` : '1.5px solid rgba(0,0,0,.1)',
+                background: selectedId === s.id ? `rgba(241,139,17,.06)` : '#fff',
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600, fontSize: 14, color: '#222' }}>{s.visitante_nombre}</span>
+                  <span style={{
+                    fontSize: 10, fontWeight: 700, borderRadius: 20, padding: '2px 8px', color: '#fff',
+                    background: s.estado === 'espera' ? '#e67e22' : s.estado === 'activo' ? '#27ae60' : '#888',
+                  }}>{s.estado === 'espera' ? 'En espera' : s.estado === 'activo' ? 'Activo' : 'Cerrado'}</span>
+                </div>
+                {s.visitante_email && <div style={{ fontSize: 11, color: '#888', marginTop: 2 }}>{s.visitante_email}</div>}
+                <div style={{ fontSize: 11, color: '#aaa', marginTop: 2 }}>
+                  {s.num_mensajes} mensajes {s.agente_nombre ? `· ${s.agente_nombre}` : '· Sin asignar'}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Panel de chat */}
+      {selectedId && sesionActiva && (
+        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+          <div style={{ padding: '12px 16px', borderBottom: '1px solid rgba(0,0,0,.1)', background: '#fafafa', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <button onClick={() => setSelectedId(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 16, color: '#888', marginRight: 8 }}>←</button>
+              <span style={{ fontWeight: 700, fontSize: 15 }}>{sesionActiva.visitante_nombre}</span>
+              {sesionActiva.visitante_email && <span style={{ fontSize: 12, color: '#888', marginLeft: 8 }}>{sesionActiva.visitante_email}</span>}
+            </div>
+            {sesionActiva.estado !== 'cerrado' && (
+              <button onClick={() => cerrarSesion(selectedId)} style={{ ...btnSec, fontSize: 12, padding: '5px 10px' }}>Cerrar chat</button>
+            )}
+          </div>
+          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {mensajes.map(m => {
+              const esAgente = m.autor_tipo === 'agente'
+              return (
+                <div key={m.id} style={{ display: 'flex', flexDirection: esAgente ? 'row-reverse' : 'row', gap: 8, alignItems: 'flex-end' }}>
+                  <div style={{
+                    maxWidth: '72%', padding: '8px 12px', borderRadius: esAgente ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                    background: esAgente ? `rgba(241,139,17,.12)` : '#f0f2f8',
+                  }}>
+                    <div style={{ fontSize: 10, color: '#999', marginBottom: 2 }}>{m.autor_nombre}</div>
+                    <div style={{ fontSize: 14, color: '#222', whiteSpace: 'pre-wrap', wordBreak: 'break-word' }}>{m.contenido}</div>
+                    <div style={{ fontSize: 10, color: '#bbb', marginTop: 3, textAlign: esAgente ? 'right' : 'left' }}>{fechaMsg(m.creado_en)}</div>
+                  </div>
+                </div>
+              )
+            })}
+            <div ref={endRef} />
+          </div>
+          {sesionActiva.estado !== 'cerrado' && (
+            <div style={{ padding: '10px 14px', borderTop: '1px solid rgba(0,0,0,.1)' }}>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <textarea value={msgInput} onChange={e => setMsgInput(e.target.value)}
+                  onKeyDown={e => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); enviar() } }}
+                  placeholder="Responder... (Enter para enviar)" rows={2}
+                  style={{ ...inpStyle, resize: 'none', marginBottom: 0, flex: 1 }} />
+                <button onClick={enviar} disabled={sending} style={{ ...btnPri, padding: '8px 14px', flexShrink: 0 }}>
+                  {sending ? '...' : '→'}
+                </button>
+              </div>
+            </div>
+          )}
+          {sesionActiva.estado === 'cerrado' && (
+            <div style={{ padding: 14, background: 'rgba(0,0,0,.04)', textAlign: 'center', fontSize: 13, color: '#888' }}>
+              Esta conversación fue cerrada
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
+
 // ─── Página principal ─────────────────────────────────────────────────────────
 export default function Atencion() {
-  const { user } = useAuth()
-  const esGestor = ['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(user?.rol)
+  const { usuario } = useAuth()
+  const esGestor = ['superadmin', 'director', 'coordinador', 'admin_ventas'].includes(usuario?.rol)
+  const [tab, setTab] = useState('solicitudes')
   const [solicitudes, setSolicitudes] = useState([])
   const [total, setTotal] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -586,82 +746,113 @@ export default function Atencion() {
     setSelected(folio)
   }
 
+  const TABS = esGestor
+    ? [['solicitudes', '🎧 Solicitudes'], ['avisos', '📢 Avisos'], ['chat', '💬 Chat en vivo']]
+    : [['solicitudes', '🎧 Mis solicitudes']]
+
   // Mobile/desktop split pane
   const hasSelected = !!selected
   const isMobile = typeof window !== 'undefined' && window.innerWidth < 768
 
   return (
-    <div style={{ display: 'flex', height: '100%', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
-      {/* Lista */}
-      {(!hasSelected || !isMobile) && (
-        <div style={{ width: selected ? 340 : '100%', minWidth: selected ? 300 : undefined, borderRight: selected ? '1px solid rgba(0,0,0,.1)' : 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(0,0,0,.08)' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-              <h2 style={{ margin: 0, fontSize: 18, color: '#222' }}>Atención a Alumnos</h2>
-              {user?.rol !== 'superadmin' && (
-                <button onClick={() => setShowNueva(true)} style={btnPri}>+ Nueva</button>
-              )}
-            </div>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden', fontFamily: 'system-ui, sans-serif' }}>
+      {/* Tab bar */}
+      <div style={{ display: 'flex', borderBottom: '2px solid rgba(0,0,0,.08)', background: '#fff', flexShrink: 0 }}>
+        {TABS.map(([k, label]) => (
+          <button key={k} onClick={() => { setTab(k); setSelected(null) }} style={{
+            padding: '12px 20px', border: 'none', borderBottom: `2.5px solid ${tab === k ? ORANGE : 'transparent'}`,
+            background: 'none', cursor: 'pointer', fontWeight: tab === k ? 700 : 400,
+            color: tab === k ? ORANGE : '#666', fontSize: 14, marginBottom: -2,
+          }}>{label}</button>
+        ))}
+      </div>
 
-            {esGestor && <DashboardStats />}
+      {/* Contenido tabs */}
+      <div style={{ flex: 1, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
 
-            {/* Filtros */}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <input value={filtros.q} onChange={e => setFiltros(p => ({ ...p, q: e.target.value }))}
-                placeholder="Buscar folio o asunto..." style={{ ...inpStyle, flex: 1, minWidth: 120, marginBottom: 0, padding: '6px 10px', fontSize: 13 }} />
-              {esGestor && (
-                <>
-                  <select value={filtros.estado} onChange={e => setFiltros(p => ({ ...p, estado: e.target.value }))}
-                    style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
-                    <option value="">Todos los estados</option>
-                    {Object.entries(ESTADO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                  <select value={filtros.categoria} onChange={e => setFiltros(p => ({ ...p, categoria: e.target.value }))}
-                    style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
-                    <option value="">Todas las categorías</option>
-                    {Object.entries(CATEGORIAS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
-                  </select>
-                </>
-              )}
-            </div>
-          </div>
-
-          <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0' }}>
-            {loading && <p style={{ color: '#888', fontSize: 13 }}>Cargando...</p>}
-            {!loading && solicitudes.length === 0 && (
-              <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
-                <div style={{ fontSize: 32, marginBottom: 8 }}>🎧</div>
-                <p style={{ margin: 0, fontSize: 14 }}>No hay solicitudes</p>
-                {!esGestor && user?.rol !== 'superadmin' && (
-                  <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>
-                )}
+        {/* ── Solicitudes ── */}
+        {tab === 'solicitudes' && (
+          <div style={{ display: 'flex', flex: 1, overflow: 'hidden' }}>
+            {(!hasSelected || !isMobile) && (
+              <div style={{ width: selected ? 340 : '100%', minWidth: selected ? 300 : undefined, borderRight: selected ? '1px solid rgba(0,0,0,.1)' : 'none', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <div style={{ padding: '16px 16px 8px', borderBottom: '1px solid rgba(0,0,0,.08)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+                    <h2 style={{ margin: 0, fontSize: 18, color: '#222' }}>Atención a Alumnos</h2>
+                    {usuario?.rol !== 'superadmin' && (
+                      <button onClick={() => setShowNueva(true)} style={btnPri}>+ Nueva</button>
+                    )}
+                  </div>
+                  {esGestor && <DashboardStats />}
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    <input value={filtros.q} onChange={e => setFiltros(p => ({ ...p, q: e.target.value }))}
+                      placeholder="Buscar folio o asunto..." style={{ ...inpStyle, flex: 1, minWidth: 120, marginBottom: 0, padding: '6px 10px', fontSize: 13 }} />
+                    {esGestor && (
+                      <>
+                        <select value={filtros.estado} onChange={e => setFiltros(p => ({ ...p, estado: e.target.value }))}
+                          style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
+                          <option value="">Todos los estados</option>
+                          {Object.entries(ESTADO_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                        <select value={filtros.categoria} onChange={e => setFiltros(p => ({ ...p, categoria: e.target.value }))}
+                          style={{ ...sel, flex: 1, minWidth: 110, marginBottom: 0, padding: '6px 8px', fontSize: 13 }}>
+                          <option value="">Todas las categorías</option>
+                          {Object.entries(CATEGORIAS_LABEL).map(([k, v]) => <option key={k} value={k}>{v}</option>)}
+                        </select>
+                      </>
+                    )}
+                  </div>
+                </div>
+                <div style={{ flex: 1, overflowY: 'auto', padding: '12px 12px 0' }}>
+                  {loading && <p style={{ color: '#888', fontSize: 13 }}>Cargando...</p>}
+                  {!loading && solicitudes.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: 32, color: '#888' }}>
+                      <div style={{ fontSize: 32, marginBottom: 8 }}>🎧</div>
+                      <p style={{ margin: 0, fontSize: 14 }}>No hay solicitudes</p>
+                      {!esGestor && usuario?.rol !== 'superadmin' && (
+                        <button onClick={() => setShowNueva(true)} style={{ ...btnPri, marginTop: 12 }}>Crear mi primera solicitud</button>
+                      )}
+                    </div>
+                  )}
+                  {solicitudes.map(s => (
+                    <SolicitudCard key={s.id} sol={s} onClick={setSelected} selected={selected === s.id} />
+                  ))}
+                  {total > solicitudes.length && (
+                    <button onClick={() => { offset.current += 30; cargarLista() }}
+                      style={{ ...btnSec, width: '100%', margin: '8px 0 16px', fontSize: 13 }}>
+                      Cargar más ({total - solicitudes.length} restantes)
+                    </button>
+                  )}
+                </div>
               </div>
             )}
-            {solicitudes.map(s => (
-              <SolicitudCard key={s.id} sol={s} onClick={setSelected} selected={selected === s.id} />
-            ))}
-            {total > solicitudes.length && (
-              <button onClick={() => { offset.current += 30; cargarLista() }}
-                style={{ ...btnSec, width: '100%', margin: '8px 0 16px', fontSize: 13 }}>
-                Cargar más ({total - solicitudes.length} restantes)
-              </button>
+            {selected && (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+                <SolicitudDetalle
+                  folio={selected}
+                  currentUser={usuario}
+                  esGestor={esGestor}
+                  onBack={() => setSelected(null)}
+                  onStatusChange={cargarLista}
+                />
+              </div>
             )}
           </div>
-        </div>
-      )}
+        )}
 
-      {/* Detalle */}
-      {selected && (
-        <div style={{ flex: 1, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-          <SolicitudDetalle
-            folio={selected}
-            currentUser={user}
-            esGestor={esGestor}
-            onBack={() => setSelected(null)}
-            onStatusChange={cargarLista}
-          />
-        </div>
-      )}
+        {/* ── Avisos ── */}
+        {tab === 'avisos' && (
+          <div style={{ flex: 1, overflowY: 'auto', padding: '0 0 24px' }}>
+            <AvisosPage />
+          </div>
+        )}
+
+        {/* ── Chat en vivo ── */}
+        {tab === 'chat' && (
+          <div style={{ flex: 1, overflow: 'hidden' }}>
+            <ChatEnVivoPane currentUser={usuario} />
+          </div>
+        )}
+      </div>
 
       {showNueva && <NuevaSolicitudForm onCreated={handleCreated} onClose={() => setShowNueva(false)} />}
     </div>

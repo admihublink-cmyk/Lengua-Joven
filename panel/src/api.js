@@ -499,6 +499,15 @@ export const getComisionesResumen = () => get('/comisiones/resumen')
 export const cobrarComision = (id) => req('PATCH', `/comisiones/${id}/cobrar`, {})
 export const cobrarTodasComisiones = (plantelId) => req('PATCH', `/comisiones/plantel/${plantelId}/cobrar-todas`, {})
 
+// ── Chat en vivo ──────────────────────────────────────────────────────────────
+export const iniciarChatSesion = (nombre, email) => post('/chat-en-vivo/sesion', { nombre, email })
+export const enviarMensajeChat = (token, contenido) => req('POST', `/chat-en-vivo/sesion/${token}/mensaje`, { contenido })
+export const getMensajesChat = (token, desde) => get(`/chat-en-vivo/sesion/${token}/mensajes?desde=${encodeURIComponent(desde || '')}`)
+export const getChatSesiones = () => get('/chat-en-vivo/sesiones')
+export const getChatSesionMensajes = (id) => get(`/chat-en-vivo/sesiones/${id}/mensajes`)
+export const responderChat = (id, contenido) => req('POST', `/chat-en-vivo/sesiones/${id}/mensaje`, { contenido })
+export const cambiarEstadoChat = (id, estado) => req('PUT', `/chat-en-vivo/sesiones/${id}/estado`, { estado })
+
 export async function exportarLiquidacionesCSV(periodo) {
   const res = await fetch(`${BASE}/liquidaciones/exportar-csv?periodo=${periodo}`, { credentials: 'include' })
   if (!res.ok) throw new Error('Error al exportar')

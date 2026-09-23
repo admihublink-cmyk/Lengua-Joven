@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react'
-import { login, getOfertas, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos } from '../api.js'
+import { useState, useEffect, useRef } from 'react'
+import { login, getOfertas, solicitarRecuperacion, verificarTokenReset, restablecerPassword, getPeriodos, iniciarChatSesion, enviarMensajeChat, getMensajesChat } from '../api.js'
 import PreRegistro from './PreRegistro.jsx'
 
 const API_BASE = import.meta.env.VITE_API_URL || ''
@@ -956,6 +956,184 @@ export default function Login({ onLogin }) {
           </a>
         </div>
       </footer>
+
+      <ChatWidget />
     </div>
+  )
+}
+
+// ─── Widget de chat en vivo ────────────────────────────────────────────────────
+function ChatWidget() {
+  const [abierto, setAbierto] = useState(false)
+  const [fase, setFase] = useState('inicio') // 'inicio' | 'chat'
+  const [nombre, setNombre] = useState('')
+  const [email, setEmail] = useState('')
+  const [token, setToken] = useState(() => { try { return localStorage.getItem('lj_chat_token') || '' } catch { return '' } })
+  const [sesionNombre, setSesionNombre] = useState(() => { try { return localStorage.getItem('lj_chat_nombre') || '' } catch { return '' } })
+  const [mensajes, setMensajes] = useState([])
+  const [input, setInput] = useState('')
+  const [sending, setSending] = useState(false)
+  const [err, setErr] = useState('')
+  const [cerrado, setCerrado] = useState(false)
+  const ultimoRef = useRef('')
+  const endRef = useRef(null)
+
+  // Al abrir: si hay sesión guardada ir directo al chat
+  useEffect(() => {
+    if (abierto && token) setFase('chat')
+  }, [abierto, token])
+
+  // Polling de mensajes
+  useEffect(() => {
+    if (!abierto || fase !== 'chat' || !token) return
+    async function poll() {
+      try {
+        const { mensajes: msgs, estado } = await getMensajesChat(token, ultimoRef.current)
+        if (msgs.length) {
+          setMensajes(prev => {
+            const ids = new Set(prev.map(m => m.id))
+            const nuevos = msgs.filter(m => !ids.has(m.id))
+            if (nuevos.length) {
+              ultimoRef.current = nuevos[nuevos.length - 1].creado_en
+              return [...prev, ...nuevos]
+            }
+            return prev
+          })
+          setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+        }
+        if (estado === 'cerrado') setCerrado(true)
+      } catch (_) {}
+    }
+    poll()
+    const t = setInterval(poll, 4000)
+    return () => clearInterval(t)
+  }, [abierto, fase, token])
+
+  async function iniciar() {
+    if (!nombre.trim()) return setErr('Tu nombre es requerido.')
+    setErr('')
+    try {
+      const { token: tk } = await iniciarChatSesion(nombre.trim(), email.trim() || undefined)
+      try { localStorage.setItem('lj_chat_token', tk); localStorage.setItem('lj_chat_nombre', nombre.trim()) } catch {}
+      setToken(tk)
+      setSesionNombre(nombre.trim())
+      setFase('chat')
+    } catch { setErr('No se pudo iniciar el chat. Intenta de nuevo.') }
+  }
+
+  async function enviar() {
+    if (!input.trim() || !token) return
+    setSending(true)
+    try {
+      await enviarMensajeChat(token, input.trim())
+      const nuevo = { id: 'tmp' + Date.now(), autor_tipo: 'visitante', autor_nombre: sesionNombre, contenido: input.trim(), creado_en: new Date().toISOString() }
+      setMensajes(prev => [...prev, nuevo])
+      setInput('')
+      setTimeout(() => endRef.current?.scrollIntoView({ behavior: 'smooth' }), 50)
+    } catch { setErr('Error enviando el mensaje.') }
+    finally { setSending(false) }
+  }
+
+  function reiniciar() {
+    try { localStorage.removeItem('lj_chat_token'); localStorage.removeItem('lj_chat_nombre') } catch {}
+    setToken(''); setSesionNombre(''); setMensajes([]); setFase('inicio')
+    setCerrado(false); ultimoRef.current = ''
+  }
+
+  const NARANJA = '#f18b11'
+
+  return (
+    <>
+      {/* Botón flotante */}
+      <button
+        onClick={() => setAbierto(o => !o)}
+        style={{
+          position: 'fixed', bottom: 24, right: 24, zIndex: 1000,
+          width: 56, height: 56, borderRadius: '50%',
+          background: NARANJA, color: '#fff', border: 'none',
+          fontSize: 24, cursor: 'pointer', boxShadow: '0 4px 16px rgba(241,139,17,.5)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+        }}
+        title="Chat en vivo"
+      >
+        {abierto ? '✕' : '💬'}
+      </button>
+
+      {/* Panel de chat */}
+      {abierto && (
+        <div style={{
+          position: 'fixed', bottom: 90, right: 24, zIndex: 1000,
+          width: 340, maxWidth: 'calc(100vw - 32px)',
+          height: 480, maxHeight: 'calc(100vh - 120px)',
+          background: '#fff', borderRadius: 16,
+          boxShadow: '0 8px 40px rgba(0,0,0,.2)',
+          display: 'flex', flexDirection: 'column', overflow: 'hidden',
+          fontFamily: 'system-ui, sans-serif',
+        }}>
+          {/* Header */}
+          <div style={{ background: NARANJA, color: '#fff', padding: '14px 18px', flexShrink: 0 }}>
+            <div style={{ fontWeight: 700, fontSize: 15 }}>💬 Chat con Lengua Joven</div>
+            <div style={{ fontSize: 12, opacity: .85, marginTop: 2 }}>Responderemos lo antes posible</div>
+          </div>
+
+          {fase === 'inicio' ? (
+            <div style={{ padding: 20, display: 'flex', flexDirection: 'column', gap: 12, flex: 1, justifyContent: 'center' }}>
+              <p style={{ margin: 0, fontSize: 14, color: '#555', textAlign: 'center' }}>¿Tienes alguna duda? ¡Chatea con nosotros!</p>
+              <input value={nombre} onChange={e => setNombre(e.target.value)} placeholder="Tu nombre *"
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, outline: 'none' }}
+                onKeyDown={e => e.key === 'Enter' && iniciar()} />
+              <input value={email} onChange={e => setEmail(e.target.value)} placeholder="Tu email (opcional)"
+                style={{ padding: '9px 12px', borderRadius: 8, border: '1.5px solid #ddd', fontSize: 14, outline: 'none' }} />
+              {err && <p style={{ margin: 0, color: '#c0392b', fontSize: 13 }}>{err}</p>}
+              <button onClick={iniciar} style={{ background: NARANJA, color: '#fff', border: 'none', borderRadius: 8, padding: '10px', fontWeight: 700, fontSize: 14, cursor: 'pointer' }}>
+                Iniciar chat
+              </button>
+            </div>
+          ) : (
+            <>
+              <div style={{ flex: 1, overflowY: 'auto', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {mensajes.length === 0 && !cerrado && (
+                  <p style={{ color: '#aaa', fontSize: 13, textAlign: 'center', marginTop: 20 }}>
+                    Envía tu primer mensaje y un agente responderá pronto.
+                  </p>
+                )}
+                {mensajes.map((m, i) => {
+                  const esVisitante = m.autor_tipo === 'visitante'
+                  return (
+                    <div key={m.id || i} style={{ display: 'flex', flexDirection: esVisitante ? 'row-reverse' : 'row' }}>
+                      <div style={{
+                        maxWidth: '80%', padding: '8px 12px', borderRadius: esVisitante ? '14px 14px 4px 14px' : '14px 14px 14px 4px',
+                        background: esVisitante ? `rgba(241,139,17,.15)` : '#f0f2f8',
+                        fontSize: 14, color: '#222', wordBreak: 'break-word',
+                      }}>
+                        {!esVisitante && <div style={{ fontSize: 10, color: '#888', marginBottom: 2 }}>{m.autor_nombre}</div>}
+                        {m.contenido}
+                      </div>
+                    </div>
+                  )
+                })}
+                <div ref={endRef} />
+              </div>
+              {cerrado ? (
+                <div style={{ padding: 14, background: 'rgba(0,0,0,.04)', textAlign: 'center', fontSize: 13, color: '#888' }}>
+                  Esta conversación fue cerrada.{' '}
+                  <button onClick={reiniciar} style={{ background: 'none', border: 'none', color: NARANJA, cursor: 'pointer', fontWeight: 600, fontSize: 13 }}>Nueva conversación</button>
+                </div>
+              ) : (
+                <div style={{ padding: '10px 12px', borderTop: '1px solid rgba(0,0,0,.1)', display: 'flex', gap: 8 }}>
+                  <input value={input} onChange={e => setInput(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && enviar()}
+                    placeholder="Escribe aquí..."
+                    style={{ flex: 1, padding: '8px 10px', border: '1.5px solid #ddd', borderRadius: 8, fontSize: 14, outline: 'none' }} />
+                  <button onClick={enviar} disabled={sending} style={{ background: NARANJA, color: '#fff', border: 'none', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 700 }}>
+                    {sending ? '...' : '→'}
+                  </button>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+      )}
+    </>
   )
 }

@@ -580,6 +580,36 @@ async function initDB() {
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_ins ON comisiones (inscripcion_id)`)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_comisiones_pre ON comisiones (pre_registro_id)`)
 
+  // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
+  await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
+  await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS editado_en TEXT`)
+
+  // ── Chat en vivo — sesiones de visitantes (v3.1) ─────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_en_vivo_sesiones (
+      id TEXT PRIMARY KEY,
+      token TEXT UNIQUE NOT NULL,
+      visitante_nombre TEXT,
+      visitante_email TEXT,
+      agente_id TEXT,
+      estado TEXT DEFAULT 'espera',
+      creado_en TEXT NOT NULL,
+      ultimo_mensaje_en TEXT
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_sesiones_estado ON chat_en_vivo_sesiones (estado, creado_en)`)
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS chat_en_vivo_mensajes (
+      id TEXT PRIMARY KEY,
+      sesion_id TEXT NOT NULL,
+      autor_tipo TEXT NOT NULL,
+      autor_nombre TEXT,
+      contenido TEXT NOT NULL,
+      creado_en TEXT NOT NULL
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_chat_mensajes_sesion ON chat_en_vivo_mensajes (sesion_id, creado_en)`)
+
   console.log('PostgreSQL inicializado correctamente.')
 }
 
