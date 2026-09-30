@@ -130,7 +130,7 @@ export default function Inscripciones() {
       ])
       setInscripciones(filtrarPorPlantel(usuario, ins))
       setGrupos(filtrarPorPlantel(usuario, g))
-      setPlanteles(p)
+      setPlanteles(filtrarPorPlantel(usuario, p, 'id'))
       setUsuarios(filtrarPorPlantel(usuario, u))
       if (puedeVerPre) setPreRegistros(pre)
       if (puedeAutorizar) setExtemporaneasPendientes(extPend)
