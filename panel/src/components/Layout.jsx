@@ -9,7 +9,7 @@ const NAV_ITEMS = [
   { id: 'dashboard',     icon: '⊞',  label: 'Inicio',            permiso: null },
   { id: 'calendario',    icon: '📅',  label: 'Calendario',        permiso: P.GRUPO_VER },
   { id: 'mensajes',      icon: '💬',  label: 'Mensajes',          permiso: P.MENSAJE_ENVIAR },
-  { id: 'tareas',        icon: '📝',  label: 'Tareas',            permiso: P.TAREA_VER },
+  // { id: 'tareas', icon: '📝', label: 'Tareas', permiso: P.TAREA_VER }, // stand-by
   // — Académico —
   { seccion: 'Académico', icon: '🏫' },
   { id: 'planteles',     icon: '🏫',  label: 'Planteles',         permiso: P.PLAN_VER },
