@@ -18,6 +18,8 @@ export default function Grupos({ params = {} }) {
   const [modal, setModal] = useState(null)
   const [form, setForm] = useState({})
 
+  const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro']
+
   async function cargar() {
     try {
       const [g, i, o, p, ins] = await Promise.all([
@@ -27,7 +29,12 @@ export default function Grupos({ params = {} }) {
         api.getPlanteles(),
         api.getInscripciones(),
       ])
-      setGrupos(g)
+      // Filtro defensivo para simulación: el JWT sigue siendo superadmin,
+      // así que el backend devuelve todo — filtramos por el plantel simulado
+      const gFiltrados = ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
+        ? g.filter(x => x.plantel_id === usuario.plantel_id)
+        : g
+      setGrupos(gFiltrados)
       setIdiomas(i)
       setOfertas(o)
       setPlanteles(p)

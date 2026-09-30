@@ -60,6 +60,12 @@ function parsearCSV(texto) {
   return { filas, detectado: { nombre: iNombre >= 0, email: iEmail >= 0, tel: iTel >= 0 } }
 }
 
+const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro']
+const filtrarPorPlantel = (usuario, data, campo = 'plantel_id') =>
+  ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+    ? data.filter(x => x[campo] === usuario.plantel_id)
+    : data
+
 export default function Inscripciones() {
   const { usuario, tienePermiso } = useAuth()
   const [inscripciones, setInscripciones] = useState([])
@@ -122,10 +128,10 @@ export default function Inscripciones() {
         puedeAutorizar ? api.getExtemporaneasPendientes() : Promise.resolve([]),
         puedeVerCambios ? api.getCambios() : Promise.resolve([]),
       ])
-      setInscripciones(ins)
-      setGrupos(g)
+      setInscripciones(filtrarPorPlantel(usuario, ins))
+      setGrupos(filtrarPorPlantel(usuario, g))
       setPlanteles(p)
-      setUsuarios(u)
+      setUsuarios(filtrarPorPlantel(usuario, u))
       if (puedeVerPre) setPreRegistros(pre)
       if (puedeAutorizar) setExtemporaneasPendientes(extPend)
       if (puedeVerCambios) setCambios(cambiosArr)

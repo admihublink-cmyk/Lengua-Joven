@@ -41,6 +41,12 @@ function fecha30DiasAtras() {
   const d = new Date(); d.setDate(d.getDate() - 30); return d.toISOString().slice(0, 10)
 }
 
+const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro']
+const filtrarPorPlantel = (usuario, data, campo = 'plantel_id') =>
+  ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+    ? data.filter(x => x[campo] === usuario.plantel_id)
+    : data
+
 export default function Pagos() {
   const { usuario, tienePermiso } = useAuth()
   const [pagos, setPagos] = useState([])
@@ -68,9 +74,15 @@ export default function Pagos() {
         api.getInscripciones(),
         api.getUsuarios(),
       ])
-      setPagos(p)
-      setInscripciones(ins)
-      setUsuarios(u)
+      const insFiltradas = filtrarPorPlantel(usuario, ins)
+      // Pagos no tienen plantel_id directo — filtra por inscripcion del plantel
+      const insIds = new Set(insFiltradas.map(i => i.id))
+      const pagosFiltrados = ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+        ? p.filter(pago => !pago.inscripcion_id || insIds.has(pago.inscripcion_id))
+        : p
+      setPagos(pagosFiltrados)
+      setInscripciones(insFiltradas)
+      setUsuarios(filtrarPorPlantel(usuario, u))
     } catch (e) {
       console.error('Error cargando pagos:', e)
     }

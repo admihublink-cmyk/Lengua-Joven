@@ -4,6 +4,11 @@ import { ROL_PERMISOS } from '../auth.js'
 import * as api from '../api.js'
 
 const ROLES_COORDINADOR = ['director', 'profesor', 'alumno', 'admin_ventas']
+const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro']
+const filtrarPorPlantel = (usuario, data, campo = 'plantel_id') =>
+  ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+    ? data.filter(x => x[campo] === usuario.plantel_id)
+    : data
 
 const ROL_LABEL = Object.fromEntries(
   Object.entries(ROL_PERMISOS).map(([k, v]) => [k, v.label])
@@ -54,9 +59,9 @@ export default function Usuarios() {
         api.getPlanteles(),
         canSeeTutorAlumnos ? api.getTutorAlumnos() : Promise.resolve([]),
       ])
-      setUsuarios(u)
-      setGrupos(g)
-      setInscripciones(ins)
+      setUsuarios(filtrarPorPlantel(usuario, u))
+      setGrupos(filtrarPorPlantel(usuario, g))
+      setInscripciones(filtrarPorPlantel(usuario, ins))
       setPlanteles(p)
       setTutorAlumnos(ta)
     } catch (e) {
