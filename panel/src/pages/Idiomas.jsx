@@ -38,12 +38,13 @@ export default function Idiomas() {
       ])
       setOfertas(o)
       setIdiomas(i)
-      // Coordinadores solo ven y editan su propio plantel
-      const visibles = usuario.rol === 'coordinador' && usuario.plantel_id
+      // Roles con scope de plantel solo ven su plantel
+      const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro', 'coordinador']
+      const visibles = ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
         ? p.filter(pl => pl.id === usuario.plantel_id)
         : p
       setPlanteles(visibles)
-      const perAll = await Promise.all(p.map(pl => api.getPeriodos({ plantel_id: pl.id })))
+      const perAll = await Promise.all(visibles.map(pl => api.getPeriodos({ plantel_id: pl.id })))
       setPeriodos(perAll.flat())
     } catch (e) { console.error(e) }
   }

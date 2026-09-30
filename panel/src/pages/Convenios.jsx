@@ -50,8 +50,16 @@ export default function Convenios() {
   const [historialPlantel, setHistorialPlantel] = useState(null) // { plantel, rows }
   const [historialCargando, setHistorialCargando] = useState(false)
 
+  const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro', 'coordinador']
+
   async function cargar() {
-    try { setPlanteles(await api.getPlanteles()) } catch (e) { console.error(e) }
+    try {
+      const p = await api.getPlanteles()
+      const visibles = ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
+        ? p.filter(pl => pl.id === usuario.plantel_id)
+        : p
+      setPlanteles(visibles)
+    } catch (e) { console.error(e) }
   }
 
   useEffect(() => { cargar() }, [])

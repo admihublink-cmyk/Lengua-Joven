@@ -56,15 +56,25 @@ export default function Avisos() {
   const [destacado, setDestacado] = useState(null)
   const avisosRef = useRef({})
 
+  const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro', 'coordinador']
+  const filtrarPlantel = (data, campo = 'plantel_id') =>
+    ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+      ? data.filter(x => !x[campo] || x[campo] === usuario.plantel_id)
+      : data
+
   async function cargar() {
     const [a, g, p] = await Promise.all([
       api.getAvisos().catch(() => []),
       api.getGrupos().catch(() => []),
       api.getPlanteles().catch(() => []),
     ])
-    setAvisos(a)
-    setGrupos(g)
-    setPlanteles(p)
+    const gFiltrados = ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+      ? g.filter(x => x.plantel_id === usuario.plantel_id)
+      : g
+    setAvisos(filtrarPlantel(a))
+    setGrupos(gFiltrados)
+    setPlanteles(ROLES_PLANTEL.includes(usuario?.rol) && usuario?.plantel_id
+      ? p.filter(x => x.id === usuario.plantel_id) : p)
   }
 
   useEffect(() => { cargar() }, [])

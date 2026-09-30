@@ -9,7 +9,13 @@ export default function Reportes() {
   useEffect(() => {
     async function cargar() {
       try {
-        const [ins, pagos, grupos, asistencias, evaluaciones, idiomas, planteles] = await Promise.all([
+        const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro', 'coordinador']
+        const filtrarPlantel = (data, campo = 'plantel_id') =>
+          ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
+            ? data.filter(x => x[campo] === usuario.plantel_id)
+            : data
+
+        const [ins_raw, pagos_raw, grupos_raw, asistencias, evaluaciones, idiomas, planteles_raw] = await Promise.all([
           api.getInscripciones(),
           api.getPagos(),
           api.getGrupos(),
@@ -18,6 +24,14 @@ export default function Reportes() {
           api.getIdiomas(),
           api.getPlanteles(),
         ])
+
+        const grupos = filtrarPlantel(grupos_raw)
+        const ins = filtrarPlantel(ins_raw)
+        const planteles = filtrarPlantel(planteles_raw)
+        const insIds = new Set(ins.map(i => i.id))
+        const pagos = ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
+          ? pagos_raw.filter(p => !p.inscripcion_id || insIds.has(p.inscripcion_id))
+          : pagos_raw
 
         const porEstado = {}
         ins.forEach(i => { porEstado[i.estado] = (porEstado[i.estado] || 0) + 1 })
