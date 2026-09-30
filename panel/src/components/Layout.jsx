@@ -5,7 +5,7 @@ import * as api from '../api.js'
 
 const NAV_ITEMS = [
   // — General —
-  { id: 'portal_alumno', icon: '🏠', label: 'Mi Portal',          permiso: P.PORTAL_VER },
+  { id: 'portal_alumno', icon: '🏠', label: 'Mi Portal',          permiso: P.PORTAL_VER, soloRol: 'alumno' },
   { id: 'dashboard',     icon: '⊞',  label: 'Inicio',            permiso: null },
   { id: 'calendario',    icon: '📅',  label: 'Calendario',        permiso: P.GRUPO_VER },
   { id: 'mensajes',      icon: '💬',  label: 'Mensajes',          permiso: P.MENSAJE_ENVIAR },
@@ -94,6 +94,7 @@ export default function Layout({ children }) {
   // Soporte para permiso array y secciones
   const itemsConPermiso = NAV_ITEMS.filter(item => {
     if (item.seccion) return true
+    if (item.soloRol && usuario.rol !== item.soloRol) return false
     if (!item.permiso) return true
     if (Array.isArray(item.permiso)) return item.permiso.some(p => tienePermiso(p))
     return tienePermiso(item.permiso)

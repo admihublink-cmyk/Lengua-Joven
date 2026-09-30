@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { getPortalAlumno } from '../api.js'
-import { useAuth } from '../App.jsx'
+import { useAuth, useNav } from '../App.jsx'
 
 const TAB_INICIO = 'inicio'
 const TAB_CLASES = 'clases'
@@ -380,12 +380,14 @@ const TABS = [
 
 export default function PortalAlumno() {
   const { usuario } = useAuth()
+  const { navegar } = useNav()
   const [tab, setTab] = useState(TAB_INICIO)
   const [data, setData] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    if (usuario?.rol !== 'alumno') { navegar('dashboard'); return }
     setCargando(true)
     getPortalAlumno()
       .then(d => setData(d))
