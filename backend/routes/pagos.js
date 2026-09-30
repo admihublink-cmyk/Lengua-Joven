@@ -168,11 +168,13 @@ router.put('/:id', requireAuth, async (req, res) => {
     return res.status(403).json({ error: 'Sin permiso' })
   }
 
+  const pagoActual = await queryOne('SELECT * FROM pagos WHERE id = $1', [req.params.id])
+  if (!pagoActual) return res.status(404).json({ error: 'Pago no encontrado' })
+
   // Director y coordinador solo pueden modificar pagos de inscripciones de sus planteles
   if (['director', 'coordinador'].includes(me.rol)) {
-    const pago = await queryOne('SELECT inscripcion_id FROM pagos WHERE id = $1', [req.params.id])
-    if (pago?.inscripcion_id) {
-      const ins = await queryOne('SELECT plantel_id FROM inscripciones WHERE id = $1', [pago.inscripcion_id])
+    if (pagoActual.inscripcion_id) {
+      const ins = await queryOne('SELECT plantel_id FROM inscripciones WHERE id = $1', [pagoActual.inscripcion_id])
       if (ins) {
         if (me.rol === 'director' && ins.plantel_id !== me.plantel_id) {
           return res.status(403).json({ error: 'Sin permiso para este plantel' })
@@ -199,6 +201,27 @@ router.put('/:id', requireAuth, async (req, res) => {
   if (metodo_pago !== undefined) { sets.push(`metodo_pago = $${sets.length + 1}`); vals.push(metodo_pago) }
   if (referencia !== undefined) { sets.push(`referencia = $${sets.length + 1}`); vals.push(referencia) }
   if (sets.length) await run(`UPDATE pagos SET ${sets.join(', ')} WHERE id = $${sets.length + 1}`, [...vals, req.params.id])
+
+  // Auto-generar comisión cuando se confirma como pagado por primera vez
+  if (estado === 'pagado' && pagoActual.estado !== 'pagado' && pagoActual.inscripcion_id) {
+    try {
+      const ins = await queryOne('SELECT plantel_id, folio FROM inscripciones WHERE id = $1', [pagoActual.inscripcion_id])
+      if (ins?.plantel_id) {
+        const yaExiste = await queryOne('SELECT id FROM comisiones WHERE inscripcion_id = $1', [pagoActual.inscripcion_id])
+        if (!yaExiste) {
+          const comId = 'com_pag_' + req.params.id + '_' + Date.now()
+          await run(
+            `INSERT INTO comisiones (id, plantel_id, inscripcion_id, monto, concepto, estado, fecha)
+             VALUES ($1,$2,$3,200,$4,'pendiente',$5) ON CONFLICT DO NOTHING`,
+            [comId, ins.plantel_id, pagoActual.inscripcion_id,
+             `Comisión pago ${req.params.id} (${ins.folio || pagoActual.inscripcion_id})`,
+             new Date().toISOString()]
+          )
+        }
+      }
+    } catch (e) { console.error('[auto comision pago]', e.message) }
+  }
+
   res.json(await queryOne('SELECT * FROM pagos WHERE id = $1', [req.params.id]))
 })
 

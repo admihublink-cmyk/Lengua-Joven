@@ -673,6 +673,22 @@ async function initDB() {
   // Backfill nivel_id desde placement_nivel para inscripciones existentes
   await pool.query(`UPDATE inscripciones SET nivel_id = placement_nivel WHERE nivel_id IS NULL AND placement_nivel IS NOT NULL`)
 
+  // ── Reglas de negocio por plantel/idioma (v3.4) ──────────────────────────────
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS reglas (
+      id TEXT PRIMARY KEY,
+      plantel_id TEXT NOT NULL,
+      idioma_id TEXT,
+      tipo TEXT NOT NULL CHECK (tipo IN ('normal','reinscripcion','extemporanea','penalizacion')),
+      fecha_limite TEXT,
+      porcentaje_penalizacion REAL DEFAULT 0,
+      monto_extra REAL DEFAULT 0,
+      activo INTEGER DEFAULT 1
+    )
+  `)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_reglas_plantel ON reglas (plantel_id, tipo, activo)`)
+  await pool.query(`CREATE INDEX IF NOT EXISTS idx_reglas_idioma ON reglas (idioma_id, tipo)`)
+
   // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS editado_en TEXT`)

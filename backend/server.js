@@ -173,6 +173,7 @@ app.use('/api/recursos', require('./routes/recursos'))
 app.use('/api/portal', require('./routes/portal'))
 app.use('/api/alertas', require('./routes/alertas'))
 app.use('/api/comisiones', require('./routes/comisiones'))
+app.use('/api/reglas', require('./routes/reglas'))
 app.use('/api/chat-en-vivo', require('./routes/chat_en_vivo'))
 
 app.get('/api/health', (req, res) => res.json({ ok: true, time: new Date().toISOString() }))

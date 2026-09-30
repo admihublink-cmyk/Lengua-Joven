@@ -130,6 +130,36 @@ router.post('/', requireAuth, async (req, res) => {
      placement_nivel || null, sugerida_por || null, nombre_externo || null, email_externo || null, tel_externo || null, oferta_id || null,
      esExt ? 1 : 0, autorizadoPor, fechaAutorizacion, motivo_extemporanea || null]
   )
+
+  // Cargo extemporáneo: si hay regla configurada para este plantel+idioma, generar pago adicional
+  if (esExt && pid) {
+    try {
+      const grupoInfo = grupo_id ? await queryOne('SELECT idioma_id FROM grupos WHERE id = $1', [grupo_id]) : null
+      const idiomaId = grupoInfo?.idioma_id || null
+      let reglaQ = `SELECT * FROM reglas WHERE plantel_id = $1 AND tipo = 'extemporanea' AND activo = 1`
+      const reglaVals = [pid]
+      if (idiomaId) {
+        reglaQ += ` AND (idioma_id = $2 OR idioma_id IS NULL) ORDER BY idioma_id DESC NULLS LAST LIMIT 1`
+        reglaVals.push(idiomaId)
+      } else {
+        reglaQ += ` ORDER BY idioma_id ASC NULLS FIRST LIMIT 1`
+      }
+      const regla = await queryOne(reglaQ, reglaVals)
+      if (regla && regla.monto_extra > 0) {
+        const { m: maxPag } = await queryOne(
+          `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 4) AS INTEGER)), 0) AS m FROM pagos WHERE id ~ '^pag[0-9]+'`
+        )
+        const pagoId = 'pag' + (maxPag + 1)
+        await run(
+          `INSERT INTO pagos (id, alumno_id, inscripcion_id, monto, fecha, estado, concepto, creado_en)
+           VALUES ($1,$2,$3,$4,$5,'pendiente',$6,$7)`,
+          [pagoId, alumno_id || null, newId, regla.monto_extra, fecha,
+           `Cargo extemporáneo (inscripción ${folio})`, new Date().toISOString()]
+        )
+      }
+    } catch (e) { console.error('[pago extemporaneo]', e.message) }
+  }
+
   let nivel_sugerido = null
   if (alumno_id && !placement_nivel) {
     const hoy = new Date().toISOString().split('T')[0]
