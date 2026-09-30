@@ -16,7 +16,14 @@ async function initDB() {
       fecha_nacimiento TEXT,
       estado_entidad TEXT,
       proveedor TEXT,
-      token_invalid_before TEXT
+      token_invalid_before TEXT,
+      curp TEXT,
+      genero_nacimiento TEXT,
+      whatsapp TEXT,
+      email_contacto TEXT,
+      municipio TEXT,
+      foto_perfil TEXT,
+      suspendido_por_convenio BOOLEAN DEFAULT false
     );
     CREATE TABLE IF NOT EXISTS planteles (
       id TEXT PRIMARY KEY,
@@ -29,7 +36,10 @@ async function initDB() {
       rfc TEXT,
       domicilio_fiscal TEXT,
       tipo_persona TEXT DEFAULT 'moral',
-      proveedor_nombre TEXT
+      proveedor_nombre TEXT,
+      convenio_baja BOOLEAN DEFAULT false,
+      convenio_baja_fecha TEXT,
+      motivo_baja TEXT
     );
     CREATE TABLE IF NOT EXISTS idiomas (
       id TEXT PRIMARY KEY,
@@ -91,9 +101,11 @@ async function initDB() {
       alumno_id TEXT,
       grupo_id TEXT,
       plantel_id TEXT,
+      nivel_id TEXT,
       estado TEXT DEFAULT 'nueva',
       folio TEXT,
       fecha_registro TEXT,
+      origen TEXT,
       placement_nivel TEXT,
       sugerida_por TEXT,
       nombre_externo TEXT,
@@ -111,7 +123,10 @@ async function initDB() {
       fecha TEXT,
       estado TEXT,
       metodo_pago TEXT,
-      referencia TEXT
+      referencia TEXT,
+      concepto TEXT,
+      fecha_limite TEXT,
+      creado_en TEXT
     );
     CREATE TABLE IF NOT EXISTS asistencias (
       id TEXT PRIMARY KEY,
@@ -646,6 +661,17 @@ async function initDB() {
     )
   `)
   await pool.query(`CREATE INDEX IF NOT EXISTS idx_tutor_sol_tutor ON tutor_solicitudes (tutor_id, estado)`)
+
+  // ── Pagos: columnas faltantes según diagrama ER (v3.4) ──────────────────────
+  await pool.query(`ALTER TABLE pagos ADD COLUMN IF NOT EXISTS concepto TEXT`)
+  await pool.query(`ALTER TABLE pagos ADD COLUMN IF NOT EXISTS fecha_limite TEXT`)
+  await pool.query(`ALTER TABLE pagos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
+
+  // ── Inscripciones: nivel_id y origen (v3.4) ──────────────────────────────────
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS nivel_id TEXT`)
+  await pool.query(`ALTER TABLE inscripciones ADD COLUMN IF NOT EXISTS origen TEXT`)
+  // Backfill nivel_id desde placement_nivel para inscripciones existentes
+  await pool.query(`UPDATE inscripciones SET nivel_id = placement_nivel WHERE nivel_id IS NULL AND placement_nivel IS NOT NULL`)
 
   // ── Avisos — fecha+hora y edición (v3.1) ─────────────────────────────────────
   await pool.query(`ALTER TABLE avisos ADD COLUMN IF NOT EXISTS creado_en TEXT`)
