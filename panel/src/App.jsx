@@ -103,6 +103,7 @@ export default function App() {
   const [ruta, setRuta] = useState('dashboard')
   const [params, setParams] = useState({})
   const [vistaComoRol, setVistaComoRol] = useState(null) // null = modo real
+  const [vistaComoPlantelId, setVistaComoPlantelId] = useState(null)
   const tema = 'light'
 
   useEffect(() => {
@@ -127,11 +128,13 @@ export default function App() {
     setRuta(u?.rol === 'alumno' ? 'portal_alumno' : 'dashboard')
     setParams({})
     setVistaComoRol(null)
+    setVistaComoPlantelId(null)
   }
   function salir() {
     apiLogout()
     setUsuario(null)
     setVistaComoRol(null)
+    setVistaComoPlantelId(null)
   }
   function navegar(r, p = {}) { setRuta(r); setParams(p) }
 
@@ -148,9 +151,9 @@ export default function App() {
     return <Login onLogin={entrar} />
   }
 
-  // Usuario efectivo para permisos: si hay simulación, sobreescribir el rol
+  // Usuario efectivo para permisos: si hay simulación, sobreescribir el rol y/o plantel
   const usuarioEfectivo = vistaComoRol
-    ? { ...usuario, rol: vistaComoRol, plantel_id: usuario.plantel_id }
+    ? { ...usuario, rol: vistaComoRol, plantel_id: vistaComoPlantelId || usuario.plantel_id }
     : usuario
 
   const Pagina = RUTAS[ruta] || Dashboard
@@ -162,6 +165,8 @@ export default function App() {
         usuarioReal: usuario,
         vistaComoRol,
         setVistaComoRol,
+        vistaComoPlantelId,
+        setVistaComoPlantelId,
         salir,
         tienePermiso: (p) => tienePermiso(usuarioEfectivo, p),
       }}>

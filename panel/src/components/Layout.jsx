@@ -57,11 +57,15 @@ const ROLES_SIMULABLES = [
   { rol: 'tutor',        label: 'Tutor / Padre' },
 ]
 
+const ROLES_CON_PLANTEL = ['director', 'profesor', 'admin_ventas']
+
 export default function Layout({ children }) {
-  const { usuario, usuarioReal, vistaComoRol, setVistaComoRol, salir, tienePermiso } = useAuth()
+  const { usuario, usuarioReal, vistaComoRol, setVistaComoRol, vistaComoPlantelId, setVistaComoPlantelId, salir, tienePermiso } = useAuth()
   const { ruta, navegar } = useNav()
   const [abierto, setAbierto] = useState(false)
   const [rolPickerAbierto, setRolPickerAbierto] = useState(false)
+  const [rolPendiente, setRolPendiente] = useState(null) // rol que espera selección de plantel
+  const [planteles, setPlanteles] = useState([])
   const rolPickerRef = useRef(null)
 
   // Secciones colapsables — inicializa abriendo la sección que contiene la ruta actual
@@ -125,7 +129,15 @@ export default function Layout({ children }) {
     } catch { /* layout errors are non-critical */ }
   }
 
-  useEffect(() => { actualizarContadores() }, [])
+  useEffect(() => {
+    actualizarContadores()
+    // Cargar planteles activos para selector de simulación
+    if (usuarioReal?.rol === 'superadmin') {
+      api.getPlanteles().then(data => {
+        setPlanteles((data || []).filter(p => !p.convenio_baja))
+      }).catch(() => {})
+    }
+  }, [])
 
   // Abrir sección automáticamente al navegar a una ruta dentro de ella
   useEffect(() => {
@@ -147,6 +159,7 @@ export default function Layout({ children }) {
       }
       if (rolPickerRef.current && !rolPickerRef.current.contains(e.target)) {
         setRolPickerAbierto(false)
+        setRolPendiente(null)
       }
     }
     document.addEventListener('mousedown', onClickFuera)
@@ -244,8 +257,15 @@ export default function Layout({ children }) {
             display: 'flex', alignItems: 'center', justifyContent: 'space-between',
             gap: 12, borderBottom: '1px solid #d97706',
           }}>
-            <span>👁 Vista simulada como: <strong>{ROL_PERMISOS[vistaComoRol]?.label || vistaComoRol}</strong> — los cambios que hagas son reales</span>
-            <button onClick={() => setVistaComoRol(null)} style={{
+            <span>
+              👁 Vista simulada como: <strong>{ROL_PERMISOS[vistaComoRol]?.label || vistaComoRol}</strong>
+              {vistaComoPlantelId && planteles.length > 0 && (() => {
+                const p = planteles.find(p => p.id === vistaComoPlantelId)
+                return p ? <> — <strong>{p.nombre}</strong></> : null
+              })()}
+              {' '}— los cambios que hagas son reales
+            </span>
+            <button onClick={() => { setVistaComoRol(null); setVistaComoPlantelId(null) }} style={{
               background: 'rgba(0,0,0,0.15)', border: 'none', borderRadius: 6,
               padding: '3px 12px', cursor: 'pointer', fontWeight: 700, fontSize: 12, color: 'inherit',
             }}>
@@ -286,45 +306,90 @@ export default function Layout({ children }) {
                 {rolPickerAbierto && (
                   <div style={{
                     position: 'absolute', top: 'calc(100% + 8px)', right: 0,
-                    width: 200, background: 'var(--bg-2)',
+                    width: rolPendiente ? 240 : 200, background: 'var(--bg-2)',
                     border: '1px solid var(--borde)', borderRadius: 10,
                     boxShadow: '0 8px 32px rgba(0,0,0,0.22)', zIndex: 200, overflow: 'hidden',
                   }}>
-                    <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--borde)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--texto-muted)' }}>
-                      Simular vista como
-                    </div>
-                    <button
-                      onClick={() => { setVistaComoRol(null); setRolPickerAbierto(false) }}
-                      style={{
-                        width: '100%', textAlign: 'left', padding: '9px 14px',
-                        border: 'none', cursor: 'pointer', fontSize: 13,
-                        background: !vistaComoRol ? 'rgba(241,139,17,0.12)' : 'transparent',
-                        fontWeight: !vistaComoRol ? 700 : 400, color: 'inherit',
-                        display: 'flex', alignItems: 'center', gap: 8,
-                      }}
-                    >
-                      <span>⚡</span> Modo Super Admin
-                    </button>
-                    {ROLES_SIMULABLES.map(r => (
-                      <button
-                        key={r.rol}
-                        onClick={() => { setVistaComoRol(r.rol); setRolPickerAbierto(false) }}
-                        style={{
-                          width: '100%', textAlign: 'left', padding: '9px 14px',
-                          border: 'none', cursor: 'pointer', fontSize: 13,
-                          background: vistaComoRol === r.rol ? 'rgba(241,139,17,0.12)' : 'transparent',
-                          fontWeight: vistaComoRol === r.rol ? 700 : 400, color: 'inherit',
-                          display: 'flex', alignItems: 'center', gap: 8,
-                          borderTop: '1px solid var(--borde)',
-                        }}
-                      >
-                        <span style={{
-                          width: 8, height: 8, borderRadius: '50%', flexShrink: 0,
-                          background: ROL_PERMISOS[r.rol]?.color || '#888',
-                        }} />
-                        {r.label}
-                      </button>
-                    ))}
+                    {rolPendiente ? (
+                      // Paso 2: elegir plantel para el rol seleccionado
+                      <>
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--borde)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--texto-muted)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <button onClick={() => setRolPendiente(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 14, padding: 0, color: 'var(--texto-muted)', lineHeight: 1 }}>←</button>
+                          Plantel — {ROL_PERMISOS[rolPendiente]?.label}
+                        </div>
+                        {planteles.length === 0 ? (
+                          <div style={{ padding: '12px 14px', fontSize: 13, color: 'var(--texto-muted)' }}>Sin planteles activos</div>
+                        ) : planteles.map(p => (
+                          <button
+                            key={p.id}
+                            onClick={() => {
+                              setVistaComoRol(rolPendiente)
+                              setVistaComoPlantelId(p.id)
+                              setRolPendiente(null)
+                              setRolPickerAbierto(false)
+                            }}
+                            style={{
+                              width: '100%', textAlign: 'left', padding: '9px 14px',
+                              border: 'none', cursor: 'pointer', fontSize: 13,
+                              background: vistaComoRol === rolPendiente && vistaComoPlantelId === p.id ? 'rgba(241,139,17,0.12)' : 'transparent',
+                              fontWeight: vistaComoRol === rolPendiente && vistaComoPlantelId === p.id ? 700 : 400,
+                              color: 'inherit', display: 'flex', alignItems: 'center', gap: 8,
+                              borderTop: '1px solid var(--borde)',
+                            }}
+                          >
+                            <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: '#f18b11' }} />
+                            <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{p.nombre}</span>
+                          </button>
+                        ))}
+                      </>
+                    ) : (
+                      // Paso 1: elegir rol
+                      <>
+                        <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--borde)', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.05em', color: 'var(--texto-muted)' }}>
+                          Simular vista como
+                        </div>
+                        <button
+                          onClick={() => { setVistaComoRol(null); setVistaComoPlantelId(null); setRolPickerAbierto(false) }}
+                          style={{
+                            width: '100%', textAlign: 'left', padding: '9px 14px',
+                            border: 'none', cursor: 'pointer', fontSize: 13,
+                            background: !vistaComoRol ? 'rgba(241,139,17,0.12)' : 'transparent',
+                            fontWeight: !vistaComoRol ? 700 : 400, color: 'inherit',
+                            display: 'flex', alignItems: 'center', gap: 8,
+                          }}
+                        >
+                          <span>⚡</span> Modo Super Admin
+                        </button>
+                        {ROLES_SIMULABLES.map(r => (
+                          <button
+                            key={r.rol}
+                            onClick={() => {
+                              if (ROLES_CON_PLANTEL.includes(r.rol)) {
+                                setRolPendiente(r.rol)
+                              } else {
+                                setVistaComoRol(r.rol)
+                                setVistaComoPlantelId(null)
+                                setRolPickerAbierto(false)
+                              }
+                            }}
+                            style={{
+                              width: '100%', textAlign: 'left', padding: '9px 14px',
+                              border: 'none', cursor: 'pointer', fontSize: 13,
+                              background: vistaComoRol === r.rol ? 'rgba(241,139,17,0.12)' : 'transparent',
+                              fontWeight: vistaComoRol === r.rol ? 700 : 400, color: 'inherit',
+                              display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                              borderTop: '1px solid var(--borde)',
+                            }}
+                          >
+                            <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                              <span style={{ width: 8, height: 8, borderRadius: '50%', flexShrink: 0, background: ROL_PERMISOS[r.rol]?.color || '#888' }} />
+                              {r.label}
+                            </span>
+                            {ROLES_CON_PLANTEL.includes(r.rol) && <span style={{ fontSize: 10, opacity: 0.5 }}>›</span>}
+                          </button>
+                        ))}
+                      </>
+                    )}
                   </div>
                 )}
               </div>
