@@ -37,7 +37,9 @@ export default function Grupos({ params = {} }) {
       setGrupos(gFiltrados)
       setIdiomas(i)
       setOfertas(o)
-      setPlanteles(p)
+      setPlanteles(ROLES_PLANTEL.includes(usuario.rol) && usuario.plantel_id
+        ? p.filter(x => x.id === usuario.plantel_id)
+        : p)
       setInscripciones(ins)
       // Niveles: cargar usando los IDs del catálogo público
       if (i.length > 0) {

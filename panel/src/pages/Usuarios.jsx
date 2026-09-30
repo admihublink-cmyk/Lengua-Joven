@@ -62,7 +62,7 @@ export default function Usuarios() {
       setUsuarios(filtrarPorPlantel(usuario, u))
       setGrupos(filtrarPorPlantel(usuario, g))
       setInscripciones(filtrarPorPlantel(usuario, ins))
-      setPlanteles(p)
+      setPlanteles(filtrarPorPlantel(usuario, p, 'id'))
       setTutorAlumnos(ta)
     } catch (e) {
       console.error('Error cargando usuarios:', e)
