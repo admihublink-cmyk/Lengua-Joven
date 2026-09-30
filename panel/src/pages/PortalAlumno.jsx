@@ -379,15 +379,18 @@ const TABS = [
 ]
 
 export default function PortalAlumno() {
-  const { usuario } = useAuth()
+  const { usuario, usuarioReal, vistaComoRol } = useAuth()
   const { navegar } = useNav()
   const [tab, setTab] = useState(TAB_INICIO)
   const [data, setData] = useState(null)
   const [cargando, setCargando] = useState(true)
   const [error, setError] = useState('')
 
+  const estaSimulando = vistaComoRol === 'alumno' && usuarioReal?.rol !== 'alumno'
+
   useEffect(() => {
     if (usuario?.rol !== 'alumno') { navegar('dashboard'); return }
+    if (estaSimulando) { setCargando(false); return }
     setCargando(true)
     getPortalAlumno()
       .then(d => setData(d))
@@ -397,6 +400,17 @@ export default function PortalAlumno() {
 
   const tareasPendientes = data?.stats?.tareasPendientes || 0
   const avisosCount = data?.avisos?.length || 0
+
+  if (estaSimulando) return (
+    <div style={{ maxWidth: 640, margin: '0 auto', paddingTop: 40, textAlign: 'center', color: 'var(--gris)' }}>
+      <div style={{ fontSize: 36, marginBottom: 12 }}>👁</div>
+      <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 8 }}>Vista simulada — Mi Portal</div>
+      <p style={{ fontSize: 14 }}>
+        El portal del alumno requiere una sesión real de alumno para cargar datos.<br />
+        Esta pantalla se verá igual para un alumno registrado con inscripciones activas.
+      </p>
+    </div>
+  )
 
   return (
     <div style={{ maxWidth: 640, margin: '0 auto' }}>
