@@ -46,7 +46,13 @@ export default function OfertaEducativa() {
   const [formInsc, setFormInsc] = useState({})
   const [inscErr, setInscErr] = useState('')
 
+  const [modalEdit, setModalEdit] = useState(false)
+  const [formEdit, setFormEdit] = useState({})
+  const [editErr, setEditErr] = useState('')
+  const [guardandoEdit, setGuardandoEdit] = useState(false)
+
   const puedeInscribir = tienePermiso(P.INSC_CREAR)
+  const puedeEditarOferta = ['superadmin', 'coordinador', 'director'].includes(usuario.rol)
   // Si el usuario tiene proveedor asignado (es staff de una escuela socia), solo ve esa escuela
   const proveedorFijo = usuario.proveedor || null
 
@@ -106,6 +112,57 @@ export default function OfertaEducativa() {
     setExpandidos(prev => ({ ...prev, [prov]: !prev[prov] }))
   }
   function isExpandido(prov) { return expandidos[prov] !== false } // abierto por defecto
+
+  function abrirEditar(o) {
+    setFormEdit({
+      id: o.id,
+      proveedor: o.proveedor || '',
+      idioma: o.idioma || '',
+      categoria: o.categoria || '',
+      edades: o.edades || '',
+      modalidad: o.modalidad || '',
+      sede: o.sede || '',
+      horario: o.horario || '',
+      costo: o.costo ?? '',
+      costo_tipo: o.costo_tipo || 'bimestral',
+      no_niveles: o.no_niveles ?? '',
+      nivel: o.nivel || '',
+      material_nivel: o.material_nivel ?? '',
+      sistema: o.sistema || '',
+      examen_ubicacion: o.examen_ubicacion || '',
+    })
+    setEditErr('')
+    setModalEdit(true)
+  }
+
+  async function guardarEdicion() {
+    setGuardandoEdit(true)
+    setEditErr('')
+    try {
+      await api.actualizarOferta(formEdit.id, {
+        proveedor: formEdit.proveedor,
+        idioma: formEdit.idioma,
+        categoria: formEdit.categoria,
+        edades: formEdit.edades,
+        modalidad: formEdit.modalidad,
+        sede: formEdit.sede,
+        horario: formEdit.horario,
+        costo: formEdit.costo !== '' ? Number(formEdit.costo) : null,
+        costo_tipo: formEdit.costo_tipo,
+        no_niveles: formEdit.no_niveles !== '' ? Number(formEdit.no_niveles) : null,
+        nivel: formEdit.nivel,
+        material_nivel: formEdit.material_nivel !== '' ? Number(formEdit.material_nivel) : null,
+        sistema: formEdit.sistema,
+        examen_ubicacion: formEdit.examen_ubicacion,
+      })
+      setModalEdit(false)
+      await cargar()
+    } catch (e) {
+      setEditErr('Error al guardar: ' + e.message)
+    } finally {
+      setGuardandoEdit(false)
+    }
+  }
 
   function abrirInscribir(oferta) {
     setFormInsc({
@@ -292,6 +349,9 @@ export default function OfertaEducativa() {
                                   <td>
                                     <div style={{ display: 'flex', gap: 4 }}>
                                       <button className="btn-mini" onClick={() => setSel(o)}>Detalle</button>
+                                      {puedeEditarOferta && (
+                                        <button className="btn-mini" onClick={() => abrirEditar(o)}>Editar</button>
+                                      )}
                                       {puedeInscribir && (
                                         <button className="btn-mini" style={{ background: 'var(--naranja)', color: '#fff', borderColor: 'var(--naranja)' }}
                                           onClick={() => abrirInscribir(o)}>Inscribir</button>
@@ -407,6 +467,76 @@ export default function OfertaEducativa() {
             {puedeInscribir && (
               <button className="btn-primario" onClick={() => abrirInscribir(sel)}>Inscribir alumno</button>
             )}
+          </div>
+        </Modal>
+      )}
+
+      {/* Modal editar oferta */}
+      {modalEdit && (
+        <Modal titulo="Editar oferta educativa" onClose={() => setModalEdit(false)} ancho={620}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0 16px' }}>
+            <label style={{ gridColumn: '1/-1' }}>Escuela / Proveedor
+              <input value={formEdit.proveedor} onChange={e => setFormEdit({ ...formEdit, proveedor: e.target.value })} />
+            </label>
+            <label>Idioma
+              <input value={formEdit.idioma} onChange={e => setFormEdit({ ...formEdit, idioma: e.target.value })} />
+            </label>
+            <label>Categoría
+              <input value={formEdit.categoria} onChange={e => setFormEdit({ ...formEdit, categoria: e.target.value })} placeholder="Jóvenes / Plus / Teens…" />
+            </label>
+            <label>Edades
+              <input value={formEdit.edades} onChange={e => setFormEdit({ ...formEdit, edades: e.target.value })} placeholder="16-29 años" />
+            </label>
+            <label>Modalidad
+              <select value={formEdit.modalidad} onChange={e => setFormEdit({ ...formEdit, modalidad: e.target.value })}>
+                <option value="">—</option>
+                <option>Presencial</option>
+                <option>En Línea</option>
+                <option>Autodidacta</option>
+              </select>
+            </label>
+            <label>Costo
+              <input type="number" value={formEdit.costo} onChange={e => setFormEdit({ ...formEdit, costo: e.target.value })} />
+            </label>
+            <label>Tipo de costo
+              <select value={formEdit.costo_tipo} onChange={e => setFormEdit({ ...formEdit, costo_tipo: e.target.value })}>
+                <option value="bimestral">Bimestral</option>
+                <option value="anual">Anual</option>
+              </select>
+            </label>
+            <label>No. de niveles
+              <input type="number" value={formEdit.no_niveles} onChange={e => setFormEdit({ ...formEdit, no_niveles: e.target.value })} placeholder="Ej. 10" />
+            </label>
+            <label>Nivel de esta oferta
+              <input value={formEdit.nivel} onChange={e => setFormEdit({ ...formEdit, nivel: e.target.value })} placeholder="Ej. Básico 1" />
+            </label>
+            <label>Material por nivel ($)
+              <input type="number" value={formEdit.material_nivel} onChange={e => setFormEdit({ ...formEdit, material_nivel: e.target.value })} />
+            </label>
+            <label>Sistema de enseñanza
+              <input value={formEdit.sistema} onChange={e => setFormEdit({ ...formEdit, sistema: e.target.value })} />
+            </label>
+            <label>Examen de ubicación
+              <select value={formEdit.examen_ubicacion} onChange={e => setFormEdit({ ...formEdit, examen_ubicacion: e.target.value })}>
+                <option value="">—</option>
+                <option value="Si">Sí</option>
+                <option value="No">No</option>
+                <option value="Pendiente">Pendiente</option>
+              </select>
+            </label>
+            <label style={{ gridColumn: '1/-1' }}>Sede / Dirección
+              <input value={formEdit.sede} onChange={e => setFormEdit({ ...formEdit, sede: e.target.value })} />
+            </label>
+            <label style={{ gridColumn: '1/-1' }}>Horario
+              <input value={formEdit.horario} onChange={e => setFormEdit({ ...formEdit, horario: e.target.value })} />
+            </label>
+          </div>
+          {editErr && <p style={{ color: 'var(--rojo)', fontSize: 13, marginTop: 8 }}>{editErr}</p>}
+          <div className="modal-acciones">
+            <button className="btn-sec" onClick={() => setModalEdit(false)}>Cancelar</button>
+            <button className="btn-primario" onClick={guardarEdicion} disabled={guardandoEdit}>
+              {guardandoEdit ? 'Guardando…' : 'Guardar cambios'}
+            </button>
           </div>
         </Modal>
       )}
