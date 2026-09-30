@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import * as api from '../api.js'
+import { useAuth, useNav } from '../App.jsx'
 
 const ORANGE = '#f18b11'
 
@@ -294,6 +295,8 @@ function SolicitudesPendientes({ onAprobada }) {
 }
 
 export default function MisMenores() {
+  const { usuario } = useAuth()
+  const { navegar } = useNav()
   const [menores, setMenores] = useState([])
   const [loading, setLoading] = useState(true)
   const [seleccionado, setSeleccionado] = useState(null)
@@ -307,6 +310,7 @@ export default function MisMenores() {
   }
 
   useEffect(() => {
+    if (usuario?.rol !== 'tutor') { navegar('dashboard'); return }
     cargarMenores()
     setLoading(false)
   }, [])
