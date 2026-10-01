@@ -274,6 +274,7 @@ export const eliminarOferta = (id) => del(`/ofertas/${id}`)
 
 // ── Pre-registros ─────────────────────────────────────────────────────────────
 export const crearPreRegistro = (data) => post('/pre-registros/publico', data)
+export const crearPreRegistroAdmin = (data) => post('/pre-registros', data)
 export const getPreRegistros = () => get('/pre-registros')
 export const getPreRegistro = (id) => get(`/pre-registros/${id}`)
 export const marcarPagadoPreRegistro = (id) => put(`/pre-registros/${id}/marcar-pagado`)

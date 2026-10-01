@@ -105,6 +105,41 @@ router.post('/publico', async (req, res) => { try {
   }
 })
 
+// POST autenticado — importación masiva por staff (sin rate limit, sin validaciones estrictas)
+router.post('/', requireAuth, async (req, res) => {
+  if (!['superadmin', 'coordinador', 'director', 'admin_ventas'].includes(req.user.rol)) {
+    return res.status(403).json({ error: 'Sin permiso' })
+  }
+  const { nombre, email, tel, curp, fecha_nacimiento, estado_entidad, municipio,
+    idioma_interes, proveedor_interes, horario_preferido, como_entero,
+    genero_nacimiento, rango_edad } = req.body
+  if (!nombre || !email) return res.status(400).json({ error: 'Nombre y email son requeridos' })
+
+  const { m: maxNum } = await queryOne(
+    `SELECT COALESCE(MAX(CAST(SUBSTRING(id FROM 3) AS INTEGER)), 0) AS m FROM pre_registros WHERE id ~ '^pr[0-9]+'`, []
+  )
+  const folio = 'PRE-' + String(maxNum + 1).padStart(4, '0')
+  const newId = 'pr' + (maxNum + 1)
+  const fecha = new Date().toISOString()
+  const curpLimpio = curp ? curp.trim().toUpperCase() : ''
+
+  try {
+    await run(`INSERT INTO pre_registros
+      (id, folio, nombre, email, tel, curp, fecha_nacimiento, estado_entidad,
+       idioma_interes, proveedor_interes, horario_preferido, como_entero,
+       estado, fecha_registro, genero_nacimiento, municipio, rango_edad)
+      VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)`,
+      [newId, folio, nombre, email, tel || '', curpLimpio,
+       fecha_nacimiento || null, estado_entidad || municipio || '',
+       idioma_interes || '', proveedor_interes || '', horario_preferido || '', como_entero || '',
+       'pendiente_pago', fecha, genero_nacimiento || null, municipio || null, rango_edad || null])
+    res.status(201).json({ folio, id: newId })
+  } catch (e) {
+    console.error('[pre_registros POST admin]', e.message)
+    res.status(500).json({ error: 'Error al guardar: ' + e.message })
+  }
+})
+
 function calcularEdad(fechaNac) {
   const hoy = new Date()
   const nac = new Date(fechaNac)

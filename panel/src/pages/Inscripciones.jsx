@@ -34,7 +34,7 @@ const ESTADOS_LABEL = {
   pendiente_autorizacion: '⏳ Pend. autorización',
 }
 
-// Parsea TSV (Google Sheets copy-paste) o CSV
+// Parsea TSV (Google Sheets copy-paste) o CSV — compatible con form de Lengua Joven
 function parsearCSV(texto) {
   const lineas = texto.trim().split('\n').filter(l => l.trim())
   if (lineas.length < 2) return null
@@ -43,21 +43,45 @@ function parsearCSV(texto) {
   const heads = lineas[0].split(sep).map(h => h.trim().replace(/^"|"$/g, '').toLowerCase())
 
   const ci = (...words) => heads.findIndex(h => words.some(w => h.includes(w)))
-  const iNombre = ci('nombre', 'name', 'alumno', 'participante', 'full')
-  const iEmail  = ci('correo', 'email', 'mail')
-  const iTel    = ci('tel', 'celular', 'whatsapp', 'phone', 'cel', 'móvil', 'movil')
+  const iNombre      = ci('nombre completo', 'nombre', 'name', 'participante')
+  const iEmail       = ci('correo electr', 'correo', 'email', 'mail')
+  const iTel         = ci('whatsapp', 'tel', 'celular', 'phone', 'cel', 'móvil', 'movil')
+  const iCURP        = ci('curp')
+  const iFechaNac    = ci('fecha de nacimiento', 'nacimiento', 'fecha_nac')
+  const iMunicipio   = ci('municipio donde', 'municipio', 'ciudad donde', 'estado_entidad')
+  const iIdioma      = ci('qué idioma', 'idioma que quiere', 'idioma')
+  const iAcademia    = ci('academia de tu preferencia', 'academia')
+  const iComoEntero  = ci('cómo te enteraste', 'como te enteraste', 'como_entero', 'enteraste')
+  const iHorario     = ci('seleccione su horario', 'selecciona tu horario', 'horario de tu', 'horario')
+  const iSexo        = ci('sexo', 'género', 'genero')
+  const iRangoEdad   = ci('rango de edad', 'confirma tu rango', 'edad')
 
   const filas = lineas.slice(1).map((l, idx) => {
     const cols = l.split(sep).map(c => c.trim().replace(/^"|"$/g, ''))
     return {
-      num:    idx + 1,
-      nombre: iNombre >= 0 ? (cols[iNombre] || '') : '',
-      email:  iEmail  >= 0 ? (cols[iEmail]  || '') : '',
-      tel:    iTel    >= 0 ? (cols[iTel]    || '') : '',
+      num:         idx + 1,
+      nombre:      iNombre    >= 0 ? (cols[iNombre]    || '') : '',
+      email:       iEmail     >= 0 ? (cols[iEmail]     || '') : '',
+      tel:         iTel       >= 0 ? (cols[iTel]       || '') : '',
+      curp:        iCURP      >= 0 ? (cols[iCURP]      || '') : '',
+      fecha_nac:   iFechaNac  >= 0 ? (cols[iFechaNac]  || '') : '',
+      municipio:   iMunicipio >= 0 ? (cols[iMunicipio] || '') : '',
+      idioma:      iIdioma    >= 0 ? (cols[iIdioma]    || '') : '',
+      academia:    iAcademia  >= 0 ? (cols[iAcademia]  || '') : '',
+      como_entero: iComoEntero>= 0 ? (cols[iComoEntero]|| '') : '',
+      horario:     iHorario   >= 0 ? (cols[iHorario]   || '') : '',
+      sexo:        iSexo      >= 0 ? (cols[iSexo]      || '') : '',
+      rango_edad:  iRangoEdad >= 0 ? (cols[iRangoEdad] || '') : '',
     }
   }).filter(f => f.nombre.trim() || f.email.trim())
 
-  return { filas, detectado: { nombre: iNombre >= 0, email: iEmail >= 0, tel: iTel >= 0 } }
+  return {
+    filas,
+    detectado: {
+      nombre: iNombre >= 0, email: iEmail >= 0, tel: iTel >= 0,
+      curp: iCURP >= 0, idioma: iIdioma >= 0, academia: iAcademia >= 0,
+    },
+  }
 }
 
 const ROLES_PLANTEL = ['director', 'profesor', 'admin_ventas', 'maestro']
@@ -235,25 +259,40 @@ export default function Inscripciones() {
   }
 
   async function importarCSV() {
-    const pid = usuario.plantel_id || ''
-    const emailsExist = new Set(
-      inscripciones.map(i => (i.email_externo || '').toLowerCase()).filter(Boolean)
-    )
+    const emailsExist = new Set([
+      ...inscripciones.map(i => (i.email_externo || '').toLowerCase()),
+      ...preRegistros.map(p => (p.email || '').toLowerCase()),
+    ].filter(Boolean))
     const nuevas = csvFilas.filter(f => {
       if (!f.nombre.trim()) return false
       if (f.email && emailsExist.has(f.email.toLowerCase())) return false
       return true
     })
-    try {
-      await Promise.all(nuevas.map(f => api.crearInscripcion({
-        plantel_id: pid, estado: 'nueva',
-        nombre_externo: f.nombre, email_externo: f.email || '', tel_externo: f.tel || '',
-      })))
-      cerrarImportar()
-      await cargar()
-    } catch (e) {
-      alert('Error importando: ' + e.message)
-    }
+    let ok = 0; let err = 0
+    await Promise.allSettled(nuevas.map(async f => {
+      try {
+        await api.crearPreRegistroAdmin({
+          nombre:           f.nombre,
+          email:            f.email || '',
+          tel:              f.tel || '',
+          curp:             f.curp || '',
+          fecha_nacimiento: f.fecha_nac || '',
+          municipio:        f.municipio || '',
+          estado_entidad:   f.municipio || '',
+          idioma_interes:   f.idioma || '',
+          proveedor_interes: f.academia || '',
+          como_entero:      f.como_entero || '',
+          horario_preferido: f.horario || '',
+          genero_nacimiento: f.sexo || '',
+          rango_edad:       f.rango_edad || '',
+        })
+        ok++
+      } catch { err++ }
+    }))
+    cerrarImportar()
+    await cargar()
+    if (err > 0) alert(`Se importaron ${ok} pre-registros. ${err} fallaron (emails duplicados u otro error).`)
+    else setTabActivo('pre_registros')
   }
 
   function cerrarImportar() {
@@ -278,10 +317,11 @@ export default function Inscripciones() {
     countByStage[s.id] = inscripciones.filter(i => i.estado === s.id).length
   })
 
-  // Duplicate detection for import preview
-  const emailsExistentes = new Set(
-    inscripciones.map(i => (i.email_externo || '').toLowerCase()).filter(Boolean)
-  )
+  // Duplicate detection for import preview (checks both inscripciones and pre_registros)
+  const emailsExistentes = new Set([
+    ...inscripciones.map(i => (i.email_externo || '').toLowerCase()),
+    ...preRegistros.map(p => (p.email || '').toLowerCase()),
+  ].filter(Boolean))
 
   const presFiltradas = preRegistros.filter(p =>
     filtroEstadoPre === 'todos' || p.estado === filtroEstadoPre
@@ -1032,7 +1072,7 @@ export default function Inscripciones() {
                 <div style={{ maxHeight: 220, overflow: 'auto', border: '1px solid var(--borde)', borderRadius: 8, marginBottom: 16 }}>
                   <table className="tabla" style={{ fontSize: 12 }}>
                     <thead>
-                      <tr><th>#</th><th>Nombre</th><th>Correo</th><th>Teléfono</th><th></th></tr>
+                      <tr><th>#</th><th>Nombre</th><th>Correo</th><th>CURP</th><th>Idioma</th><th>Academia</th><th></th></tr>
                     </thead>
                     <tbody>
                       {csvFilas.map((f, i) => {
@@ -1041,14 +1081,19 @@ export default function Inscripciones() {
                           <tr key={i} style={{ opacity: dup ? 0.45 : 1 }}>
                             <td style={{ color: 'var(--texto-muted)' }}>{f.num}</td>
                             <td>{f.nombre || '—'}</td>
-                            <td>{f.email || '—'}</td>
-                            <td>{f.tel || '—'}</td>
+                            <td style={{ fontSize: 11 }}>{f.email || '—'}</td>
+                            <td style={{ fontSize: 11, fontFamily: 'monospace' }}>{f.curp || '—'}</td>
+                            <td>{f.idioma || '—'}</td>
+                            <td style={{ fontSize: 11 }}>{f.academia || '—'}</td>
                             <td>{dup && <span className="badge baja" style={{ fontSize: 10, padding: '1px 6px' }}>dup</span>}</td>
                           </tr>
                         )
                       })}
                     </tbody>
                   </table>
+                </div>
+                <div className="alerta info" style={{ fontSize: 12, marginBottom: 12 }}>
+                  Se crearán como <strong>Pre-registros</strong> con estado "Pendiente de pago". Los puedes ver y procesar en la pestaña Pre-registros.
                 </div>
                 <div className="modal-acciones">
                   <button className="btn-sec" onClick={() => setCsvFilas([])}>← Volver</button>
@@ -1057,7 +1102,7 @@ export default function Inscripciones() {
                     disabled={nuevas.length === 0}
                     onClick={importarCSV}
                   >
-                    Importar {nuevas.length} {nuevas.length !== 1 ? 'inscripciones' : 'inscripción'}
+                    Importar {nuevas.length} {nuevas.length !== 1 ? 'pre-registros' : 'pre-registro'}
                   </button>
                 </div>
               </>
